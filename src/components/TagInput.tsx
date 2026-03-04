@@ -1,26 +1,48 @@
 import { useState, useRef, useCallback } from "react";
 import { X as Cross2Icon } from "lucide-react";
 import { useVaultStore } from "@/stores/useVaultStore";
+import {
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
-interface TagInputProps {
-  tags: string[];
-  onChange: (tags: string[]) => void;
-}
+export function TagInput() {
+  const { activeNote, updateNoteTags, tags: allTags } = useVaultStore();
+  const tags = activeNote?.tags ?? [];
 
-export function TagInput({ tags, onChange }: TagInputProps) {
   const [inputValue, setInputValue] = useState("");
+  const [typedValue, setTypedValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const allTags = useVaultStore((s) => s.tags);
 
-  // Filter suggestions based on input
-  const suggestions = inputValue.trim()
+  // Filter and sort suggestions based on relevance and popularity
+  const query = typedValue.trim().toLowerCase();
+  const suggestions = query
     ? allTags
         .filter(
           (t) =>
-            t.name.toLowerCase().includes(inputValue.toLowerCase()) &&
-            !tags.includes(t.name),
+            t.name.toLowerCase().includes(query) &&
+            !tags.includes(t.name.toLowerCase()),
         )
+        .sort((a, b) => {
+          const aName = a.name.toLowerCase();
+          const bName = b.name.toLowerCase();
+          const aStarts = aName.startsWith(query);
+          const bStarts = bName.startsWith(query);
+
+          // Priority 1: Prefix matches over substring matches
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+
+          // Priority 2: Popularity (usage count)
+          if (a.count !== b.count) return b.count - a.count;
+
+          // Priority 3: Alphabetical order for identical counts
+          return aName.localeCompare(bName);
+        })
         .slice(0, 5)
     : [];
 
@@ -28,36 +50,55 @@ export function TagInput({ tags, onChange }: TagInputProps) {
     (tag: string) => {
       const normalised = tag.trim().toLowerCase();
       if (normalised && !tags.includes(normalised)) {
-        onChange([...tags, normalised]);
+        updateNoteTags([...tags, normalised]);
       }
       setInputValue("");
+      setTypedValue("");
       setShowSuggestions(false);
+      setSelectedIndex(-1);
     },
-    [tags, onChange],
+    [tags, updateNoteTags],
   );
 
   const removeTag = useCallback(
     (tag: string) => {
-      onChange(tags.filter((t) => t !== tag));
+      updateNoteTags(tags.filter((t) => t !== tag));
     },
-    [tags, onChange],
+    [tags, updateNoteTags],
   );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === "Tab" || e.key === ",") {
+      if (e.key === "Tab" && suggestions.length > 0) {
         e.preventDefault();
-        if (inputValue.trim()) {
+        const nextIndex = e.shiftKey
+          ? selectedIndex <= -1
+            ? suggestions.length - 1
+            : selectedIndex - 1
+          : selectedIndex >= suggestions.length - 1
+            ? -1
+            : selectedIndex + 1;
+
+        setSelectedIndex(nextIndex);
+        setInputValue(nextIndex === -1 ? typedValue : suggestions[nextIndex].name);
+      } else if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+          addTag(suggestions[selectedIndex].name);
+        } else if (inputValue.trim()) {
           addTag(inputValue);
         }
       } else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
         removeTag(tags[tags.length - 1]);
       } else if (e.key === "Escape") {
         setShowSuggestions(false);
+        setSelectedIndex(-1);
+        setInputValue("");
+        setTypedValue("");
         inputRef.current?.blur();
       }
     },
-    [inputValue, tags, addTag, removeTag],
+    [inputValue, typedValue, tags, addTag, removeTag, suggestions, selectedIndex],
   );
 
   return (
@@ -77,41 +118,56 @@ export function TagInput({ tags, onChange }: TagInputProps) {
         </span>
       ))}
 
-      <input
-        ref={inputRef}
-        className="bg-transparent border-none outline-none text-[13px] h-7 text-muted-foreground placeholder:text-muted-foreground/50 min-w-[80px] w-auto focus:ring-0 focus:text-foreground transition-colors"
-        value={inputValue}
-        onChange={(e) => {
-          setInputValue(e.target.value);
-          setShowSuggestions(true);
-        }}
-        onKeyDown={handleKeyDown}
-        onFocus={() => setShowSuggestions(true)}
-        onBlur={() => {
-          // Delay to allow click on suggestion
-          setTimeout(() => setShowSuggestions(false), 150);
-        }}
-        placeholder="+ add tag"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          className="bg-muted px-2.5 rounded-md border border-border/10 hover:border-border outline-none text-[13px] h-7 text-muted-foreground font-medium placeholder:text-muted-foreground/50 min-w-[90px] focus:ring-0 focus:text-foreground transition-all"
+          style={{
+            width: `${Math.max(inputValue.length * 8 + 20, 90)}px`,
+          }}
+          value={inputValue}
+          onChange={(e) => {
+            const val = e.target.value;
+            setInputValue(val);
+            setTypedValue(val);
+            setShowSuggestions(true);
+            setSelectedIndex(-1);
+          }}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => {
+            setTimeout(() => {
+              setShowSuggestions(false);
+              setSelectedIndex(-1);
+              setInputValue("");
+              setTypedValue("");
+            }, 150);
+          }}
+          placeholder="+ add tag"
+        />
 
-      {/* Autocomplete suggestions */}
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 mt-1 bg-popover border border-border rounded-md py-1 min-w-[140px] z-20">
-          {suggestions.map((s) => (
-            <button
-              key={s.name}
-              className="w-full text-left px-3 py-1 text-[12px] text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-              onMouseDown={(e) => {
-                e.preventDefault(); // prevent blur
-                addTag(s.name);
-              }}
-            >
-              <span>{s.name}</span>
-              <span className="text-muted-foreground/30 ml-1.5">({s.count})</span>
-            </button>
-          ))}
-        </div>
-      )}
+        {showSuggestions && suggestions.length > 0 && (
+          <Command
+            className="absolute top-full left-0 mt-1 bg-popover border border-border rounded-md shadow-xl min-w-[160px] z-50 overflow-hidden h-auto"
+            value={selectedIndex >= 0 ? suggestions[selectedIndex].name : ""}
+          >
+            <CommandList>
+              <CommandGroup>
+                {suggestions.map((s) => (
+                  <CommandItem
+                    key={s.name}
+                    value={s.name}
+                    onSelect={() => addTag(s.name)}
+                    className="flex items-center justify-between gap-4 cursor-pointer py-1"
+                  >
+                    <span className="font-medium text-[12px]">{s.name}</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        )}
+      </div>
     </div>
   );
 }
