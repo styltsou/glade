@@ -339,7 +339,7 @@ button, a, input, [role="button"] {
 .tiptap-editor {
   font-family: "Source Serif 4", "Georgia", serif;
   font-size: 17px;
-  line-height: 1.8;
+  line-height: 1.4;
   color: hsl(var(--editor-text));
   outline: none;
 }
@@ -394,7 +394,7 @@ button, a, input, [role="button"] {
 
 /* Paragraphs */
 .tiptap-editor p {
-  margin-bottom: 1.2em;
+  margin-bottom: 0.15em;
 }
 
 .tiptap-editor p:last-child {
