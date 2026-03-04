@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { VaultEntry, NoteData, TagCount } from "@/types";
+import { useHomeStore } from "./useHomeStore";
 
 interface VaultState {
   /** Tree of vault entries */
@@ -26,6 +27,10 @@ interface VaultState {
   saveNote: (path: string, content: string) => Promise<void>;
   /** Create a new note, optionally in a folder */
   createNote: (folder?: string) => Promise<void>;
+  /** Rename a note */
+  renameNote: (path: string, newTitle: string) => Promise<void>;
+  /** Duplicate a note */
+  duplicateNote: (path: string) => Promise<void>;
   /** Delete a file or folder */
   deleteEntry: (path: string) => Promise<void>;
   /** Create a new folder */
@@ -42,6 +47,8 @@ interface VaultState {
   clearSearch: () => void;
   /** Update tags for the active note */
   updateNoteTags: (tags: string[]) => Promise<void>;
+  /** Clear active note to go to home view */
+  goHome: () => void;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -67,6 +74,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     try {
       const note = await invoke<NoteData>("read_note", { path });
       set({ activeNote: note, error: null });
+      // Record in recents (fire-and-forget)
+      invoke("record_note_opened", { path }).catch(() => {});
     } catch (e) {
       set({ error: String(e) });
     }
@@ -88,7 +97,32 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         folder: folder ?? null,
       });
       await get().loadVault();
+      await useHomeStore.getState().loadAll();
       set({ activeNote: note, error: null });
+    } catch (e) {
+      set({ error: String(e) });
+    }
+  },
+
+  renameNote: async (path: string, newTitle: string) => {
+    try {
+      await invoke("rename_note", { path, newTitle });
+      const { activeNote } = get();
+      if (activeNote?.path === path) {
+        set({ activeNote: { ...activeNote, title: newTitle } });
+      }
+      await get().loadVault();
+      await useHomeStore.getState().loadAll();
+    } catch (e) {
+      set({ error: String(e) });
+    }
+  },
+
+  duplicateNote: async (path: string) => {
+    try {
+      await invoke<NoteData>("duplicate_note", { path });
+      await get().loadVault();
+      await useHomeStore.getState().loadAll();
     } catch (e) {
       set({ error: String(e) });
     }
@@ -102,6 +136,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         set({ activeNote: null });
       }
       await get().loadVault();
+      await useHomeStore.getState().loadAll();
     } catch (e) {
       set({ error: String(e) });
     }
@@ -166,8 +201,12 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       });
       set({ activeNote: note });
       await get().loadTags();
+      await useHomeStore.getState().loadAll();
     } catch (e) {
       set({ error: String(e) });
     }
+  },
+  goHome: () => {
+    set({ activeNote: null });
   },
 }));

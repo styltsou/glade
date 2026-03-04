@@ -11,9 +11,6 @@ pub enum AppError {
 
     #[error("Invalid path: {0}")]
     InvalidPath(String),
-
-    #[error("Frontmatter parse error: {0}")]
-    FrontmatterParse(String),
 }
 
 impl Serialize for AppError {

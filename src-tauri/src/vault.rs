@@ -73,7 +73,11 @@ pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> 
                 modified,
             });
         } else if name.ends_with(".md") {
-            let display_name = name.trim_end_matches(".md").to_string();
+            let content = fs::read_to_string(&path).unwrap_or_default();
+            let (meta, _) = parse_frontmatter(&content);
+            let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| name.clone());
+            let display_name = meta.title.filter(|t| !t.is_empty()).unwrap_or(stem);
+            
             entries.push(VaultEntry {
                 name: display_name,
                 path: relative,
@@ -117,7 +121,8 @@ pub fn build_frontmatter(meta: &NoteMeta) -> String {
     let mut lines = vec!["---".to_string()];
 
     if let Some(ref title) = meta.title {
-        lines.push(format!("title: \"{}\"", title));
+        let escaped = title.replace('"', "\\\"");
+        lines.push(format!("title: \"{}\"", escaped));
     }
 
     if !meta.tags.is_empty() {
@@ -138,12 +143,16 @@ pub fn build_frontmatter(meta: &NoteMeta) -> String {
         lines.push(format!("updated: {}", updated));
     }
 
+    if meta.pinned {
+        lines.push("pinned: true".to_string());
+    }
+
     lines.push("---".to_string());
     lines.join("\n")
 }
 
 /// Very simple YAML-to-JSON converter for our limited frontmatter format.
-/// Handles: key: "value", key: value, key: [a, b, c]
+/// Handles: key: "value", key: value, key: [a, b, c], key: true/false
 fn yaml_to_json(yaml: &str) -> String {
     let mut pairs = Vec::new();
 
@@ -155,22 +164,26 @@ fn yaml_to_json(yaml: &str) -> String {
 
         if let Some(colon_pos) = line.find(':') {
             let key = line[..colon_pos].trim();
-            let value = line[colon_pos + 1..].trim();
+            let mut value = line[colon_pos + 1..].trim();
 
             if value.starts_with('[') && value.ends_with(']') {
                 // Array value
                 let inner = &value[1..value.len() - 1];
                 let items: Vec<String> = inner
                     .split(',')
-                    .map(|s| format!("\"{}\"", s.trim().trim_matches('"')))
+                    .map(|s| format!("\"{}\"", s.trim().trim_matches('"').replace('"', "\\\"")))
                     .collect();
                 pairs.push(format!("\"{}\":[{}]", key, items.join(",")));
-            } else if value.starts_with('"') && value.ends_with('"') {
-                // Quoted string
+            } else if value == "true" || value == "false" {
+                // Boolean value
                 pairs.push(format!("\"{}\":{}", key, value));
             } else {
-                // Unquoted value — wrap in quotes
-                pairs.push(format!("\"{}\":\"{}\"", key, value));
+                // String value — handle potential quotes
+                if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
+                    value = &value[1..value.len() - 1];
+                }
+                let escaped = value.replace('\\', "\\\\").replace('"', "\\\"");
+                pairs.push(format!("\"{}\":\"{}\"", key, escaped));
             }
         }
     }

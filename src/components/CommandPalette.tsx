@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  PlusIcon,
-  FileTextIcon,
-  TrashIcon,
-  GearIcon,
-} from "@radix-ui/react-icons";
+  Plus as PlusIcon,
+  FileText as FileTextIcon,
+  Trash2 as TrashIcon,
+  Settings as GearIcon,
+} from "lucide-react";
 import {
   CommandDialog,
   CommandInput,
@@ -54,10 +54,17 @@ export function CommandPalette() {
         e.preventDefault();
         setSettingsOpen(true);
       }
+      // Cmd+D for delete note
+      if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
+        e.preventDefault();
+        if (activeNote) {
+          deleteEntry(activeNote.path);
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [createNote]);
+  }, [createNote, activeNote, deleteEntry]);
 
   const handleSelect = useCallback(
     (action: string) => {
@@ -118,7 +125,7 @@ export function CommandPalette() {
                   <FileTextIcon className="shrink-0" />
                   <span className="truncate">{note.title}</span>
                   {note.preview && (
-                    <span className="text-muted-foreground/30 text-xs truncate ml-auto max-w-[200px]">
+                    <span className="text-muted-foreground text-xs truncate ml-auto max-w-[200px]">
                       {note.preview}
                     </span>
                   )}
@@ -147,6 +154,7 @@ export function CommandPalette() {
               >
                 <TrashIcon />
                 <span>Delete Current Note</span>
+                <CommandShortcut>⌘D</CommandShortcut>
               </CommandItem>
             )}
 
@@ -173,7 +181,7 @@ export function CommandPalette() {
                 <FileTextIcon className="shrink-0" />
                 <span className="truncate">{note.name}</span>
                 {note.path.includes("/") && (
-                  <span className="text-muted-foreground/30 text-xs ml-auto">
+                  <span className="text-muted-foreground text-xs ml-auto">
                     {note.path.split("/").slice(0, -1).join("/")}
                   </span>
                 )}

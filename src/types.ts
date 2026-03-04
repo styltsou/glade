@@ -35,3 +35,21 @@ export interface TagCount {
   name: string;
   count: number;
 }
+
+/** Lightweight note representation for the home view grid. */
+export interface NoteCard {
+  path: string;
+  title: string;
+  tags: string[];
+  modified: string | null;
+  preview: string;
+  pinned: boolean;
+}
+
+export type SortMode = "name-asc" | "name-desc" | "modified";
+
+/** Persistent sidebar UI state. */
+export interface SidebarState {
+  collapsed: boolean;
+  sort: SortMode;
+}

@@ -105,8 +105,8 @@ function ThemeCard({
         transition-all duration-150 cursor-pointer
         ${
           isActive
-            ? "border-primary bg-accent/50"
-            : "border-border hover:border-muted-foreground/30 hover:bg-accent/30"
+            ? "border-primary bg-accent"
+            : "border-border hover:border-primary hover:bg-muted"
         }
       `}
     >
@@ -115,7 +115,7 @@ function ThemeCard({
         {previewColors.map((color, i) => (
           <span
             key={i}
-            className="h-5 w-5 rounded-full border border-border/50"
+            className="h-5 w-5 rounded-full border border-border"
             style={{ backgroundColor: color }}
           />
         ))}

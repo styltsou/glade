@@ -42,6 +42,60 @@ pub struct NoteMeta {
     pub tags: Vec<String>,
     pub created: Option<String>,
     pub updated: Option<String>,
+    #[serde(default)]
+    pub pinned: bool,
+}
+
+/// A lightweight card representation used in the home view.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NoteCard {
+    /// Relative path from vault root
+    pub path: String,
+    /// Title from frontmatter (falls back to filename)
+    pub title: String,
+    /// Tags from frontmatter
+    pub tags: Vec<String>,
+    /// Last modified timestamp (ISO 8601)
+    pub modified: Option<String>,
+    /// Short preview of the body
+    pub preview: String,
+    /// Whether the note is pinned
+    pub pinned: bool,
+}
+
+/// A single entry in the local recents list.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecentEntry {
+    /// Relative path from vault root
+    pub path: String,
+    /// Unix timestamp of when the note was last opened
+    pub last_opened: i64,
+}
+
+/// The persistent sidebar UI state.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SidebarState {
+    pub collapsed: bool,
+    /// One of: "name-asc", "name-desc", "modified"
+    pub sort: String,
+}
+
+impl Default for SidebarState {
+    fn default() -> Self {
+        Self {
+            collapsed: false,
+            sort: "name-asc".to_string(),
+        }
+    }
+}
+
+/// The full local app config (not synced to Git).
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AppConfig {
+    #[serde(default)]
+    pub recents: Vec<RecentEntry>,
+    #[serde(default)]
+    pub sidebar: SidebarState,
 }
 
 /// Tag with its usage count across all notes.

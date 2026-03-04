@@ -1,10 +1,10 @@
 import {
-  CheckCircledIcon,
-  InfoCircledIcon,
-  UpdateIcon,
-  CrossCircledIcon,
-  ExclamationTriangleIcon,
-} from "@radix-ui/react-icons"
+  CircleCheck as CheckCircledIcon,
+  Info as InfoCircledIcon,
+  Loader2 as UpdateIcon,
+  CircleX as CrossCircledIcon,
+  TriangleAlert as ExclamationTriangleIcon,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
 

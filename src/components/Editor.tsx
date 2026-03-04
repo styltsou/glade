@@ -7,18 +7,18 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
 import {
-  FontBoldIcon,
-  FontItalicIcon,
-  StrikethroughIcon,
-  ListBulletIcon,
-  CodeIcon,
-  QuoteIcon,
-  Link2Icon,
-  ReaderIcon,
-  DividerHorizontalIcon,
-  CheckboxIcon,
-  FileTextIcon,
-} from "@radix-ui/react-icons";
+  Bold as FontBoldIcon,
+  Italic as FontItalicIcon,
+  Strikethrough as StrikethroughIcon,
+  List as ListBulletIcon,
+  Code as CodeIcon,
+  Quote as QuoteIcon,
+  Link2 as Link2Icon,
+  BookOpen as ReaderIcon,
+  Minus as DividerHorizontalIcon,
+  CheckSquare as CheckboxIcon,
+  FileText as FileTextIcon,
+} from "lucide-react";
 import { useVaultStore } from "@/stores/useVaultStore";
 import { TagInput } from "@/components/TagInput";
 
@@ -127,12 +127,12 @@ export function Editor() {
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
       {/* Note date header */}
-      <div className="flex items-center justify-between px-6 h-9 shrink-0 text-[12px] text-muted-foreground/40 select-none">
+      <div className="flex items-center justify-between px-6 h-9 shrink-0 text-[12px] text-muted-foreground select-none">
         <div className="flex items-center gap-1.5">
           <ReaderIcon className="w-3 h-3" />
           {dateLabel && <span>{dateLabel}</span>}
         </div>
-        <span className="text-muted-foreground/25">
+        <span className="text-muted-foreground">
           {saveStatus === "saving"
             ? "Saving…"
             : saveStatus === "saved"
@@ -289,7 +289,7 @@ export function Editor() {
           {/* Editor or Raw view */}
           {isRawMode ? (
             <textarea
-              className="w-full h-[calc(100vh-280px)] bg-transparent text-[14px] leading-[1.7] font-mono text-foreground/80 resize-none focus:outline-none placeholder:text-muted-foreground/25"
+              className="w-full h-[calc(100vh-280px)] bg-transparent text-[14px] leading-[1.7] font-mono text-foreground resize-none focus:outline-none placeholder:text-muted-foreground"
               value={rawContent}
               onChange={(e) => onRawChange(e.target.value)}
               placeholder="Write raw markdown…"
@@ -308,11 +308,11 @@ function EmptyState() {
   const { createNote } = useVaultStore();
   return (
     <div className="flex flex-col flex-1 h-full bg-background items-center justify-center select-none">
-      <FileTextIcon className="w-10 h-10 text-muted-foreground/15 mb-4" />
-      <p className="text-[14px] text-muted-foreground/30 mb-1">No note selected</p>
+      <FileTextIcon className="w-10 h-10 text-muted-foreground mb-4" />
+      <p className="text-[14px] text-muted-foreground mb-1">No note selected</p>
       <button
         onClick={() => createNote()}
-        className="text-[13px] text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors"
+        className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
       >
         Create a new note
       </button>
@@ -341,8 +341,8 @@ function ToolbarButton({
     <button
       className={`inline-flex items-center justify-center h-7 min-w-7 px-1.5 rounded-md transition-all focus:outline-none ${
         active
-          ? "text-foreground bg-muted/60"
-          : "text-muted-foreground/50 hover:text-foreground hover:bg-muted/40"
+          ? "text-foreground bg-accent"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent"
       }`}
       title={title}
       onClick={onClick}

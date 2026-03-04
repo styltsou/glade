@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { X as Cross2Icon } from "lucide-react";
 import { useVaultStore } from "@/stores/useVaultStore";
 
 interface TagInputProps {
@@ -65,21 +65,21 @@ export function TagInput({ tags, onChange }: TagInputProps) {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="group inline-flex items-center gap-1 px-2 py-[1px] rounded-md bg-muted/40 text-[12px] text-muted-foreground/60 border border-border/50 hover:border-border hover:bg-muted/60 transition-all cursor-default select-none"
+          className="group inline-flex items-center h-7 px-2.5 rounded-md bg-muted text-[13px] text-muted-foreground border border-border/10 hover:border-border transition-all cursor-default select-none"
         >
           {tag}
           <button
             onClick={() => removeTag(tag)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-0 hover:text-foreground"
+            className="w-0 opacity-0 group-hover:w-4 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-200 overflow-hidden flex items-center justify-center hover:text-foreground"
           >
-            <Cross2Icon className="w-2.5 h-2.5" />
+            <Cross2Icon className="w-3.5 h-3.5" />
           </button>
         </span>
       ))}
 
       <input
         ref={inputRef}
-        className="bg-transparent border-none outline-none text-[12px] text-muted-foreground/60 placeholder:text-muted-foreground/25 min-w-[60px] w-auto focus:ring-0 focus:text-muted-foreground"
+        className="bg-transparent border-none outline-none text-[13px] h-7 text-muted-foreground placeholder:text-muted-foreground/50 min-w-[80px] w-auto focus:ring-0 focus:text-foreground transition-colors"
         value={inputValue}
         onChange={(e) => {
           setInputValue(e.target.value);
