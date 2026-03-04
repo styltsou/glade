@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { NoteCard as NoteCardType } from "@/types";
 import { RenameDialog } from "@/components/RenameDialog";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 interface NoteCardProps {
   card: NoteCardType;
@@ -21,9 +22,10 @@ interface NoteCardProps {
 
 export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const { selectNote, deleteEntry, renameNote, duplicateNote } = useVaultStore();
-  const { pinNote, unpinNote, loadAll } = useHomeStore();
+  const { pinNote, unpinNote } = useHomeStore();
   
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
   const handleClick = useCallback(async () => {
     await selectNote(card.path);
@@ -40,6 +42,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
 
   const handleDelete = async () => {
     await deleteEntry(card.path);
+    setIsDeleteOpen(false);
   };
 
   const handleRename = async (newTitle: string) => {
@@ -111,7 +114,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); handleDelete(); }}>
+              <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); setIsDeleteOpen(true); }}>
                 <TrashIcon className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
@@ -160,6 +163,12 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
         onOpenChange={setIsRenameOpen}
         initialTitle={card.title}
         onRename={handleRename}
+      />
+      <DeleteConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        name={card.title}
+        onConfirm={handleDelete}
       />
     </>
   );

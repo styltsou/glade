@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { VaultEntry, NoteData } from "@/types";
 import { RenameDialog } from "@/components/RenameDialog";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 // ─── Sort label helpers ───────────────────────────────────────────────────────
 
@@ -326,7 +327,7 @@ function PinnedItem({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const { renameNote, duplicateNote, deleteEntry } = useVaultStore();
 
   return (
@@ -363,20 +364,19 @@ function PinnedItem({
             Unpin note
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); setPendingDelete(path); }}>
+          <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); setIsDeleteOpen(true); }}>
             <TrashIcon className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {pendingDelete && (
-        <ConfirmDeleteDialog
-           name={name}
-           onConfirm={() => { deleteEntry(pendingDelete); setPendingDelete(null); }}
-           onCancel={() => setPendingDelete(null)}
-        />
-      )}
+      <DeleteConfirmDialog
+        open={isDeleteOpen}
+        onOpenChange={setIsDeleteOpen}
+        name={name}
+        onConfirm={() => { deleteEntry(path); setIsDeleteOpen(false); }}
+      />
 
       <RenameDialog
         isOpen={isRenameOpen}
@@ -491,14 +491,13 @@ function FileTreeNode({
           </div>
         )}
         
-        {pendingDelete && (
-          <ConfirmDeleteDialog
-            name={entry.name}
-            isFolder
-            onConfirm={() => { onDeleteEntry(pendingDelete); setPendingDelete(null); }}
-            onCancel={() => setPendingDelete(null)}
-          />
-        )}
+        <DeleteConfirmDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+          name={entry.name}
+          isFolder
+          onConfirm={() => { if (pendingDelete) { onDeleteEntry(pendingDelete); setPendingDelete(null); } }}
+        />
       </div>
     );
   }
@@ -546,13 +545,12 @@ function FileTreeNode({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {pendingDelete && (
-        <ConfirmDeleteDialog
-           name={entry.name}
-           onConfirm={() => { onDeleteEntry(pendingDelete); setPendingDelete(null); }}
-           onCancel={() => setPendingDelete(null)}
-        />
-      )}
+      <DeleteConfirmDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => { if (!open) setPendingDelete(null); }}
+        name={entry.name}
+        onConfirm={() => { if (pendingDelete) { onDeleteEntry(pendingDelete); setPendingDelete(null); } }}
+      />
 
       <RenameDialog
         isOpen={isRenameOpen}
@@ -564,61 +562,6 @@ function FileTreeNode({
   );
 }
 
-
-// ─── Confirmation dialog for destructive actions ──────────────────────────────
-
-function ConfirmDeleteDialog({
-  name,
-  isFolder = false,
-  onConfirm,
-  onCancel,
-}: {
-  name: string;
-  isFolder?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
-    >
-      {/* backdrop */}
-      <div className="absolute inset-0 bg-background/60 backdrop-blur-[2px]" />
-      {/* panel */}
-      <div className="relative z-10 w-[340px] rounded-xl bg-popover border border-border p-5 flex flex-col gap-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-            <TrashIcon className="h-4 w-4 text-destructive" />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-foreground">
-              Delete {isFolder ? "folder" : "note"}?
-            </p>
-            <p className="mt-1 text-[12px] text-muted-foreground leading-relaxed">
-              <span className="font-medium text-foreground">{name}</span> will be
-              permanently deleted. This cannot be undone.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="h-7 px-3 rounded-md text-[12px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="h-7 px-3 rounded-md text-[12px] font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Sorting & Filtering helpers ─────────────────────────────────────────────
 

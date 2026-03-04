@@ -17,10 +17,12 @@ import {
 } from "@/components/ui/command";
 import { useVaultStore } from "@/stores/useVaultStore";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const {
     entries,
     activeNote,
@@ -54,11 +56,11 @@ export function CommandPalette() {
         e.preventDefault();
         setSettingsOpen(true);
       }
-      // Cmd+D for delete note
+      // Cmd+D for delete note — show confirmation
       if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
         e.preventDefault();
         if (activeNote) {
-          deleteEntry(activeNote.path);
+          setIsDeleteOpen(true);
         }
       }
     };
@@ -77,7 +79,7 @@ export function CommandPalette() {
           break;
         case "delete-note":
           if (activeNote) {
-            deleteEntry(activeNote.path);
+            setIsDeleteOpen(true);
           }
           break;
         case "settings":
@@ -192,6 +194,18 @@ export function CommandPalette() {
       </CommandDialog>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {activeNote && (
+        <DeleteConfirmDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          name={activeNote.title}
+          onConfirm={() => {
+            deleteEntry(activeNote.path);
+            setIsDeleteOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }
