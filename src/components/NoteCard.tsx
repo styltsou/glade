@@ -98,7 +98,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       </div>
 
       {/* Title */}
-      <span className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 pr-8">
+      <span className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 pr-2">
         {card.title}
       </span>
 
