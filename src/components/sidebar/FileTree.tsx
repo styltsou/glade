@@ -84,7 +84,7 @@ export function FileTree() {
   return (
     <div className="flex-1 overflow-auto px-2 py-1">
       {!isLoading && sortedEntries.length > 0 && (
-        <div className="flex items-center justify-between pb-1.5">
+        <div className="flex items-center justify-between pb-1.5 px-2">
           <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
             Notes ({countNotes(entries)})
           </span>

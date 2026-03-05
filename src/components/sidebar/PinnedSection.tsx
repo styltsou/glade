@@ -25,7 +25,7 @@ export function PinnedSection() {
 
   return (
     <div className="px-2 py-1 shrink-0">
-      <div className="pb-1.5 flex items-center">
+      <div className="pb-1.5 px-2 flex items-center">
         <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
           Pinned ({pinnedNotes.length})
         </span>
