@@ -161,7 +161,7 @@ export function SearchResultsList() {
               {isPinned && (
                 <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
               )}
-              <span className="truncate flex-1">
+              <span className="truncate flex-1 pr-1">
                 <Highlight text={note.title} query={sidebarQuery} />
               </span>
             </button>
@@ -269,7 +269,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
             ) : (
               <Folder className="h-3.5 w-3.5 shrink-0" />
             )}
-            <span className="truncate pr-6">{entry.name}</span>
+            <span className="truncate pr-1">{entry.name}</span>
           </button>
 
           <DropdownMenu onOpenChange={setMenuOpen}>
@@ -319,7 +319,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
             : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
         }`}
       >
-        <span className="truncate pr-6">{entry.name}</span>
+        <span className="truncate pr-1">{entry.name}</span>
       </button>
 
       <DropdownMenu onOpenChange={setMenuOpen}>

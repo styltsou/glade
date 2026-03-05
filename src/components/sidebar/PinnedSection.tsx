@@ -74,7 +74,7 @@ function PinnedItem({
             : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
         }`}
       >
-        <span className="truncate pr-6">{name}</span>
+        <span className="truncate pr-1">{name}</span>
       </button>
 
       <DropdownMenu onOpenChange={setMenuOpen}>
