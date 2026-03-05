@@ -162,7 +162,14 @@ export function SearchResultsList() {
                   : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
             >
-              <div className="flex flex-col min-w-0 flex-1 pr-1">
+                {folderPath && (
+                  <div className="flex items-center gap-1 mb-0.5 opacity-60">
+                    <Folder className="h-2.5 w-2.5 shrink-0" />
+                    <span className="text-[10px] font-normal truncate">
+                      {folderPath}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5">
                   {isPinned && (
                     <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
@@ -171,11 +178,6 @@ export function SearchResultsList() {
                     <Highlight text={note.title} query={sidebarQuery} />
                   </span>
                 </div>
-                {folderPath && (
-                  <span className="text-[10px] text-muted-foreground/50 font-normal truncate pl-0">
-                    {folderPath}
-                  </span>
-                )}
               </div>
             </button>
 
