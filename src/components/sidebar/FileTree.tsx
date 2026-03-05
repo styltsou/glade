@@ -115,7 +115,7 @@ export function FileTree() {
       ) : (
         <div className="space-y-0.5">
           {sortedEntries.map((entry) => (
-            <FileTreeNode key={entry.path} entry={entry} depth={0} />
+            <FileTreeNode key={entry.path} entry={entry} />
           ))}
         </div>
       )}
@@ -239,7 +239,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 
 // ─── FileTreeNode (recursive, reads from stores) ──────────────────────────────
 
-function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number }) {
+function FileTreeNode({ entry }: { entry: VaultEntry }) {
   const { activeNote, selectNote, duplicateNote } = useVaultStore();
   const { pinNote } = useHomeStore();
   const { sort } = useSidebarStore();
@@ -260,10 +260,9 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
             onClick={() => setExpanded((e) => !e)}
             className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
               menuOpen
-                ? "text-foreground"
-                : "text-foreground hover:text-foreground"
+                ? "bg-sidebar-accent text-foreground"
+                : "text-foreground hover:bg-sidebar-accent hover:text-foreground"
             }`}
-            style={{ paddingLeft: `${8 + depth * 14}px` }}
           >
             {expanded ? (
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
@@ -291,17 +290,17 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
           </DropdownMenu>
         </div>
 
-        {/* Children rendered outside the group so hovering them doesn't trigger folder hover */}
+        {/* Children rendered inside a margin-left container which doubles as the indent line base */}
         {expanded && (
-          <div className="relative">
-            {/* Indent guide line drops down from the center of the parent folder icon */}
-            <div
-              className="absolute top-0 bottom-0 w-[1px] bg-border/80"
-              style={{ left: `${14.5 + depth * 14}px` }}
-            />
-            {children.map((child) => (
-              <FileTreeNode key={child.path} entry={child} depth={depth + 1} />
-            ))}
+          <div className="ml-3.5 pl-2 relative">
+            {/* Indent guide line — absolutely positioned to not take space, drawn down the left edge */}
+            <div className="absolute top-0 bottom-0 left-0 w-[1px] bg-border/80" />
+            
+            <div className="flex flex-col gap-0.5">
+              {children.map((child) => (
+                <FileTreeNode key={child.path} entry={child} />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -314,12 +313,11 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
     <div className="relative group/note">
       <button
         onClick={() => selectNote(entry.path)}
-        className={`flex items-center w-full rounded-md py-1.5 text-[13px] text-left transition-colors cursor-pointer font-medium ${
+        className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
           isActive || menuOpen
             ? "bg-sidebar-accent text-foreground"
             : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
         }`}
-        style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: "8px" }}
       >
         <span className="truncate pr-6">{entry.name}</span>
       </button>
