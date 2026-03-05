@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronRight as ChevronRightIcon } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { useVaultStore } from "@/stores/useVaultStore";
 import { useHomeStore } from "@/stores/useHomeStore";
 import { useSidebarStore } from "@/stores/useSidebarStore";
@@ -51,7 +51,7 @@ export function Sidebar() {
       <div className="w-[260px] flex flex-col h-full">
         <SidebarHeader />
         <SidebarSearch onSearchChange={setIsSearchActive} />
-        <PinnedSection />
+        {!isSearchActive && <PinnedSection />}
         <div className="flex-1 overflow-hidden flex flex-col">
           {isSearchActive ? <SearchResultsList /> : <FileTree />}
         </div>
@@ -70,10 +70,10 @@ export function SidebarCollapseToggle() {
   return (
     <button
       onClick={toggleCollapsed}
-      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all"
+      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
       title="Expand sidebar (Ctrl+B)"
     >
-      <ChevronRightIcon className="h-3.5 w-3.5" />
+      <PanelLeft className="h-4 w-4" />
     </button>
   );
 }

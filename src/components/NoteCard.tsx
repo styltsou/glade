@@ -47,7 +47,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
       className="
         group relative flex flex-col gap-2 text-left w-full
-        rounded-xl p-3.5 cursor-pointer
+        rounded-lg p-3.5 cursor-pointer
         bg-card border border-border
         hover:border-foreground/20 hover:bg-muted/50
         hover:shadow-md
@@ -115,7 +115,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           {tags.map((tag) => (
             <span
               key={tag}
-              className="text-[12px] font-medium text-muted-foreground bg-muted rounded-md px-1.5 py-0.5 leading-none truncate"
+              className="text-[10px] font-medium text-primary/80 bg-primary/5 border border-primary/20 rounded-sm px-2 py-0.5 leading-none truncate tracking-tight"
             >
               {tag}
             </span>

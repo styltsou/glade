@@ -270,6 +270,226 @@
   --syntax-number:          210 40% 62%;
 }
 
+/* ── Everforest Theme ─────────────────────────────────────── */
+
+[data-theme="everforest"][data-mode="light"] {
+  --background:             44 86% 94%;
+  --foreground:             202 11% 40%;
+
+  --card:                   51 55% 90%;
+  --card-foreground:        202 11% 40%;
+
+  --popover:                44 86% 94%;
+  --popover-foreground:     202 11% 40%;
+
+  --primary:                67 99% 32%;
+  --primary-foreground:     0 0% 100%;
+
+  --secondary:              52 46% 88%;
+  --secondary-foreground:   202 11% 40%;
+
+  --muted:                  52 46% 88%;
+  --muted-foreground:       116 7% 55%;
+
+  --accent:                 51 34% 85%;
+  --accent-foreground:      202 11% 40%;
+
+  --destructive:            1 92% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 51 29% 83%;
+  --input:                  51 29% 83%;
+  --ring:                   67 99% 32%;
+
+  --radius:                 0.5rem;
+
+  --chart-1:                67 99% 32%;
+  --chart-2:                25 91% 55%;
+  --chart-3:                201 55% 50%;
+  --chart-4:                43 100% 44%;
+  --chart-5:                319 65% 64%;
+
+  --sidebar:                44 70% 93%;
+  --sidebar-foreground:     202 11% 40%;
+  --sidebar-primary:        67 99% 32%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent:         51 34% 85%;
+  --sidebar-accent-foreground: 202 11% 40%;
+  --sidebar-border:         51 29% 83%;
+  --sidebar-ring:           67 99% 32%;
+
+  --editor-bg:              44 86% 94%;
+  --editor-text:            202 11% 40%;
+  --syntax-keyword:         25 91% 55%;
+  --syntax-string:          67 99% 32%;
+  --syntax-comment:         116 7% 55%;
+  --syntax-number:          319 65% 64%;
+}
+
+[data-theme="everforest"][data-mode="dark"] {
+  --background:             206 13% 20%;
+  --foreground:             41 32% 75%;
+
+  --card:                   199 13% 24%;
+  --card-foreground:        41 32% 75%;
+
+  --popover:                199 13% 24%;
+  --popover-foreground:     41 32% 75%;
+
+  --primary:                83 34% 63%;
+  --primary-foreground:     0 0% 10%;
+
+  --secondary:              199 12% 27%;
+  --secondary-foreground:   41 32% 75%;
+
+  --muted:                  199 12% 27%;
+  --muted-foreground:       111 5% 49%;
+
+  --accent:                 201 11% 31%;
+  --accent-foreground:      41 32% 75%;
+
+  --destructive:            359 68% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 200 12% 25%;
+  --input:                  200 12% 25%;
+  --ring:                   83 34% 63%;
+
+  --radius:                 0.5rem;
+
+  --chart-1:                83 34% 63%;
+  --chart-2:                19 69% 68%;
+  --chart-3:                172 31% 62%;
+  --chart-4:                40 56% 68%;
+  --chart-5:                331 43% 72%;
+
+  --sidebar:                206 13% 21%;
+  --sidebar-foreground:     41 32% 75%;
+  --sidebar-primary:        83 34% 63%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent:         201 11% 31%;
+  --sidebar-accent-foreground: 41 32% 75%;
+  --sidebar-border:         200 12% 25%;
+  --sidebar-ring:           83 34% 63%;
+
+  --editor-bg:              206 13% 20%;
+  --editor-text:            41 32% 75%;
+  --syntax-keyword:         19 69% 68%;
+  --syntax-string:          83 34% 63%;
+  --syntax-comment:         111 5% 49%;
+  --syntax-number:          331 43% 72%;
+}
+
+/* ── Rosé Pine Theme ──────────────────────────────────────── */
+
+[data-theme="rose-pine"][data-mode="light"] {
+  --background:             33 57% 95%;
+  --foreground:             248 19% 40%;
+
+  --card:                   35 100% 98%;
+  --card-foreground:        248 19% 40%;
+
+  --popover:                29 40% 92%;
+  --popover-foreground:     248 19% 40%;
+
+  --primary:                268 21% 57%;
+  --primary-foreground:     0 0% 100%;
+
+  --secondary:              24 35% 93%;
+  --secondary-foreground:   248 19% 40%;
+
+  --muted:                  24 35% 93%;
+  --muted-foreground:       257 9% 61%;
+
+  --accent:                 10 9% 86%;
+  --accent-foreground:      248 19% 40%;
+
+  --destructive:            343 35% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 10 9% 86%;
+  --input:                  10 9% 86%;
+  --ring:                   268 21% 57%;
+
+  --radius:                 0.5rem;
+
+  --chart-1:                343 35% 55%;
+  --chart-2:                35 81% 56%;
+  --chart-3:                268 21% 57%;
+  --chart-4:                189 30% 48%;
+  --chart-5:                197 53% 34%;
+
+  --sidebar:                33 50% 94%;
+  --sidebar-foreground:     248 19% 40%;
+  --sidebar-primary:        268 21% 57%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent:         10 9% 86%;
+  --sidebar-accent-foreground: 248 19% 40%;
+  --sidebar-border:         10 9% 86%;
+  --sidebar-ring:           268 21% 57%;
+
+  --editor-bg:              33 57% 95%;
+  --editor-text:            248 19% 40%;
+  --syntax-keyword:         268 21% 57%;
+  --syntax-string:          35 81% 56%;
+  --syntax-comment:         257 9% 61%;
+  --syntax-number:          189 30% 48%;
+}
+
+[data-theme="rose-pine"][data-mode="dark"] {
+  --background:             249 22% 12%;
+  --foreground:             245 50% 91%;
+
+  --card:                   247 23% 15%;
+  --card-foreground:        245 50% 91%;
+
+  --popover:                248 25% 18%;
+  --popover-foreground:     245 50% 91%;
+
+  --primary:                267 57% 78%;
+  --primary-foreground:     249 22% 12%;
+
+  --secondary:              248 25% 18%;
+  --secondary-foreground:   245 50% 91%;
+
+  --muted:                  248 25% 18%;
+  --muted-foreground:       248 12% 47%;
+
+  --accent:                 249 15% 28%;
+  --accent-foreground:      245 50% 91%;
+
+  --destructive:            343 76% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 249 15% 28%;
+  --input:                  249 15% 28%;
+  --ring:                   267 57% 78%;
+
+  --radius:                 0.5rem;
+
+  --chart-1:                343 76% 68%;
+  --chart-2:                35 88% 72%;
+  --chart-3:                267 57% 78%;
+  --chart-4:                189 43% 73%;
+  --chart-5:                197 49% 38%;
+
+  --sidebar:                249 22% 13%;
+  --sidebar-foreground:     245 50% 91%;
+  --sidebar-primary:        267 57% 78%;
+  --sidebar-primary-foreground: 249 22% 12%;
+  --sidebar-accent:         249 15% 28%;
+  --sidebar-accent-foreground: 245 50% 91%;
+  --sidebar-border:         249 15% 28%;
+  --sidebar-ring:           267 57% 78%;
+
+  --editor-bg:              249 22% 12%;
+  --editor-text:            245 50% 91%;
+  --syntax-keyword:         267 57% 78%;
+  --syntax-string:          35 88% 72%;
+  --syntax-comment:         248 12% 47%;
+  --syntax-number:          189 43% 73%;
+}
+
 /* ── Base Layer ─────────────────────────────────────────── */
 
 @layer base {
@@ -521,6 +741,62 @@ button, a, input, [role="button"] {
   color: hsl(var(--foreground));
 }
 
+/* Tables */
+.tiptap-editor table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.tiptap-editor table td,
+.tiptap-editor table th {
+  min-width: 1em;
+  border: 1px solid hsl(var(--border) / 80%);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.tiptap-editor table th {
+  font-weight: 600;
+  text-align: left;
+  background-color: hsl(var(--muted) / 50%);
+}
+
+.tiptap-editor table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: hsl(var(--primary) / 10%);
+  pointer-events: none;
+}
+
+.tiptap-editor table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.tiptap-editor .tableWrapper {
+  overflow-x: auto;
+}
+
+.tiptap-editor.resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}
+
 /* Placeholder */
 .tiptap-editor p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -538,4 +814,31 @@ button, a, input, [role="button"] {
 
 .tiptap.ProseMirror:focus {
   outline: none;
+}
+.mention {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mention:hover {
+  background-color: hsla(var(--accent), 0.8);
+}
+
+.tags-scroll ::-webkit-scrollbar {
+  width: 4px;
+}
+
+.tags-scroll ::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 2px;
+  opacity: 0.2;
+}
+
+.tags-scroll ::-webkit-scrollbar-thumb:hover {
+  background: var(--foreground);
 }

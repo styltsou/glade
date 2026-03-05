@@ -5,8 +5,14 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
+import Mention from "@tiptap/extension-mention";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
 import { useEffect } from "react";
 import { useAutosave } from "@/hooks/useAutosave";
+import suggestion from "./editor/suggestion";
 
 interface TipTapEditorProps {
   content: string;
@@ -40,6 +46,21 @@ export function TipTapEditor({ content, editable = true }: TipTapEditorProps) {
       Image.configure({
         inline: false,
       }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention",
+        },
+        suggestion,
+      }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: "editor-table",
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content: content || "",
     editable,

@@ -2,6 +2,25 @@ import { useEffect } from "react";
 import { useHomeStore } from "@/stores/useHomeStore";
 import { useVaultStore } from "@/stores/useVaultStore";
 import { NoteCard } from "@/components/NoteCard";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { NoteCard as NoteCardType } from "@/types";
+
+function NoteCardSkeleton() {
+  return (
+    <div className="flex flex-col gap-2 p-3.5 rounded-lg border border-border bg-card/50">
+      <Skeleton className="h-4 w-3/4 mb-1" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-3 w-5/6" />
+      <div className="flex justify-between mt-auto pt-3">
+        <div className="flex gap-1">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-10" />
+        </div>
+        <Skeleton className="h-3 w-12" />
+      </div>
+    </div>
+  );
+}
 
 export function HomeView() {
   const { pinnedNotes, recentNotes, isLoading, loadAll } = useHomeStore();
@@ -14,16 +33,24 @@ export function HomeView() {
     }
   }, [activeNote, loadAll]);
 
-  if (isLoading) {
+  const hasPinned = pinnedNotes.length > 0;
+  const hasRecents = recentNotes.length > 0;
+  const hasData = hasPinned || hasRecents;
+
+  if (isLoading && !hasData) {
     return (
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-[13px]">
-        Loading…
+      <div className="flex-1 overflow-auto px-8 py-10 max-w-5xl mx-auto w-full">
+        <section className="mb-10">
+          <Skeleton className="h-3 w-16 mb-4" />
+          <div className="grid grid-cols-3 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <NoteCardSkeleton key={i} />
+            ))}
+          </div>
+        </section>
       </div>
     );
   }
-
-  const hasPinned = pinnedNotes.length > 0;
-  const hasRecents = recentNotes.length > 0;
 
   return (
     <div className="flex-1 overflow-auto px-8 py-10 max-w-5xl mx-auto w-full">
@@ -32,7 +59,7 @@ export function HomeView() {
         <section className="mb-10">
           <SectionHeader label="Pinned" />
           <div className="grid grid-cols-3 gap-3">
-            {pinnedNotes.map((card) => (
+            {pinnedNotes.map((card: NoteCardType) => (
               <NoteCard key={card.path} card={card} showPin={false} />
             ))}
           </div>
@@ -44,7 +71,7 @@ export function HomeView() {
         <section className="mb-10">
           <SectionHeader label="Recently Opened" />
           <div className="grid grid-cols-3 gap-3">
-            {recentNotes.map((card) => (
+            {recentNotes.map((card: NoteCardType) => (
               <NoteCard key={card.path} card={card} />
             ))}
           </div>

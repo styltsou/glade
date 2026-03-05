@@ -76,6 +76,7 @@ pub struct RecentEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SidebarState {
     pub collapsed: bool,
+    pub tags_collapsed: bool,
     /// One of: "name-asc", "name-desc", "modified"
     pub sort: String,
 }
@@ -84,6 +85,7 @@ impl Default for SidebarState {
     fn default() -> Self {
         Self {
             collapsed: false,
+            tags_collapsed: true,
             sort: "name-asc".to_string(),
         }
     }

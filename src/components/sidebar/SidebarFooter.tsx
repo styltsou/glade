@@ -1,36 +1,26 @@
-import {
-  Type as LetterCaseCapitalizeIcon,
-  Clock as ClockIcon,
-} from "lucide-react";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 
 const SORT_LABELS = {
   "name-asc": "A → Z",
   "name-desc": "Z → A",
-  modified: "Recent",
+  modified: "Most Recent",
 } as const;
 
 export function SidebarFooter() {
   const { sort, cycleSort } = useSidebarStore();
 
   return (
-    <div className="shrink-0 border-t border-border px-2 py-2">
-      <div className="flex items-center justify-between w-full pr-0.5">
-        <button
-          onClick={cycleSort}
-          className="flex items-center gap-2 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground transition-colors cursor-default"
-          title="Cycle sort order"
-        >
-          {sort === "modified" ? (
-            <ClockIcon className="h-3 w-3" />
-          ) : (
-            <LetterCaseCapitalizeIcon className="h-3 w-3" />
-          )}
-          <span className="pt-[0.5px] uppercase tracking-wider text-[10px] font-bold">
-            {SORT_LABELS[sort]}
-          </span>
-        </button>
-      </div>
+    <div className="shrink-0 border-t border-border bg-sidebar/50 mt-auto">
+      <button
+        onClick={cycleSort}
+        className="flex items-center w-full gap-2 px-2 py-2 text-[10px] font-bold text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent/50 transition-all group uppercase tracking-widest cursor-pointer"
+        title="Cycle sort order"
+      >
+        <span className="text-muted-foreground/50">Sort:</span>
+        <span className="pt-[0.5px]">
+          {SORT_LABELS[sort]}
+        </span>
+      </button>
     </div>
   );
 }

@@ -26,7 +26,7 @@ export function PinnedSection() {
   return (
     <div className="px-2 py-1 shrink-0">
       <div className="pb-1.5 flex items-center">
-        <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest pt-[1px]">
+        <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
           Pinned ({pinnedNotes.length})
         </span>
       </div>
@@ -68,7 +68,7 @@ function PinnedItem({
     <div className="relative group">
       <button
         onClick={onClick}
-        className={`flex items-center w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-default font-medium ${
+        className={`flex items-center w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
           active || menuOpen
             ? "bg-sidebar-accent text-foreground"
             : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"

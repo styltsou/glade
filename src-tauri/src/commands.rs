@@ -166,33 +166,34 @@ pub async fn create_folder(path: String) -> Result<(), AppError> {
 
 /// Search notes by query string (case-insensitive, matches title and body).
 #[tauri::command]
-pub async fn search_notes(query: String) -> Result<Vec<NoteData>, AppError> {
+pub async fn search_notes(query: String, title_only: Option<bool>) -> Result<Vec<NoteData>, AppError> {
     let vault_path = vault::get_vault_path()?;
     let query_lower = query.to_lowercase();
-    let mut results = Vec::new();
+    let terms: Vec<&str> = query_lower.split_whitespace().collect();
+    
+    if terms.is_empty() {
+        return Ok(Vec::new());
+    }
 
-    collect_notes_recursive(&vault_path, &vault_path, &query_lower, &mut results)?;
+    let mut scored_results = Vec::new();
+    collect_notes_recursive(&vault_path, &vault_path, &terms, &query_lower, title_only.unwrap_or(false), &mut scored_results)?;
 
-    // Sort by relevance: title matches first, then by modified date
-    results.sort_by(|a, b| {
-        let a_title_match = a.title.to_lowercase().contains(&query_lower);
-        let b_title_match = b.title.to_lowercase().contains(&query_lower);
-        match (a_title_match, b_title_match) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.updated.cmp(&a.updated),
-        }
+    // Sort by score descending, then by modified date
+    scored_results.sort_by(|(a_score, a_note), (b_score, b_note)| {
+        b_score.cmp(a_score).then_with(|| b_note.updated.cmp(&a_note.updated))
     });
 
-    Ok(results)
+    Ok(scored_results.into_iter().map(|(_, note)| note).collect())
 }
 
 /// Recursively collect notes matching a search query.
 fn collect_notes_recursive(
     root: &std::path::Path,
     dir: &std::path::Path,
-    query: &str,
-    results: &mut Vec<NoteData>,
+    terms: &[&str],
+    full_query: &str,
+    title_only: bool,
+    results: &mut Vec<(i32, NoteData)>,
 ) -> Result<(), AppError> {
     for entry in fs::read_dir(dir)? {
         let entry = entry?;
@@ -204,7 +205,7 @@ fn collect_notes_recursive(
         }
 
         if path.is_dir() {
-            collect_notes_recursive(root, &path, query, results)?;
+            collect_notes_recursive(root, &path, terms, full_query, title_only, results)?;
         } else if name.ends_with(".md") {
             let content = fs::read_to_string(&path)?;
             let (meta, body) = vault::parse_frontmatter(&content);
@@ -215,32 +216,126 @@ fn collect_notes_recursive(
                 .unwrap_or_default();
 
             let title = meta.title.filter(|t| !t.is_empty()).unwrap_or_else(|| filename.clone());
+            let title_lower = title.to_lowercase();
+            let body_lower = body.to_lowercase();
+            let tags_lower: Vec<String> = meta.tags.iter().map(|t| t.to_lowercase()).collect();
 
-            // Check if query matches title, body, or tags
-            let matches = title.to_lowercase().contains(query)
-                || body.to_lowercase().contains(query)
-                || meta.tags.iter().any(|t| t.to_lowercase().contains(query));
+            // All terms must match somewhere in title, body, or tags
+            let mut all_terms_match = true;
+            for term in terms {
+                let term_matches = if title_only {
+                    title_lower.contains(term)
+                } else {
+                    title_lower.contains(term)
+                        || body_lower.contains(term)
+                        || tags_lower.iter().any(|t| t.contains(term))
+                };
+                
+                if !term_matches {
+                    all_terms_match = false;
+                    break;
+                }
+            }
 
-            if matches {
+            if all_terms_match {
+                let mut score = 0;
+
+                // Title Matching Tiers
+                if title_lower == full_query {
+                    score += 100; // Exact match
+                } else if title_lower.starts_with(full_query) {
+                    score += 80;
+                } else if title_lower.contains(full_query) {
+                    score += 60;
+                } else {
+                    // Check if all terms appear in title in any order
+                    let all_in_title = terms.iter().all(|t| title_lower.contains(t));
+                    if all_in_title {
+                        score += 50;
+                    }
+                }
+
+                // Tag Matching Tiers
+                if !title_only {
+                    for tag in &tags_lower {
+                        if tag == full_query {
+                            score += 40;
+                        } else if tag.contains(full_query) {
+                            score += 30;
+                        }
+                    }
+                }
+
+                // Body Matching
+                let mut preview = vault::make_preview(&body);
+                if !title_only {
+                    if body_lower.contains(full_query) {
+                        score += 20;
+                        preview = make_context_preview(&body, full_query);
+                    } else {
+                        // Check individual terms
+                        let mut first_match = None;
+                        for term in terms {
+                            if body_lower.contains(term) {
+                                score += 5;
+                                if first_match.is_none() {
+                                    first_match = Some(*term);
+                                }
+                            }
+                        }
+                        if let Some(m) = first_match {
+                            preview = make_context_preview(&body, m);
+                        }
+                    }
+                }
+
                 let relative = path
                     .strip_prefix(root)
                     .unwrap_or(&path)
                     .to_string_lossy()
                     .to_string();
 
-                results.push(NoteData {
+                results.push((score, NoteData {
                     path: relative,
                     title,
                     tags: meta.tags,
                     created: meta.created,
                     updated: meta.updated,
-                    preview: vault::make_preview(&body),
+                    preview,
                     body,
-                });
+                }));
             }
         }
     }
     Ok(())
+}
+
+fn make_context_preview(body: &str, query: &str) -> String {
+    let lower = body.to_lowercase();
+    let query_lower = query.to_lowercase();
+    
+    let pos = match lower.find(&query_lower) {
+        Some(p) => p,
+        None => return vault::make_preview(body),
+    };
+
+    let start = if pos > 40 { pos - 40 } else { 0 };
+    let end = std::cmp::min(body.len(), pos + 80);
+    
+    let mut snippet = body[start..end].replace('\n', " ").trim().to_string();
+    
+    if start > 0 {
+        snippet = format!("…{}", snippet.trim_start());
+    }
+    if end < body.len() {
+        snippet = format!("{}…", snippet.trim_end());
+    }
+    
+    if snippet.len() > 140 {
+        snippet = format!("{}…", &snippet[..137]);
+    }
+    
+    snippet
 }
 
 /// List all unique tags across all notes with their counts.
@@ -500,6 +595,212 @@ pub async fn save_sidebar_state(state: SidebarState) -> Result<(), AppError> {
     let mut cfg = config::load_config()?;
     cfg.sidebar = state;
     config::save_config(&cfg)?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Export commands
+// ---------------------------------------------------------------------------
+
+/// Read the raw markdown content of a note (full file including frontmatter).
+#[tauri::command]
+pub async fn read_note_raw(path: String) -> Result<String, AppError> {
+    let vault_path = vault::get_vault_path()?;
+    let full_path = vault_path.join(&path);
+
+    if !full_path.exists() {
+        return Err(AppError::NotFound(format!("Note not found: {}", path)));
+    }
+
+    let content = fs::read_to_string(&full_path)?;
+    Ok(content)
+}
+
+/// Export a note as a markdown file to the given destination path.
+#[tauri::command]
+pub async fn export_markdown(
+    source_path: String,
+    dest_path: String,
+    strip_frontmatter: bool,
+) -> Result<(), AppError> {
+    let vault_path = vault::get_vault_path()?;
+    let full_source = vault_path.join(&source_path);
+
+    if !full_source.exists() {
+        return Err(AppError::NotFound(format!(
+            "Note not found: {}",
+            source_path
+        )));
+    }
+
+    let content = fs::read_to_string(&full_source)?;
+
+    let output = if strip_frontmatter {
+        let (_, body) = vault::parse_frontmatter(&content);
+        body
+    } else {
+        content
+    };
+
+    fs::write(&dest_path, output)?;
+    Ok(())
+}
+
+/// Export a note as PDF by converting markdown to styled HTML,
+/// loading it in a hidden webview, and triggering print-to-PDF.
+#[tauri::command]
+pub async fn export_pdf(
+    app: tauri::AppHandle,
+    source_path: String,
+    dest_path: String,
+    strip_frontmatter: bool,
+) -> Result<(), AppError> {
+    use pulldown_cmark::{html, Options, Parser};
+    use tauri::{WebviewUrl, WebviewWindowBuilder};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    let vault_path = vault::get_vault_path()?;
+    let full_source = vault_path.join(&source_path);
+
+    if !full_source.exists() {
+        return Err(AppError::NotFound(format!(
+            "Note not found: {}",
+            source_path
+        )));
+    }
+
+    let content = fs::read_to_string(&full_source)?;
+
+    let markdown = if strip_frontmatter {
+        let (_, body) = vault::parse_frontmatter(&content);
+        body
+    } else {
+        content
+    };
+
+    // Parse markdown to HTML
+    let options = Options::all();
+    let parser = Parser::new_ext(&markdown, options);
+    let mut html_body = String::new();
+    html::push_html(&mut html_body, parser);
+
+    // Wrap in a styled HTML document with auto-print
+    let styled_html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@page {{
+  margin: 1in;
+  size: A4;
+}}
+@media print {{
+  pre, code {{ page-break-inside: avoid; }}
+  h1, h2, h3 {{ page-break-after: avoid; }}
+}}
+body {{
+  font-family: Georgia, "Times New Roman", serif;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 2rem;
+  color: #1a1a1a;
+  line-height: 1.7;
+  font-size: 14px;
+}}
+h1 {{ font-size: 2em; margin-top: 1.5em; margin-bottom: 0.5em; }}
+h2 {{ font-size: 1.5em; margin-top: 1.3em; margin-bottom: 0.4em; }}
+h3 {{ font-size: 1.25em; margin-top: 1.2em; margin-bottom: 0.3em; }}
+h4 {{ font-size: 1.1em; margin-top: 1em; margin-bottom: 0.3em; }}
+p {{ margin: 0.8em 0; }}
+pre {{
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+  font-size: 13px;
+}}
+code {{
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.9em;
+}}
+pre code {{
+  background: none;
+  padding: 0;
+}}
+code:not(pre code) {{
+  background: #f0f0f0;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}}
+blockquote {{
+  border-left: 3px solid #ddd;
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  color: #555;
+}}
+ul, ol {{ padding-left: 1.5em; }}
+li {{ margin: 0.3em 0; }}
+hr {{
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 2em 0;
+}}
+a {{ color: #2563eb; text-decoration: none; }}
+img {{ max-width: 100%; height: auto; }}
+table {{
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}}
+th, td {{
+  border: 1px solid #ddd;
+  padding: 0.5em 0.75em;
+  text-align: left;
+}}
+th {{ background: #f5f5f5; font-weight: 600; }}
+</style>
+</head>
+<body>
+{html_body}
+</body>
+</html>"#
+    );
+
+    // Create a unique window label
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let label = format!("export-pdf-{}", timestamp);
+
+    use base64::Engine;
+    use base64::prelude::BASE64_STANDARD;
+    let b64 = BASE64_STANDARD.encode(styled_html.as_bytes());
+    let data_url = format!("data:text/html;base64,{}", b64);
+    let url = tauri::Url::parse(&data_url)
+        .map_err(|e| AppError::Internal(format!("Failed to parse data URL: {}", e)))?;
+
+    // Create hidden window with the HTML content
+    let window = WebviewWindowBuilder::new(
+        &app,
+        &label,
+        WebviewUrl::External(url)
+    )
+    .visible(false)
+    .build()
+    .map_err(|e| AppError::Internal(format!("Failed to create print window: {}", e)))?;
+
+    // Wait briefly for content to render, then print to PDF
+    // Note: window.print() in Tauri (via wry) delegates to the platform's print machinery.
+    window.eval(&format!(r#"
+        setTimeout(() => {{
+            window.print({{
+                destination: "{dest_path}"
+            }});
+        }}, 500);
+    "#)).map_err(|e| AppError::Internal(format!("Failed to execute print script: {}", e)))?;
+
     Ok(())
 }
 

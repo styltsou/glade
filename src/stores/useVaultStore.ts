@@ -18,6 +18,8 @@ interface VaultState {
   activeTagFilters: string[];
   /** Search results */
   searchResults: NoteData[];
+  /** Current sidebar specific search query */
+  sidebarQuery: string;
 
   /** Load vault contents from disk */
   loadVault: () => Promise<void>;
@@ -42,13 +44,15 @@ interface VaultState {
   /** Clear all tag filters */
   clearTagFilters: () => void;
   /** Search notes by query */
-  searchNotes: (query: string) => Promise<void>;
+  searchNotes: (query: string, titleOnly?: boolean) => Promise<void>;
   /** Clear search results */
   clearSearch: () => void;
   /** Update tags for the active note */
   updateNoteTags: (tags: string[]) => Promise<void>;
   /** Clear active note to go to home view */
   goHome: () => void;
+  /** Set sidebar specific search query */
+  setSidebarQuery: (query: string) => void;
 }
 
 export const useVaultStore = create<VaultState>((set, get) => ({
@@ -59,6 +63,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   tags: [],
   activeTagFilters: [],
   searchResults: [],
+  sidebarQuery: "",
 
   loadVault: async () => {
     set({ isLoading: true, error: null });
@@ -173,13 +178,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set({ activeTagFilters: [] });
   },
 
-  searchNotes: async (query: string) => {
+  searchNotes: async (query: string, titleOnly: boolean = false) => {
     if (!query.trim()) {
       set({ searchResults: [] });
       return;
     }
     try {
-      const results = await invoke<NoteData[]>("search_notes", { query });
+      const results = await invoke<NoteData[]>("search_notes", { query, titleOnly });
       set({ searchResults: results });
     } catch (e) {
       set({ error: String(e) });
@@ -208,5 +213,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
   goHome: () => {
     set({ activeNote: null });
+  },
+  setSidebarQuery: (query: string) => {
+    set({ sidebarQuery: query });
   },
 }));

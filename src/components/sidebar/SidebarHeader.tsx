@@ -1,6 +1,6 @@
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { useVaultStore } from "@/stores/useVaultStore";
-import { ChevronLeft as ChevronLeftIcon } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 
 export function SidebarHeader() {
   const { toggleCollapsed } = useSidebarStore();
@@ -16,11 +16,11 @@ export function SidebarHeader() {
       </button>
       <div className="flex items-center gap-0.5">
         <button
-          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all"
+          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
           onClick={toggleCollapsed}
           title="Collapse sidebar (Ctrl+B)"
         >
-          <ChevronLeftIcon className="h-3.5 w-3.5" />
+          <PanelLeft className="h-4 w-4" />
         </button>
       </div>
     </div>

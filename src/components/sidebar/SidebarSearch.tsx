@@ -7,16 +7,17 @@ interface SidebarSearchProps {
 }
 
 export function SidebarSearch({ onSearchChange }: SidebarSearchProps) {
-  const { searchNotes } = useVaultStore();
+  const { searchNotes, setSidebarQuery } = useVaultStore();
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      searchNotes(searchQuery);
+      searchNotes(searchQuery, true);
+      setSidebarQuery(searchQuery);
       onSearchChange?.(searchQuery.trim().length > 0);
     }, 200);
     return () => clearTimeout(timer);
-  }, [searchQuery, searchNotes, onSearchChange]);
+  }, [searchQuery, searchNotes, setSidebarQuery, onSearchChange]);
 
   return (
     <div className="px-2 py-2 shrink-0">
@@ -27,7 +28,7 @@ export function SidebarSearch({ onSearchChange }: SidebarSearchProps) {
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-8 pl-8 pr-3 text-[13px] bg-sidebar-accent/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring transition-all"
+          className="w-full h-8 pl-8 pr-3 text-[13px] bg-sidebar-accent/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
         />
       </div>
     </div>

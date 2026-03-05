@@ -6,7 +6,8 @@ import type { VaultEntry } from "@/types";
 import type { SortMode } from "@/types";
 import { useState } from "react";
 import {
-  ChevronDown as ChevronDownIcon,
+  Folder,
+  FolderOpen,
   MoreHorizontal,
   Pencil as PencilIcon,
   Copy as CopyIcon,
@@ -84,11 +85,11 @@ export function FileTree() {
     <div className="flex-1 overflow-auto px-2 py-1">
       {!isLoading && sortedEntries.length > 0 && (
         <div className="flex items-center justify-between pb-1.5">
-          <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-widest pt-[1px]">
+          <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
             Notes ({countNotes(entries)})
           </span>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
             onClick={() => createNote()}
             title="New note"
           >
@@ -125,9 +126,12 @@ export function FileTree() {
 // ─── Search results panel (used by Sidebar when search is active) ─────────────
 
 export function SearchResultsList() {
-  const { searchResults, activeNote, selectNote } = useVaultStore();
+  const { searchResults, activeNote, selectNote, sidebarQuery, duplicateNote } = useVaultStore();
+  const { pinnedNotes, pinNote } = useHomeStore();
+  const { openRename, openDelete } = useDialogStore();
+  const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null);
 
-  if (searchResults.length === 0) {
+  if (searchResults.length === 0 && sidebarQuery.trim().length > 0) {
     return (
       <div className="px-2.5 py-8 text-center text-[12px] text-muted-foreground">
         No matching notes found
@@ -135,22 +139,101 @@ export function SearchResultsList() {
     );
   }
 
+  const pinnedPaths = new Set(pinnedNotes.map((n) => n.path));
+
   return (
-    <div className="space-y-0.5 px-2 py-1">
-      {searchResults.map((note) => (
-        <button
-          key={note.path}
-          onClick={() => selectNote(note.path)}
-          className={`group flex items-center w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-default font-medium ${
-            activeNote?.path === note.path
-              ? "bg-sidebar-accent text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-          }`}
-        >
-          <span className="truncate">{note.title}</span>
-        </button>
-      ))}
+    <div className="space-y-0.5 px-2 py-1 border-t border-border/40">
+      {searchResults.map((note) => {
+        const isPinned = pinnedPaths.has(note.path);
+        const isActive = activeNote?.path === note.path;
+        const isMenuOpen = menuOpenPath === note.path;
+
+        return (
+          <div key={note.path} className="relative group">
+            <button
+              onClick={() => selectNote(note.path)}
+              className={`flex items-center gap-2 w-full rounded-md pr-8 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
+                isActive || isMenuOpen
+                  ? "bg-sidebar-accent text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+              }`}
+            >
+              {isPinned && (
+                <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
+              )}
+              <span className="truncate flex-1">
+                <Highlight text={note.title} query={sidebarQuery} />
+              </span>
+            </button>
+
+            <DropdownMenu onOpenChange={(open) => setMenuOpenPath(open ? note.path : null)}>
+              <DropdownMenuTrigger asChild>
+                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(note.path, note.title); }}>
+                  <PencilIcon className="mr-2 h-4 w-4" />
+                  Rename
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateNote(note.path); }}>
+                  <CopyIcon className="mr-2 h-4 w-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); pinNote(note.path); }}>
+                  <DrawingPinFilledIcon className="mr-2 h-4 w-4" />
+                  {isPinned ? "Unpin note" : "Pin note"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={(e) => { e.stopPropagation(); openDelete(note.path, note.title); }}
+                >
+                  <TrashIcon className="h-4 w-4 mr-2" />
+                  Delete note
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })}
     </div>
+  );
+}
+
+function Highlight({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) return <>{text}</>;
+
+  const terms = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
+  if (terms.length === 0) return <>{text}</>;
+
+  const escapedTerms = terms.map((t) =>
+    t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  );
+  const regex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <span
+            key={i}
+            className="bg-primary/20 text-primary px-[1px] rounded-[2px] font-medium"
+          >
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </>
   );
 }
 
@@ -170,41 +253,52 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
     if (children.length === 0) return null;
 
     return (
-      <div className="relative group">
-        <button
-          onClick={() => setExpanded((e) => !e)}
-          className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-all cursor-default ${
-            menuOpen
-              ? "bg-sidebar-accent text-foreground"
-              : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
-          }`}
-          style={{ paddingLeft: `${8 + depth * 14}px` }}
-        >
-          <ChevronDownIcon
-            className={`h-3 w-3 shrink-0 transition-transform ${expanded ? "" : "-rotate-90"}`}
-          />
-          <span className="truncate pr-6">{entry.name}</span>
-        </button>
+      <div>
+        {/* Header row — group scoped to just this row */}
+        <div className="relative group/folder">
+          <button
+            onClick={() => setExpanded((e) => !e)}
+            className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
+              menuOpen
+                ? "text-foreground"
+                : "text-foreground hover:text-foreground"
+            }`}
+            style={{ paddingLeft: `${8 + depth * 14}px` }}
+          >
+            {expanded ? (
+              <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <Folder className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="truncate pr-6">{entry.name}</span>
+          </button>
 
-        <DropdownMenu onOpenChange={setMenuOpen}>
-          <DropdownMenuTrigger asChild>
-            <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all">
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={(e) => { e.stopPropagation(); openDelete(entry.path, entry.name, true); }}
-            >
-              <TrashIcon className="h-4 w-4 mr-2" />
-              Delete folder
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu onOpenChange={setMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground hover:bg-sidebar-accent transition-all">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={(e) => { e.stopPropagation(); openDelete(entry.path, entry.name, true); }}
+              >
+                <TrashIcon className="h-4 w-4 mr-2" />
+                Delete folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
 
+        {/* Children rendered outside the group so hovering them doesn't trigger folder hover */}
         {expanded && (
-          <div>
+          <div className="relative">
+            {/* Indent guide line drops down from the center of the parent folder icon */}
+            <div
+              className="absolute top-0 bottom-0 w-[1px] bg-border/80"
+              style={{ left: `${14.5 + depth * 14}px` }}
+            />
             {children.map((child) => (
               <FileTreeNode key={child.path} entry={child} depth={depth + 1} />
             ))}
@@ -217,13 +311,13 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
   const isActive = activeNote?.path === entry.path;
 
   return (
-    <div className="relative group">
+    <div className="relative group/note">
       <button
         onClick={() => selectNote(entry.path)}
-        className={`flex items-center w-full rounded-md py-1.5 text-[13px] text-left transition-all cursor-default font-medium ${
+        className={`flex items-center w-full rounded-md py-1.5 text-[13px] text-left transition-colors cursor-pointer font-medium ${
           isActive || menuOpen
             ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
+            : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
         }`}
         style={{ paddingLeft: `${8 + depth * 14}px`, paddingRight: "8px" }}
       >
@@ -232,7 +326,7 @@ function FileTreeNode({ entry, depth = 0 }: { entry: VaultEntry; depth?: number 
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground hover:bg-sidebar-accent transition-all">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>

@@ -106,7 +106,7 @@ export function TagInput() {
       {tags.map((tag) => (
         <span
           key={tag}
-          className="group inline-flex items-center h-7 px-2.5 rounded-md bg-muted text-[13px] text-muted-foreground border border-border/10 hover:border-border transition-all cursor-default select-none"
+          className="group inline-flex items-center h-7 px-2.5 rounded-sm bg-muted text-[13px] text-muted-foreground border border-border/10 hover:border-border transition-all cursor-default select-none"
         >
           {tag}
           <button
@@ -121,7 +121,7 @@ export function TagInput() {
       <div className="relative">
         <input
           ref={inputRef}
-          className="bg-muted px-2.5 rounded-md border border-border/10 hover:border-border outline-none text-[13px] h-7 text-muted-foreground font-medium placeholder:text-muted-foreground/50 min-w-[90px] focus:ring-0 focus:text-foreground transition-all"
+          className="bg-muted px-2.5 rounded-sm border border-border/10 hover:border-border outline-none text-[13px] h-7 text-muted-foreground font-medium placeholder:text-muted-foreground/50 min-w-[90px] focus:ring-0 focus:text-foreground transition-all"
           style={{
             width: `${Math.max(inputValue.length * 8 + 20, 90)}px`,
           }}

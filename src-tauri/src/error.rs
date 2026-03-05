@@ -11,6 +11,9 @@ pub enum AppError {
 
     #[error("Invalid path: {0}")]
     InvalidPath(String),
+
+    #[error("Internal error: {0}")]
+    Internal(String),
 }
 
 impl Serialize for AppError {

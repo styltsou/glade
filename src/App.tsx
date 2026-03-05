@@ -10,6 +10,8 @@ import { useVaultStore } from "@/stores/useVaultStore";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { useDialogStore } from "@/stores/useDialogStore";
 import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
+import { useHomeStore } from "@/stores/useHomeStore";
 
 function SharedDialogs() {
   const {
@@ -48,6 +50,12 @@ function SharedDialogs() {
 function App() {
   const { activeNote } = useVaultStore();
   const { collapsed } = useSidebarStore();
+  const { loadAll } = useHomeStore();
+
+  useEffect(() => {
+    // Initial load of home data
+    loadAll();
+  }, [loadAll]);
 
   return (
     <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
@@ -55,14 +63,14 @@ function App() {
         <Sidebar />
         {collapsed && <SidebarCollapseToggle />}
         <div className="flex-1 overflow-hidden flex flex-col relative">
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="popLayout">
             {activeNote ? (
               <motion.div
                 key="editor"
-                initial={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 <Editor />
@@ -70,10 +78,10 @@ function App() {
             ) : (
               <motion.div
                 key="home"
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 <HomeView />
