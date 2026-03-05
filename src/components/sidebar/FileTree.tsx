@@ -148,6 +148,10 @@ export function SearchResultsList() {
         const isActive = activeNote?.path === note.path;
         const isMenuOpen = menuOpenPath === note.path;
 
+        // Extract folder path (e.g., "Work/Projects/Note.md" -> "Work/Projects")
+        const pathParts = note.path.split("/");
+        const folderPath = pathParts.slice(0, -1).join("/");
+
         return (
           <div key={note.path} className="relative group">
             <button
@@ -158,12 +162,21 @@ export function SearchResultsList() {
                   : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
             >
-              {isPinned && (
-                <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
-              )}
-              <span className="truncate flex-1 pr-1">
-                <Highlight text={note.title} query={sidebarQuery} />
-              </span>
+              <div className="flex flex-col min-w-0 flex-1 pr-1">
+                <div className="flex items-center gap-1.5">
+                  {isPinned && (
+                    <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
+                  )}
+                  <span className="truncate">
+                    <Highlight text={note.title} query={sidebarQuery} />
+                  </span>
+                </div>
+                {folderPath && (
+                  <span className="text-[10px] text-muted-foreground/50 font-normal truncate pl-0">
+                    {folderPath}
+                  </span>
+                )}
+              </div>
             </button>
 
             <DropdownMenu onOpenChange={(open) => setMenuOpenPath(open ? note.path : null)}>
