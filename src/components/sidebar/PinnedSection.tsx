@@ -79,7 +79,7 @@ function PinnedItem({
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>

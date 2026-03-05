@@ -152,7 +152,7 @@ export function SearchResultsList() {
           <div key={note.path} className="relative group">
             <button
               onClick={() => selectNote(note.path)}
-              className={`flex items-center gap-2 w-full rounded-md pr-8 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
+              className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
                 isActive || isMenuOpen
                   ? "bg-sidebar-accent text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
@@ -168,7 +168,7 @@ export function SearchResultsList() {
 
             <DropdownMenu onOpenChange={(open) => setMenuOpenPath(open ? note.path : null)}>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all">
+                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -274,7 +274,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
           <DropdownMenu onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground hover:bg-sidebar-accent transition-all">
+              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
@@ -324,7 +324,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-muted-foreground opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground hover:bg-sidebar-accent transition-all">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>

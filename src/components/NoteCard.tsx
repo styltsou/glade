@@ -55,15 +55,18 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       "
     >
       {/* Actions (Pin + Dropdown) */}
-      <div className="absolute top-2.5 right-2.5 flex items-center gap-1 z-10" onClick={(e) => e.stopPropagation()}>
+      <div 
+        className="absolute top-2 right-2 flex items-center gap-0.5 z-10 p-0.5 rounded-md bg-card group-hover:bg-muted/50 transition-colors" 
+        onClick={(e) => e.stopPropagation()}
+      >
         {showPin && card.pinned && (
-          <span className="text-muted-foreground mr-1">
+          <span className="text-muted-foreground px-1">
             <DrawingPinFilledIcon className="h-2.5 w-2.5 fill-current" />
           </span>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="cursor-pointer p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/80 transition-all">
+            <button className="cursor-pointer p-1 rounded-md text-foreground/70 hover:bg-muted transition-colors">
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>

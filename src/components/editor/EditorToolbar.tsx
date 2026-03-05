@@ -67,14 +67,20 @@ export function EditorToolbar({
       const raw = await invoke<string>("read_note_raw", { path: notePath });
       // Strip YAML frontmatter before copying
       const stripped = raw.replace(/^---[\s\S]*?---\s*\n?/, "");
-      await writeText(stripped);
+      
+      let finalMarkdown = stripped.trimStart();
+      if (noteTitle && !finalMarkdown.startsWith("# ")) {
+        finalMarkdown = `# ${noteTitle}\n\n${finalMarkdown}`;
+      }
+      
+      await writeText(finalMarkdown);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.success("Markdown copied to clipboard");
     } catch (err) {
       toast.error(`Failed to copy: ${err}`);
     }
-  }, [notePath]);
+  }, [notePath, noteTitle]);
 
   const handleExport = useCallback((format: ExportFormat) => {
     setExportMenuOpen(false);

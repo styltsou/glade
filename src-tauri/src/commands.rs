@@ -635,11 +635,23 @@ pub async fn export_markdown(
 
     let content = fs::read_to_string(&full_source)?;
 
+    let (meta, body) = vault::parse_frontmatter(&content);
+    let filename_fallback = full_source
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let title = meta.title.as_deref().unwrap_or(&filename_fallback);
+    
+    let mut final_body = body.trim_start().to_string();
+    if !final_body.starts_with("# ") {
+        final_body = format!("# {}\n\n{}", title, final_body);
+    }
+
     let output = if strip_frontmatter {
-        let (_, body) = vault::parse_frontmatter(&content);
-        body
+        final_body
     } else {
-        content
+        let frontmatter = vault::build_frontmatter(&meta);
+        format!("{}\n\n{}", frontmatter, final_body)
     };
 
     fs::write(&dest_path, output)?;
@@ -671,11 +683,23 @@ pub async fn export_pdf(
 
     let content = fs::read_to_string(&full_source)?;
 
+    let (meta, body) = vault::parse_frontmatter(&content);
+    let filename_fallback = full_source
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let title = meta.title.as_deref().unwrap_or(&filename_fallback);
+    
+    let mut final_body = body.trim_start().to_string();
+    if !final_body.starts_with("# ") {
+        final_body = format!("# {}\n\n{}", title, final_body);
+    }
+
     let markdown = if strip_frontmatter {
-        let (_, body) = vault::parse_frontmatter(&content);
-        body
+        final_body
     } else {
-        content
+        let frontmatter = vault::build_frontmatter(&meta);
+        format!("{}\n\n{}", frontmatter, final_body)
     };
 
     // Parse markdown to HTML
