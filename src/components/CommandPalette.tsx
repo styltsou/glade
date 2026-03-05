@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Plus as PlusIcon,
   Trash2 as TrashIcon,
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/command";
 import { useVaultStore } from "@/stores/useVaultStore";
 import { useDialogStore } from "@/stores/useDialogStore";
+import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
+import { HighlightedText } from "./command-palette/HighlightedText";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -31,35 +33,8 @@ export function CommandPalette() {
   } = useVaultStore();
   const { openDelete, openSettings } = useDialogStore();
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
-        e.preventDefault();
-        setOpen((prev) => !prev);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setOpen(true);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
-        e.preventDefault();
-        createNote();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
-        e.preventDefault();
-        openSettings();
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
-        e.preventDefault();
-        if (activeNote) {
-          openDelete(activeNote.path, activeNote.title);
-        }
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [createNote, activeNote, openDelete, openSettings]);
+  // Register global shortcuts
+  useCommandShortcuts(setOpen);
 
   const handleSelect = useCallback(
     (action: string) => {
@@ -115,16 +90,14 @@ export function CommandPalette() {
         const v = value.toLowerCase();
         const s = search.toLowerCase();
 
-        // If it's a note (marked by value prefix), we trust backend results
         if (value.startsWith("note:") && searchResults.length > 0) {
           return 1;
         }
 
-        // Strict substring match for actions and other items
-        if (v === s) return 2; // Exact match
-        if (v.startsWith(s)) return 1.5; // Prefix match
-        if (v.includes(s)) return 1; // Substring match
-        return 0; // No match
+        if (v === s) return 2;
+        if (v.startsWith(s)) return 1.5;
+        if (v.includes(s)) return 1;
+        return 0;
       }}
     >
       <CommandInput
@@ -192,7 +165,7 @@ export function CommandPalette() {
                   <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                     <div className="flex items-center gap-2 overflow-hidden">
                       <span className="truncate flex-shrink-0">
-                        <Highlight text={note.title} query={searchValue} />
+                        <HighlightedText text={note.title} query={searchValue} />
                       </span>
                       {matchedTags.length > 0 && (
                         <div className="flex gap-1 overflow-hidden">
@@ -201,7 +174,7 @@ export function CommandPalette() {
                               key={tag}
                               className="px-1 py-0.5 rounded-sm bg-primary/10 text-primary text-[10px] font-medium leading-none whitespace-nowrap"
                             >
-                              #<Highlight text={tag} query={searchValue} />
+                              #<HighlightedText text={tag} query={searchValue} />
                             </span>
                           ))}
                         </div>
@@ -209,7 +182,7 @@ export function CommandPalette() {
                     </div>
                     {note.preview && (
                       <span className="text-muted-foreground text-xs truncate">
-                        <Highlight text={note.preview} query={searchValue} />
+                        <HighlightedText text={note.preview} query={searchValue} />
                       </span>
                     )}
                   </div>
@@ -228,47 +201,15 @@ export function CommandPalette() {
   );
 }
 
-function Highlight({ text, query }: { text: string; query: string }) {
-  if (!query.trim()) return <>{text}</>;
-
-  const terms = query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length > 0);
-  if (terms.length === 0) return <>{text}</>;
-
-  // Escape special characters for regex and create a pattern that matches any of the terms
-  const escapedTerms = terms.map((t) =>
-    t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  );
-  const regex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
-
-  const parts = text.split(regex);
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? (
-          <span key={i} className="bg-primary/20 text-primary px-[1px] rounded-[2px] font-medium">
-            {part}
-          </span>
-        ) : (
-          part
-        ),
-      )}
-    </>
-  );
-}
-
 function flattenNotes(
   entries: { name: string; path: string; is_dir: boolean; children: any[] }[],
-): { title: string; path: string; preview?: string }[] {
-  const notes: { title: string; path: string; preview?: string }[] = [];
+): { title: string; path: string; preview?: string; tags: string[] }[] {
+  const notes: any[] = [];
   for (const entry of entries) {
     if (entry.is_dir) {
       notes.push(...flattenNotes(entry.children));
     } else {
-      notes.push({ title: entry.name, path: entry.path });
+      notes.push({ title: entry.name, path: entry.path, tags: (entry as any).tags ?? [] });
     }
   }
   return notes;

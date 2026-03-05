@@ -156,12 +156,13 @@ export function SearchResultsList() {
           <div key={note.path} className="relative group">
             <button
               onClick={() => selectNote(note.path)}
-              className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
+              className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-normal ${
                 isActive || isMenuOpen
-                  ? "bg-sidebar-accent text-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                  ? "bg-sidebar-accent text-foreground font-medium"
+                  : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
               }`}
             >
+              <div className="flex flex-col min-w-0 flex-1 pr-1">
                 {folderPath && (
                   <div className="flex items-center gap-1 mb-0.5 opacity-60">
                     <Folder className="h-2.5 w-2.5 shrink-0" />
@@ -174,7 +175,7 @@ export function SearchResultsList() {
                   {isPinned && (
                     <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
                   )}
-                  <span className="truncate">
+                  <span className="truncate flex-1">
                     <Highlight text={note.title} query={sidebarQuery} />
                   </span>
                 </div>
@@ -183,7 +184,7 @@ export function SearchResultsList() {
 
             <DropdownMenu onOpenChange={(open) => setMenuOpenPath(open ? note.path : null)}>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
+                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -276,7 +277,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
             className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
               menuOpen
                 ? "bg-sidebar-accent text-foreground"
-                : "text-foreground hover:bg-sidebar-accent hover:text-foreground"
+                : "text-foreground group-hover/folder:bg-sidebar-accent"
             }`}
           >
             {expanded ? (
@@ -289,7 +290,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
           <DropdownMenu onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
+              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
@@ -307,7 +308,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
         {/* Children rendered inside a margin-left container which doubles as the indent line base */}
         {expanded && (
-          <div className="ml-3.5 pl-2 relative">
+          <div className="ml-[15px] pl-2 relative">
             {/* Indent guide line — absolutely positioned to not take space, drawn down the left edge */}
             <div className="absolute top-0 bottom-0 left-0 w-[1px] bg-border/80" />
             
@@ -330,8 +331,8 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
         onClick={() => selectNote(entry.path)}
         className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
           isActive || menuOpen
-            ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+            ? "bg-sidebar-accent text-foreground font-medium"
+            : "text-muted-foreground font-normal group-hover/note:text-foreground group-hover/note:bg-sidebar-accent"
         }`}
       >
         <span className="truncate pr-1">{entry.name}</span>
@@ -339,7 +340,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>

@@ -56,7 +56,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
     >
       {/* Actions (Pin + Dropdown) */}
       <div 
-        className="absolute top-2 right-2 flex items-center gap-0.5 z-10 p-0.5 rounded-md bg-card group-hover:bg-muted/50 transition-colors" 
+        className="absolute top-2 right-2 flex items-center gap-0.5 z-10 p-0.5 rounded-md transition-colors" 
         onClick={(e) => e.stopPropagation()}
       >
         {showPin && card.pinned && (
@@ -66,7 +66,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="cursor-pointer p-1 rounded-md text-foreground/70 hover:bg-muted transition-colors">
+            <button className="cursor-pointer p-1 rounded-md text-foreground/70 hover:bg-muted/50 transition-colors">
               <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>

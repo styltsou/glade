@@ -68,7 +68,7 @@ function PinnedItem({
     <div className="relative group">
       <button
         onClick={onClick}
-        className={`flex items-center w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
+        className={`flex items-center gap-1 w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
           active || menuOpen
             ? "bg-sidebar-accent text-foreground"
             : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
@@ -79,7 +79,7 @@ function PinnedItem({
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent hover:bg-muted transition-all z-10">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
