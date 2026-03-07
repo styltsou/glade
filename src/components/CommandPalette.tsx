@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Plus as PlusIcon,
   Trash2 as TrashIcon,
@@ -77,27 +77,33 @@ export function CommandPalette() {
     return () => clearTimeout(timer);
   }, [searchValue, searchNotes, clearSearch]);
 
-  const allNotes = flattenNotes(entries);
+  const allNotes = useMemo(() => {
+    if (!entries) return [];
+    return flattenNotes(entries).slice(0, 100);
+  }, [entries]);
 
   return (
     <CommandDialog
       open={open}
       onOpenChange={setOpen}
       showCloseButton={false}
-      filter={(value, search) => {
-        if (!search) return 1;
+      className="max-w-lg"
+      commandProps={{
+        filter: (value: string, search: string) => {
+          if (!search) return 1;
 
-        const v = value.toLowerCase();
-        const s = search.toLowerCase();
+          const v = value.toLowerCase();
+          const s = search.toLowerCase();
 
-        if (value.startsWith("note:") && searchResults.length > 0) {
-          return 1;
+          if (value.startsWith("note:") && searchResults.length > 0) {
+            return 1;
+          }
+
+          if (v === s) return 2;
+          if (v.startsWith(s)) return 1.5;
+          if (v.includes(s)) return 1;
+          return 0;
         }
-
-        if (v === s) return 2;
-        if (v.startsWith(s)) return 1.5;
-        if (v.includes(s)) return 1;
-        return 0;
       }}
     >
       <CommandInput
@@ -140,10 +146,11 @@ export function CommandPalette() {
 
         <CommandSeparator />
 
-        <CommandGroup
-          heading={searchResults.length > 0 ? "Search Results" : "Notes"}
-        >
-          {(searchResults.length > 0 ? searchResults : allNotes).map(
+        {(searchResults.length > 0 || allNotes.length > 0) && (
+          <CommandGroup
+            heading={searchResults.length > 0 ? "Search Results" : "Notes"}
+          >
+            {(searchResults.length > 0 ? searchResults : allNotes).map(
             (note: any) => {
               const matchedTags =
                 searchResults.length > 0 && searchValue.trim()
@@ -196,18 +203,23 @@ export function CommandPalette() {
             },
           )}
         </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   );
 }
 
 function flattenNotes(
-  entries: { name: string; path: string; is_dir: boolean; children: any[] }[],
+  entries: { name: string; path: string; is_dir: boolean; children?: any[] }[],
 ): { title: string; path: string; preview?: string; tags: string[] }[] {
+  if (!entries) return [];
   const notes: any[] = [];
   for (const entry of entries) {
+    if (!entry) continue;
     if (entry.is_dir) {
-      notes.push(...flattenNotes(entry.children));
+      if (entry.children) {
+        notes.push(...flattenNotes(entry.children));
+      }
     } else {
       notes.push({ title: entry.name, path: entry.path, tags: (entry as any).tags ?? [] });
     }

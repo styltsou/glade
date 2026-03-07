@@ -1,22 +1,26 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::error::AppError;
-use crate::types::{AppConfig, SidebarState};
+use chrono::Utc;
+use uuid::Uuid;
 
-/// Maximum number of recent note entries to keep.
+use crate::error::AppError;
+use crate::types::{AppConfig, Vault};
+
 const MAX_RECENTS: usize = 12;
 
 /// Returns the path to the local app-config JSON file.
 /// Uses Tauri's app data directory: e.g. ~/.config/glade/glade-config.json on Linux.
 pub fn get_config_path() -> Result<PathBuf, AppError> {
-    let home = dirs_next_home().ok_or_else(|| {
-        AppError::InvalidPath("Could not determine home directory".into())
-    })?;
+    let home = dirs_next_home()
+        .ok_or_else(|| AppError::InvalidPath("Could not determine home directory".into()))?;
 
     // Platform-specific config directory
     #[cfg(target_os = "macos")]
-    let config_dir = home.join("Library").join("Application Support").join("glade");
+    let config_dir = home
+        .join("Library")
+        .join("Application Support")
+        .join("glade");
     #[cfg(target_os = "windows")]
     let config_dir = home.join("AppData").join("Roaming").join("glade");
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
@@ -43,8 +47,8 @@ pub fn load_config() -> Result<AppConfig, AppError> {
 /// Save the app config to disk.
 pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     let path = get_config_path()?;
-    let content = serde_json::to_string_pretty(config)
-        .map_err(|e| AppError::InvalidPath(e.to_string()))?;
+    let content =
+        serde_json::to_string_pretty(config).map_err(|e| AppError::InvalidPath(e.to_string()))?;
     fs::write(&path, content)?;
     Ok(())
 }
@@ -59,10 +63,13 @@ pub fn record_opened(config: &mut AppConfig, path: &str) {
 
     // Remove existing entry for this path, then prepend the fresh one
     config.recents.retain(|r| r.path != path);
-    config.recents.insert(0, crate::types::RecentEntry {
-        path: path.to_string(),
-        last_opened: now,
-    });
+    config.recents.insert(
+        0,
+        crate::types::RecentEntry {
+            path: path.to_string(),
+            last_opened: now,
+        },
+    );
     config.recents.truncate(MAX_RECENTS);
 }
 
@@ -75,4 +82,20 @@ fn dirs_next_home() -> Option<PathBuf> {
     {
         std::env::var("HOME").ok().map(PathBuf::from)
     }
+}
+
+pub fn create_vault(name: &str, slug: &str) -> Result<Vault, AppError> {
+    let now = Utc::now().to_rfc3339();
+    Ok(Vault {
+        id: Uuid::new_v4().to_string(),
+        name: name.to_string(),
+        slug: slug.to_string(),
+        git_remote: None,
+        created_at: now.clone(),
+        last_opened: now,
+    })
+}
+
+pub fn vault_exists(config: &AppConfig, slug: &str) -> bool {
+    config.vaults.iter().any(|v| v.slug == slug)
 }

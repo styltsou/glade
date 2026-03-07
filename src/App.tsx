@@ -7,10 +7,11 @@ import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { useVaultStore } from "@/stores/useVaultStore";
+import { useVaultsStore } from "@/stores/useVaultsStore";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { useDialogStore } from "@/stores/useDialogStore";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useHomeStore } from "@/stores/useHomeStore";
 
 function SharedDialogs() {
@@ -51,11 +52,30 @@ function App() {
   const { activeNote } = useVaultStore();
   const { collapsed } = useSidebarStore();
   const { loadAll } = useHomeStore();
+  const { initializeApp, activeVault } = useVaultsStore();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Initial load of home data
-    loadAll();
-  }, [loadAll]);
+    const init = async () => {
+      await initializeApp();
+      setIsReady(true);
+    };
+    init();
+  }, [initializeApp]);
+
+  useEffect(() => {
+    if (isReady && activeVault) {
+      loadAll();
+    }
+  }, [isReady, activeVault, loadAll]);
+
+  if (!isReady) {
+    return (
+      <main className="flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">

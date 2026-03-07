@@ -3,23 +3,11 @@ use std::path::{Path, PathBuf};
 
 use chrono::Utc;
 
+use crate::config;
 use crate::error::AppError;
 use crate::types::{NoteMeta, VaultEntry};
 
-/// Returns the vault root path (`~/.glade/`), creating it if it doesn't exist.
-pub fn get_vault_path() -> Result<PathBuf, AppError> {
-    let home = dirs_next().ok_or_else(|| {
-        AppError::InvalidPath("Could not determine home directory".into())
-    })?;
-    let vault = home.join(".glade");
-    if !vault.exists() {
-        fs::create_dir_all(&vault)?;
-    }
-    Ok(vault)
-}
-
-/// Resolve the home directory cross-platform.
-fn dirs_next() -> Option<PathBuf> {
+fn get_home_dir() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
         std::env::var("USERPROFILE").ok().map(PathBuf::from)
@@ -30,13 +18,61 @@ fn dirs_next() -> Option<PathBuf> {
     }
 }
 
+pub fn get_glade_root() -> Result<PathBuf, AppError> {
+    let home = get_home_dir()
+        .ok_or_else(|| AppError::InvalidPath("Could not determine home directory".into()))?;
+    let glade = home.join(".glade");
+    if !glade.exists() {
+        fs::create_dir_all(&glade)?;
+    }
+    Ok(glade)
+}
+
+pub fn get_vaults_root() -> Result<PathBuf, AppError> {
+    let root = get_glade_root()?.join("vaults");
+    if !root.exists() {
+        fs::create_dir_all(&root)?;
+    }
+    Ok(root)
+}
+
+pub fn get_vault_dir(slug: &str) -> Result<PathBuf, AppError> {
+    let vault_dir = get_vaults_root()?.join(slug);
+    if !vault_dir.exists() {
+        fs::create_dir_all(&vault_dir)?;
+    }
+    Ok(vault_dir)
+}
+
+pub fn get_active_vault_dir() -> Result<PathBuf, AppError> {
+    let config = config::load_config()?;
+    let active_id = config
+        .active_vault_id
+        .ok_or_else(|| AppError::InvalidPath("No active vault set".into()))?;
+    let vault = config
+        .vaults
+        .iter()
+        .find(|v| v.id == active_id)
+        .ok_or_else(|| AppError::InvalidPath("Active vault not found".into()))?;
+    get_vault_dir(&vault.slug)
+}
+
+pub fn get_vault_path() -> Result<PathBuf, AppError> {
+    get_active_vault_dir()
+}
+
 /// Build a recursive tree of `VaultEntry` from the vault directory.
+/// `vault_root` is always the top-level vault path so that all `path` values
+/// returned by this function are relative to the vault root, never to a
+/// subdirectory.
 pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> {
+    build_vault_tree_inner(vault_root, vault_root)
+}
+
+fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntry>, AppError> {
     let mut entries = Vec::new();
 
-    let mut children: Vec<_> = fs::read_dir(vault_root)?
-        .filter_map(|e| e.ok())
-        .collect();
+    let mut children: Vec<_> = fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
     children.sort_by_key(|e| e.file_name());
 
     for entry in children {
@@ -48,6 +84,7 @@ pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> 
         }
 
         let path = entry.path();
+        // Always strip the vault root so the path is vault-relative.
         let relative = path
             .strip_prefix(vault_root)
             .unwrap_or(&path)
@@ -55,16 +92,13 @@ pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> 
             .to_string();
 
         let metadata = entry.metadata()?;
-        let modified = metadata
-            .modified()
-            .ok()
-            .and_then(|t| {
-                let datetime: chrono::DateTime<Utc> = t.into();
-                Some(datetime.to_rfc3339())
-            });
+        let modified = metadata.modified().ok().and_then(|t| {
+            let datetime: chrono::DateTime<Utc> = t.into();
+            Some(datetime.to_rfc3339())
+        });
 
         if metadata.is_dir() {
-            let sub_children = build_vault_tree(&path)?;
+            let sub_children = build_vault_tree_inner(vault_root, &path)?;
             entries.push(VaultEntry {
                 name,
                 path: relative,
@@ -75,9 +109,12 @@ pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> 
         } else if name.ends_with(".md") {
             let content = fs::read_to_string(&path).unwrap_or_default();
             let (meta, _) = parse_frontmatter(&content);
-            let stem = path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| name.clone());
+            let stem = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| name.clone());
             let display_name = meta.title.filter(|t| !t.is_empty()).unwrap_or(stem);
-            
+
             entries.push(VaultEntry {
                 name: display_name,
                 path: relative,
@@ -105,10 +142,7 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
         let yaml_str = &after_open[..close_pos].trim();
         let body = after_open[close_pos + 4..].trim_start().to_string();
 
-        let meta: NoteMeta = serde_json::from_str(
-            &yaml_to_json(yaml_str),
-        )
-        .unwrap_or_default();
+        let meta: NoteMeta = serde_json::from_str(&yaml_to_json(yaml_str)).unwrap_or_default();
 
         (meta, body)
     } else {

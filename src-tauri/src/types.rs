@@ -1,5 +1,16 @@
 use serde::{Deserialize, Serialize};
 
+/// A vault directory under ~/.glade/vaults/
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Vault {
+    pub id: String,
+    pub name: String,
+    pub slug: String,
+    pub git_remote: Option<String>,
+    pub created_at: String,
+    pub last_opened: String,
+}
+
 /// A single entry in the vault (file or directory).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultEntry {
@@ -94,6 +105,9 @@ impl Default for SidebarState {
 /// The full local app config (not synced to Git).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppConfig {
+    #[serde(default)]
+    pub vaults: Vec<Vault>,
+    pub active_vault_id: Option<String>,
     #[serde(default)]
     pub recents: Vec<RecentEntry>,
     #[serde(default)]

@@ -61,15 +61,6 @@ export function filterPinnedEntries(
     });
 }
 
-export function countNotes(entries: VaultEntry[]): number {
-  let count = 0;
-  for (const entry of entries) {
-    if (entry.is_dir) count += countNotes(entry.children);
-    else count++;
-  }
-  return count;
-}
-
 // ─── FileTree (exported for use in Sidebar) ───────────────────────────────────
 
 export function FileTree() {
@@ -84,9 +75,9 @@ export function FileTree() {
   return (
     <div className="flex-1 overflow-auto px-2 py-1">
       {!isLoading && sortedEntries.length > 0 && (
-        <div className="flex items-center justify-between pb-1.5 px-2">
+        <div className="flex items-center justify-between pb-1.5 pl-2">
           <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
-            Notes ({countNotes(entries)})
+            Notes
           </span>
           <button
             className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
@@ -129,7 +120,6 @@ export function SearchResultsList() {
   const { searchResults, activeNote, selectNote, sidebarQuery, duplicateNote } = useVaultStore();
   const { pinnedNotes, pinNote } = useHomeStore();
   const { openRename, openDelete } = useDialogStore();
-  const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null);
 
   if (searchResults.length === 0 && sidebarQuery.trim().length > 0) {
     return (
@@ -146,18 +136,17 @@ export function SearchResultsList() {
       {searchResults.map((note) => {
         const isPinned = pinnedPaths.has(note.path);
         const isActive = activeNote?.path === note.path;
-        const isMenuOpen = menuOpenPath === note.path;
 
         // Extract folder path (e.g., "Work/Projects/Note.md" -> "Work/Projects")
         const pathParts = note.path.split("/");
         const folderPath = pathParts.slice(0, -1).join("/");
 
         return (
-          <div key={note.path} className="relative group">
+          <div key={note.path} className="relative group/note">
             <button
               onClick={() => selectNote(note.path)}
               className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-normal ${
-                isActive || isMenuOpen
+                isActive
                   ? "bg-sidebar-accent text-foreground font-medium"
                   : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
               }`}
@@ -182,13 +171,13 @@ export function SearchResultsList() {
               </div>
             </button>
 
-            <DropdownMenu onOpenChange={(open) => setMenuOpenPath(open ? note.path : null)}>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
+                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/btn:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
                   <MoreHorizontal className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
+              <DropdownMenuContent align="end" sideOffset={2}>
                 <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(note.path, note.title); }}>
                   <PencilIcon className="mr-2 h-4 w-4" />
                   Rename
@@ -262,7 +251,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
   const { openRename, openDelete } = useDialogStore();
 
   const [expanded, setExpanded] = useState(true);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [, setMenuOpen] = useState(false);
 
   if (entry.is_dir) {
     const children = sortEntries(entry.children, sort);
@@ -274,11 +263,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
         <div className="relative group/folder">
           <button
             onClick={() => setExpanded((e) => !e)}
-            className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer ${
-              menuOpen
-                ? "bg-sidebar-accent text-foreground"
-                : "text-foreground group-hover/folder:bg-sidebar-accent"
-            }`}
+            className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer text-foreground group-hover/folder:bg-sidebar-accent"
           >
             {expanded ? (
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
@@ -294,7 +279,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="end" sideOffset={2}>
               <DropdownMenuItem
                 variant="destructive"
                 onClick={(e) => { e.stopPropagation(); openDelete(entry.path, entry.name, true); }}
@@ -330,7 +315,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
       <button
         onClick={() => selectNote(entry.path)}
         className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
-          isActive || menuOpen
+          isActive
             ? "bg-sidebar-accent text-foreground font-medium"
             : "text-muted-foreground font-normal group-hover/note:text-foreground group-hover/note:bg-sidebar-accent"
         }`}
@@ -344,7 +329,7 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="end" sideOffset={2}>
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(entry.path, entry.name); }}>
             <PencilIcon className="mr-2 h-4 w-4" />
             Rename

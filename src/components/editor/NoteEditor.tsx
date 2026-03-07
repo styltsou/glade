@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
@@ -22,8 +23,14 @@ export function NoteEditor({
   rawContent,
   onRawChange,
 }: NoteEditorProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [activeNote.path]);
+
   return (
-    <div className="flex-1 overflow-auto px-10 py-8">
+    <div ref={scrollRef} className="flex-1 overflow-auto px-10 py-8">
       <div className="max-w-[680px] mx-auto">
         <EditableTitle title={activeNote.title} path={activeNote.path} />
 

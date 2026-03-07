@@ -27,7 +27,7 @@ export function PinnedSection() {
     <div className="px-2 py-1 shrink-0">
       <div className="pb-1.5 px-2 flex items-center">
         <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
-          Pinned ({pinnedNotes.length})
+          Pinned
         </span>
       </div>
       <div className="space-y-0.5">
@@ -60,18 +60,18 @@ function PinnedItem({
   onClick: () => void;
   onUnpin: () => void;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [, setMenuOpen] = useState(false);
   const { duplicateNote } = useVaultStore();
   const { openRename, openDelete } = useDialogStore();
 
   return (
-    <div className="relative group">
+    <div className="relative group/note">
       <button
         onClick={onClick}
         className={`flex items-center gap-1 w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
-          active || menuOpen
+          active
             ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
+            : "text-muted-foreground group-hover/note:text-foreground group-hover/note:bg-sidebar-accent"
         }`}
       >
         <span className="truncate pr-1">{name}</span>
@@ -79,11 +79,11 @@ function PinnedItem({
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
+          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
             <MoreHorizontal className="h-4 w-4" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent align="end" sideOffset={2}>
           <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(path, name); }}>
             <PencilIcon className="mr-2 h-4 w-4" />
             Rename

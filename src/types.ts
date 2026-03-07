@@ -1,3 +1,13 @@
+/** A vault directory under ~/.glade/vaults/ */
+export interface Vault {
+  id: string;
+  name: string;
+  slug: string;
+  git_remote: string | null;
+  created_at: string;
+  last_opened: string;
+}
+
 /** A single entry in the vault (file or directory). */
 export interface VaultEntry {
   /** Display name (filename without extension for notes) */

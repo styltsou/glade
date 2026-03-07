@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useVaultStore } from "@/stores/useVaultStore";
+import { useVaultsStore } from "@/stores/useVaultsStore";
 import { useHomeStore } from "@/stores/useHomeStore";
 import { useSidebarStore } from "@/stores/useSidebarStore";
 import { motion } from "framer-motion";
@@ -15,6 +16,7 @@ import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 
 export function Sidebar() {
   const { loadVault, loadTags } = useVaultStore();
+  const { activeVault } = useVaultsStore();
   const { loadAll: loadHome } = useHomeStore();
   const { loadState, toggleCollapsed } = useSidebarStore();
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -23,8 +25,14 @@ export function Sidebar() {
     loadVault();
     loadTags();
     loadState();
-    loadHome();
-  }, [loadVault, loadTags, loadState, loadHome]);
+  }, [loadVault, loadTags, loadState]);
+
+  useEffect(() => {
+    if (activeVault) {
+      loadVault();
+      loadHome();
+    }
+  }, [activeVault, loadVault, loadHome]);
 
   // Keyboard shortcut Ctrl+B
   useEffect(() => {
