@@ -6,21 +6,27 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useVaultsStore } from "@/stores/useVaultsStore";
-import { useSidebarStore } from "@/stores/useSidebarStore";
-import { useDialogStore } from "@/stores/useDialogStore";
+import { useStore } from "@/store";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { useHomeStore } from "@/stores/useHomeStore";
 
 function SharedDialogs() {
-  const {
-    renameOpen, renamePath, renameInitialTitle, closeRename,
-    deleteOpen, deletePath, deleteName, deleteIsFolder, closeDelete,
-    settingsOpen, closeSettings,
-  } = useDialogStore();
-  const { renameNote, deleteEntry } = useVaultStore();
+  const renameOpen = useStore((state) => state.renameOpen);
+  const renamePath = useStore((state) => state.renamePath);
+  const renameInitialTitle = useStore((state) => state.renameInitialTitle);
+  const closeRename = useStore((state) => state.closeRename);
+
+  const deleteOpen = useStore((state) => state.deleteOpen);
+  const deletePath = useStore((state) => state.deletePath);
+  const deleteName = useStore((state) => state.deleteName);
+  const deleteIsFolder = useStore((state) => state.deleteIsFolder);
+  const closeDelete = useStore((state) => state.closeDelete);
+
+  const settingsOpen = useStore((state) => state.settingsOpen);
+  const closeSettings = useStore((state) => state.closeSettings);
+
+  const renameNote = useStore((state) => state.renameNote);
+  const deleteEntry = useStore((state) => state.deleteEntry);
 
   return (
     <>
@@ -49,10 +55,11 @@ function SharedDialogs() {
 }
 
 function App() {
-  const { activeNote } = useVaultStore();
-  const { collapsed } = useSidebarStore();
-  const { loadAll } = useHomeStore();
-  const { initializeApp, activeVault } = useVaultsStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
+  const loadAll = useStore((state) => state.loadAll);
+  const initializeApp = useStore((state) => state.initializeApp);
+  const activeVault = useStore((state) => state.activeVault);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -81,7 +88,7 @@ function App() {
     <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
       <div className="flex flex-1 overflow-hidden w-full relative">
         <Sidebar />
-        {collapsed && <SidebarCollapseToggle />}
+        {sidebarCollapsed && <SidebarCollapseToggle />}
         <div className="flex-1 overflow-hidden flex flex-col relative">
           <AnimatePresence mode="popLayout">
             {activeNote ? (

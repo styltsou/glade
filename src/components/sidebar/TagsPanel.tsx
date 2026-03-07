@@ -1,12 +1,17 @@
-import { useSidebarStore } from "@/stores/useSidebarStore";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 import { ChevronDown, ChevronRight, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import type { TagCount } from "@/types";
 
 export function TagsPanel() {
-  const { tags, activeTagFilters, toggleTagFilter, clearTagFilters } = useVaultStore();
-  const { tagsCollapsed, toggleTagsCollapsed } = useSidebarStore();
+  const tags = useStore((state) => state.tags);
+  const activeTagFilters = useStore((state) => state.activeTagFilters);
+  const toggleTagFilter = useStore((state) => state.toggleTagFilter);
+  const clearTagFilters = useStore((state) => state.clearTagFilters);
+
+  const tagsCollapsed = useStore((state) => state.tagsCollapsed);
+  const toggleTagsCollapsed = useStore((state) => state.toggleTagsCollapsed);
   const isOpen = !tagsCollapsed;
 
   return (
@@ -44,7 +49,7 @@ export function TagsPanel() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={{ duration: 0.1, ease: "easeInOut" }}
             className="overflow-hidden px-2 pb-3"
           >
             <div className="space-y-0.5 pt-0.5 max-h-[200px] overflow-y-auto pr-1">
@@ -53,7 +58,7 @@ export function TagsPanel() {
                   No tags yet
                 </div>
               ) : (
-                tags.map((tag) => (
+                tags.map((tag: TagCount) => (
                   <button
                     key={tag.name}
                     onClick={() => toggleTagFilter(tag.name)}

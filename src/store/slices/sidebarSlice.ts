@@ -1,29 +1,29 @@
-import { create } from "zustand";
+import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { SortMode } from "@/types";
 
 const SORT_CYCLE: SortMode[] = ["name-asc", "name-desc", "modified"];
 
-interface SidebarStoreState {
-  collapsed: boolean;
+export interface SidebarSlice {
+  sidebarCollapsed: boolean;
   tagsCollapsed: boolean;
-  sort: SortMode;
-  loaded: boolean;
+  sidebarSort: SortMode;
+  isSidebarLoaded: boolean;
 
-  loadState: () => Promise<void>;
-  toggleCollapsed: () => Promise<void>;
+  loadSidebarState: () => Promise<void>;
+  toggleSidebarCollapsed: () => Promise<void>;
   toggleTagsCollapsed: () => Promise<void>;
-  cycleSort: () => Promise<void>;
-  setSort: (sort: SortMode) => Promise<void>;
+  cycleSidebarSort: () => Promise<void>;
+  setSidebarSort: (sort: SortMode) => Promise<void>;
 }
 
-export const useSidebarStore = create<SidebarStoreState>((set, get) => ({
-  collapsed: false,
+export const createSidebarSlice: StateCreator<any, [], [], SidebarSlice> = (set, get) => ({
+  sidebarCollapsed: false,
   tagsCollapsed: true,
-  sort: "name-asc",
-  loaded: false,
+  sidebarSort: "name-asc",
+  isSidebarLoaded: false,
 
-  loadState: async () => {
+  loadSidebarState: async () => {
     try {
       const state = await invoke<{
         collapsed: boolean;
@@ -31,25 +31,25 @@ export const useSidebarStore = create<SidebarStoreState>((set, get) => ({
         sort: SortMode;
       }>("get_sidebar_state");
       set({
-        collapsed: state.collapsed,
+        sidebarCollapsed: state.collapsed,
         tagsCollapsed: state.tags_collapsed,
-        sort: state.sort,
-        loaded: true,
+        sidebarSort: state.sort,
+        isSidebarLoaded: true,
       });
     } catch {
-      set({ loaded: true });
+      set({ isSidebarLoaded: true });
     }
   },
 
-  toggleCollapsed: async () => {
-    const next = !get().collapsed;
-    set({ collapsed: next });
+  toggleSidebarCollapsed: async () => {
+    const next = !get().sidebarCollapsed;
+    set({ sidebarCollapsed: next });
     try {
       await invoke("save_sidebar_state", {
         state: {
           collapsed: next,
           tags_collapsed: get().tagsCollapsed,
-          sort: get().sort,
+          sort: get().sidebarSort,
         },
       });
     } catch (e) {
@@ -63,9 +63,9 @@ export const useSidebarStore = create<SidebarStoreState>((set, get) => ({
     try {
       await invoke("save_sidebar_state", {
         state: {
-          collapsed: get().collapsed,
+          collapsed: get().sidebarCollapsed,
           tags_collapsed: next,
-          sort: get().sort,
+          sort: get().sidebarSort,
         },
       });
     } catch (e) {
@@ -73,19 +73,19 @@ export const useSidebarStore = create<SidebarStoreState>((set, get) => ({
     }
   },
 
-  cycleSort: async () => {
-    const current = get().sort;
+  cycleSidebarSort: async () => {
+    const current = get().sidebarSort;
     const idx = SORT_CYCLE.indexOf(current);
-    const next = SORT_CYCLE[(idx + 1) % SORT_CYCLE.length];
-    await get().setSort(next);
+    const next = SORT_CYCLE[(idx + 1) % SORT_CYCLE.length] as SortMode;
+    await get().setSidebarSort(next);
   },
 
-  setSort: async (sort: SortMode) => {
-    set({ sort });
+  setSidebarSort: async (sort: SortMode) => {
+    set({ sidebarSort: sort });
     try {
       await invoke("save_sidebar_state", {
         state: {
-          collapsed: get().collapsed,
+          collapsed: get().sidebarCollapsed,
           tags_collapsed: get().tagsCollapsed,
           sort,
         },
@@ -94,4 +94,4 @@ export const useSidebarStore = create<SidebarStoreState>((set, get) => ({
       console.error("Failed to save sidebar sort:", e);
     }
   },
-}));
+});

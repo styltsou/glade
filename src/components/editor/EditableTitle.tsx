@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useRef, useState } from "react";
+import { useStore } from "@/store";
 
 interface EditableTitleProps {
   title: string;
@@ -10,7 +10,7 @@ export function EditableTitle({ title, path }: EditableTitleProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const { renameNote } = useVaultStore();
+  const renameNote = useStore((state) => state.renameNote);
 
   const handleStartEditing = () => {
     setTempTitle(title);

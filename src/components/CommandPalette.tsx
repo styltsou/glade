@@ -14,24 +14,23 @@ import {
   CommandShortcut,
   CommandSeparator,
 } from "@/components/ui/command";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useDialogStore } from "@/stores/useDialogStore";
+import { useStore } from "@/store";
 import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
 import { HighlightedText } from "./command-palette/HighlightedText";
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const {
-    entries,
-    activeNote,
-    selectNote,
-    createNote,
-    searchNotes,
-    searchResults,
-    clearSearch,
-  } = useVaultStore();
-  const { openDelete, openSettings } = useDialogStore();
+  const entries = useStore((state) => state.entries);
+  const activeNote = useStore((state) => state.activeNote);
+  const selectNote = useStore((state) => state.selectNote);
+  const createNote = useStore((state) => state.createNote);
+  const searchNotes = useStore((state) => state.searchNotes);
+  const searchResults = useStore((state) => state.searchResults);
+  const clearSearch = useStore((state) => state.clearSearch);
+
+  const openDelete = useStore((state) => state.openDelete);
+  const openSettings = useStore((state) => state.openSettings);
 
   // Register global shortcuts
   useCommandShortcuts(setOpen);

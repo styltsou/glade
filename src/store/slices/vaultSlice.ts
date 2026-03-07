@@ -1,88 +1,90 @@
-import { create } from "zustand";
+import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { VaultEntry, NoteData, TagCount } from "@/types";
-import { useHomeStore } from "./useHomeStore";
 
-interface VaultState {
-  /** Tree of vault entries */
+export interface VaultSlice {
   entries: VaultEntry[];
-  /** Currently selected/open note */
   activeNote: NoteData | null;
-  /** Loading state */
-  isLoading: boolean;
-  /** Error message */
-  error: string | null;
-  /** All unique tags with counts */
+  isVaultLoading: boolean;
+  vaultError: string | null;
   tags: TagCount[];
-  /** Currently active tag filters */
   activeTagFilters: string[];
-  /** Search results */
   searchResults: NoteData[];
-  /** Current sidebar specific search query */
   sidebarQuery: string;
 
-  /** Load vault contents from disk */
   loadVault: () => Promise<void>;
-  /** Select and open a note by path */
-  selectNote: (path: string) => Promise<void>;
-  /** Save note content to disk */
+  selectNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
   saveNote: (path: string, content: string) => Promise<void>;
-  /** Create a new note, optionally in a folder */
   createNote: (folder?: string) => Promise<void>;
-  /** Rename a note */
   renameNote: (path: string, newTitle: string) => Promise<void>;
-  /** Duplicate a note */
   duplicateNote: (path: string) => Promise<void>;
-  /** Delete a file or folder */
   deleteEntry: (path: string) => Promise<void>;
-  /** Create a new folder */
   createFolder: (path: string) => Promise<void>;
-  /** Load all tags */
   loadTags: () => Promise<void>;
-  /** Toggle a tag filter */
   toggleTagFilter: (tag: string) => void;
-  /** Clear all tag filters */
   clearTagFilters: () => void;
-  /** Search notes by query */
   searchNotes: (query: string, titleOnly?: boolean) => Promise<void>;
-  /** Clear search results */
   clearSearch: () => void;
-  /** Update tags for the active note */
   updateNoteTags: (tags: string[]) => Promise<void>;
-  /** Clear active note to go to home view */
   goHome: () => void;
-  /** Set sidebar specific search query */
   setSidebarQuery: (query: string) => void;
 }
 
-export const useVaultStore = create<VaultState>((set, get) => ({
+export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get) => ({
   entries: [],
   activeNote: null,
-  isLoading: false,
-  error: null,
+  isVaultLoading: false,
+  vaultError: null,
   tags: [],
   activeTagFilters: [],
   searchResults: [],
   sidebarQuery: "",
 
   loadVault: async () => {
-    set({ isLoading: true, error: null });
+    set({ isVaultLoading: true, vaultError: null });
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");
-      set({ entries, isLoading: false });
+      set({ entries, isVaultLoading: false });
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultError: String(e), isVaultLoading: false });
     }
   },
 
-  selectNote: async (path: string) => {
+  selectNote: async (path: string, partial?: Partial<NoteData>) => {
+    const { noteCache } = get();
+    
+    // Optimistic update: If we have partial data (from a card or tree), set it immediately
+    // so the editor can show the title and transition instantly.
+    if (partial || noteCache[path]) {
+      const cached = noteCache[path];
+      set({ 
+        activeNote: {
+          path,
+          title: partial?.title || cached?.title || path.split("/").pop()?.replace(".md", "") || "Untitled",
+          body: cached?.body || "",
+          tags: partial?.tags || cached?.tags || [],
+          preview: partial?.preview || cached?.preview || "",
+          created: cached?.created || null,
+          updated: cached?.updated || null,
+          ...partial,
+        } as NoteData,
+        vaultError: null 
+      });
+    }
+
     try {
       const note = await invoke<NoteData>("read_note", { path });
-      set({ activeNote: note, error: null });
-      // Record in recents (fire-and-forget)
+      set({ activeNote: note, vaultError: null });
+      
+      // Update cache
+      set({ noteCache: { ...get().noteCache, [path]: note } });
+      
       invoke("record_note_opened", { path }).catch(() => {});
     } catch (e) {
-      set({ error: String(e) });
+      // Only show error if we don't have even partial data
+      if (!get().activeNote) {
+        set({ vaultError: String(e) });
+      }
     }
   },
 
@@ -90,22 +92,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     try {
       await invoke("write_note", { path, content });
       const note = await invoke<NoteData>("read_note", { path });
-      set({ activeNote: note, error: null });
+      set({ activeNote: note, vaultError: null });
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
   createNote: async (folder?: string) => {
     try {
-      const note = await invoke<NoteData>("create_note", {
-        folder: folder ?? null,
-      });
+      const note = await invoke<NoteData>("create_note", { folder: folder ?? null });
       await get().loadVault();
-      await useHomeStore.getState().loadAll();
-      set({ activeNote: note, error: null });
+      await get().loadAll();
+      set({ activeNote: note, vaultError: null });
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -117,9 +117,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         set({ activeNote: { ...activeNote, title: newTitle } });
       }
       await get().loadVault();
-      await useHomeStore.getState().loadAll();
+      await get().loadAll();
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -127,9 +127,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     try {
       await invoke<NoteData>("duplicate_note", { path });
       await get().loadVault();
-      await useHomeStore.getState().loadAll();
+      await get().loadAll();
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -141,9 +141,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         set({ activeNote: null });
       }
       await get().loadVault();
-      await useHomeStore.getState().loadAll();
+      await get().loadAll();
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -152,7 +152,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       await invoke("create_folder", { path });
       await get().loadVault();
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -161,14 +161,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const tags = await invoke<TagCount[]>("list_tags");
       set({ tags });
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
   toggleTagFilter: (tag: string) => {
     const { activeTagFilters } = get();
     if (activeTagFilters.includes(tag)) {
-      set({ activeTagFilters: activeTagFilters.filter((t) => t !== tag) });
+      set({ activeTagFilters: activeTagFilters.filter((t: string) => t !== tag) });
     } else {
       set({ activeTagFilters: [...activeTagFilters, tag] });
     }
@@ -187,7 +187,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const results = await invoke<NoteData[]>("search_notes", { query, titleOnly });
       set({ searchResults: results });
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
 
@@ -200,21 +200,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (!activeNote) return;
     try {
       await invoke("update_tags", { path: activeNote.path, tags });
-      // Reload note and tags
-      const note = await invoke<NoteData>("read_note", {
-        path: activeNote.path,
-      });
+      const note = await invoke<NoteData>("read_note", { path: activeNote.path });
       set({ activeNote: note });
       await get().loadTags();
-      await useHomeStore.getState().loadAll();
+      await get().loadAll();
     } catch (e) {
-      set({ error: String(e) });
+      set({ vaultError: String(e) });
     }
   },
+
   goHome: () => {
     set({ activeNote: null });
   },
+
   setSidebarQuery: (query: string) => {
     set({ sidebarQuery: query });
   },
-}));
+});

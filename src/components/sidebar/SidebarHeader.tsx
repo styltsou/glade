@@ -1,7 +1,5 @@
 import { useState } from "react";
-import { useSidebarStore } from "@/stores/useSidebarStore";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useVaultsStore } from "@/stores/useVaultsStore";
+import { useStore } from "@/store";
 import { PanelLeft, Plus } from "lucide-react";
 import {
   Select,
@@ -18,11 +16,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { Vault } from "@/types";
 
 export function SidebarHeader() {
-  const { toggleCollapsed } = useSidebarStore();
-  const { goHome } = useVaultStore();
-  const { vaults, activeVault, setActiveVault, createVault } = useVaultsStore();
+  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
+  const goHome = useStore((state) => state.goHome);
+  const vaults = useStore((state) => state.vaults);
+  const activeVault = useStore((state) => state.activeVault);
+  const setActiveVault = useStore((state) => state.setActiveVault);
+  const createVault = useStore((state) => state.createVault);
   
   const [newVaultName, setNewVaultName] = useState("");
   const [error, setError] = useState("");
@@ -45,7 +47,7 @@ export function SidebarHeader() {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
     
-    if (vaults.some(v => v.slug === slug)) {
+    if (vaults.some((v: Vault) => v.slug === slug)) {
       setError("A vault with this name already exists");
       return;
     }
@@ -72,7 +74,7 @@ export function SidebarHeader() {
           <SelectValue placeholder="Select Vault" />
         </SelectTrigger>
         <SelectContent>
-          {vaults.map((vault) => (
+          {vaults.map((vault: Vault) => (
             <SelectItem key={vault.id} value={vault.id}>
               <span>{vault.name}</span>
             </SelectItem>
@@ -128,8 +130,8 @@ export function SidebarHeader() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-7 w-7"
-        onClick={toggleCollapsed}
+        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+        onClick={toggleSidebarCollapsed}
         title="Collapse sidebar (Ctrl+B)"
       >
         <PanelLeft className="h-4 w-4" />

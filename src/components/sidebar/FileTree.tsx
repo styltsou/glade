@@ -1,9 +1,6 @@
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useDialogStore } from "@/stores/useDialogStore";
-import { useHomeStore } from "@/stores/useHomeStore";
-import { useSidebarStore } from "@/stores/useSidebarStore";
-import type { VaultEntry } from "@/types";
-import type { SortMode } from "@/types";
+import { useStore } from "@/store";
+import type { SortMode, VaultEntry } from "@/types";
+import type { NoteCard, NoteData } from "@/types";
 import { useState } from "react";
 import {
   Folder,
@@ -64,17 +61,19 @@ export function filterPinnedEntries(
 // ─── FileTree (exported for use in Sidebar) ───────────────────────────────────
 
 export function FileTree() {
-  const { entries, isLoading, createNote } = useVaultStore();
-  const { pinnedNotes } = useHomeStore();
-  const { sort } = useSidebarStore();
+  const entries = useStore((state) => state.entries);
+  const isVaultLoading = useStore((state) => state.isVaultLoading);
+  const createNote = useStore((state) => state.createNote);
+  const pinnedNotes = useStore((state) => state.pinnedNotes);
+  const sidebarSort = useStore((state) => state.sidebarSort);
 
-  const pinnedPaths = new Set(pinnedNotes.map((n) => n.path));
+  const pinnedPaths = new Set<string>(pinnedNotes.map((n: NoteCard) => n.path));
   const filteredEntries = filterPinnedEntries(entries, pinnedPaths);
-  const sortedEntries = sortEntries(filteredEntries, sort);
+  const sortedEntries = sortEntries(filteredEntries, sidebarSort);
 
   return (
     <div className="flex-1 overflow-auto px-2 py-1">
-      {!isLoading && sortedEntries.length > 0 && (
+      {!isVaultLoading && sortedEntries.length > 0 && (
         <div className="flex items-center justify-between pb-1.5 pl-2">
           <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
             Notes
@@ -89,7 +88,7 @@ export function FileTree() {
         </div>
       )}
 
-      {isLoading ? (
+      {isVaultLoading ? (
         <div className="px-2.5 py-4 text-[12px] text-muted-foreground text-center">
           Loading…
         </div>
@@ -117,9 +116,18 @@ export function FileTree() {
 // ─── Search results panel (used by Sidebar when search is active) ─────────────
 
 export function SearchResultsList() {
-  const { searchResults, activeNote, selectNote, sidebarQuery, duplicateNote } = useVaultStore();
-  const { pinnedNotes, pinNote } = useHomeStore();
-  const { openRename, openDelete } = useDialogStore();
+  const searchResults = useStore((state) => state.searchResults);
+  const activeNote = useStore((state) => state.activeNote);
+  const selectNote = useStore((state) => state.selectNote);
+  const prefetchNote = useStore((state) => state.prefetchNote);
+  const sidebarQuery = useStore((state) => state.sidebarQuery);
+  const duplicateNote = useStore((state) => state.duplicateNote);
+
+  const pinnedNotes = useStore((state) => state.pinnedNotes);
+  const pinNote = useStore((state) => state.pinNote);
+
+  const openRename = useStore((state) => state.openRename);
+  const openDelete = useStore((state) => state.openDelete);
 
   if (searchResults.length === 0 && sidebarQuery.trim().length > 0) {
     return (
@@ -129,11 +137,11 @@ export function SearchResultsList() {
     );
   }
 
-  const pinnedPaths = new Set(pinnedNotes.map((n) => n.path));
+  const pinnedPaths = new Set<string>(pinnedNotes.map((n: NoteCard) => n.path));
 
   return (
     <div className="space-y-0.5 px-2 py-1 border-t border-border/40">
-      {searchResults.map((note) => {
+      {searchResults.map((note: NoteData) => {
         const isPinned = pinnedPaths.has(note.path);
         const isActive = activeNote?.path === note.path;
 
@@ -144,7 +152,8 @@ export function SearchResultsList() {
         return (
           <div key={note.path} className="relative group/note">
             <button
-              onClick={() => selectNote(note.path)}
+              onClick={() => selectNote(note.path, { path: note.path, title: note.title, tags: note.tags, preview: note.preview })}
+              onMouseEnter={() => prefetchNote(note.path)}
               className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-normal ${
                 isActive
                   ? "bg-sidebar-accent text-foreground font-medium"
@@ -245,16 +254,22 @@ function Highlight({ text, query }: { text: string; query: string }) {
 // ─── FileTreeNode (recursive, reads from stores) ──────────────────────────────
 
 function FileTreeNode({ entry }: { entry: VaultEntry }) {
-  const { activeNote, selectNote, duplicateNote } = useVaultStore();
-  const { pinNote } = useHomeStore();
-  const { sort } = useSidebarStore();
-  const { openRename, openDelete } = useDialogStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const selectNote = useStore((state) => state.selectNote);
+  const duplicateNote = useStore((state) => state.duplicateNote);
+
+  const pinNote = useStore((state) => state.pinNote);
+  const prefetchNote = useStore((state) => state.prefetchNote);
+  const sidebarSort = useStore((state) => state.sidebarSort);
+
+  const openRename = useStore((state) => state.openRename);
+  const openDelete = useStore((state) => state.openDelete);
 
   const [expanded, setExpanded] = useState(true);
   const [, setMenuOpen] = useState(false);
 
   if (entry.is_dir) {
-    const children = sortEntries(entry.children, sort);
+    const children = sortEntries(entry.children, sidebarSort);
     if (children.length === 0) return null;
 
     return (
@@ -313,7 +328,8 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
   return (
     <div className="relative group/note">
       <button
-        onClick={() => selectNote(entry.path)}
+        onClick={() => selectNote(entry.path, { path: entry.path, title: entry.name })}
+        onMouseEnter={() => prefetchNote(entry.path)}
         className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
           isActive
             ? "bg-sidebar-accent text-foreground font-medium"

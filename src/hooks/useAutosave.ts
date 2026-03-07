@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 
 const DEBOUNCE_MS = 1500;
 
@@ -8,7 +8,8 @@ const DEBOUNCE_MS = 1500;
  * Returns { onContentChange, saveStatus }.
  */
 export function useAutosave() {
-  const { activeNote, saveNote } = useVaultStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const saveNote = useStore((state) => state.saveNote);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const statusRef = useRef<"idle" | "saving" | "saved">("idle");
 

@@ -1,12 +1,12 @@
-import { create } from "zustand";
+import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { Vault } from "@/types";
 
-interface VaultsState {
+export interface VaultsSlice {
   vaults: Vault[];
   activeVault: Vault | null;
-  isLoading: boolean;
-  error: string | null;
+  isVaultsLoading: boolean;
+  vaultsError: string | null;
 
   initializeApp: () => Promise<void>;
   loadVaults: () => Promise<void>;
@@ -16,85 +16,87 @@ interface VaultsState {
   deleteVault: (vaultId: string) => Promise<void>;
 }
 
-export const useVaultsStore = create<VaultsState>((set, get) => ({
+export const createVaultsSlice: StateCreator<any, [], [], VaultsSlice> = (set, get) => ({
   vaults: [],
   activeVault: null,
-  isLoading: false,
-  error: null,
+  isVaultsLoading: false,
+  vaultsError: null,
 
   initializeApp: async () => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       await invoke("initialize_app");
       await get().loadVaults();
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
     }
   },
 
   loadVaults: async () => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       const vaults = await invoke<Vault[]>("list_vaults");
       const activeVault = await invoke<Vault | null>("get_active_vault");
-      set({ vaults, activeVault, isLoading: false });
+      set({ vaults, activeVault, isVaultsLoading: false });
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
     }
   },
 
   setActiveVault: async (vaultId: string) => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       await invoke("set_active_vault", { vaultId });
       await invoke("update_vault_last_opened", { vaultId });
-      const activeVault = get().vaults.find((v) => v.id === vaultId) || null;
-      set({ activeVault, isLoading: false });
+      const activeVault = get().vaults.find((v: Vault) => v.id === vaultId) || null;
+      
+      // Clear caches for the new vault
+      get().clearCache();
+      
+      set({ activeVault, isVaultsLoading: false });
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
     }
   },
 
   createVault: async (name: string, slug: string) => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       const vault = await invoke<Vault>("create_vault", { name, slug });
       const vaults = await invoke<Vault[]>("list_vaults");
       const activeVault = await invoke<Vault | null>("get_active_vault");
-      set({ vaults, activeVault, isLoading: false });
+      set({ vaults, activeVault, isVaultsLoading: false });
       return vault;
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
       throw e;
     }
   },
 
   renameVault: async (vaultId: string, name: string, slug: string) => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       const vault = await invoke<Vault>("rename_vault", { vaultId, name, slug });
       const vaults = await invoke<Vault[]>("list_vaults");
-      const activeVault = get().activeVault?.id === vaultId
-        ? vault
-        : get().activeVault;
-      set({ vaults, activeVault, isLoading: false });
+      const activeVault = get().activeVault?.id === vaultId ? vault : get().activeVault;
+      set({ vaults, activeVault, isVaultsLoading: false });
       return vault;
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
       throw e;
     }
   },
 
   deleteVault: async (vaultId: string) => {
-    set({ isLoading: true, error: null });
+    set({ isVaultsLoading: true, vaultsError: null });
     try {
       await invoke("delete_vault", { vaultId });
       const vaults = await invoke<Vault[]>("list_vaults");
       const activeVault = await invoke<Vault | null>("get_active_vault");
-      set({ vaults, activeVault, isLoading: false });
+      set({ vaults, activeVault, isVaultsLoading: false });
     } catch (e) {
-      set({ error: String(e), isLoading: false });
+      set({ vaultsError: String(e), isVaultsLoading: false });
       throw e;
     }
   },
-}));
+});

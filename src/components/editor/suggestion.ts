@@ -1,12 +1,12 @@
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
-import { useVaultStore } from '@/stores/useVaultStore';
+import { useStore } from '@/store';
 import { MentionList } from './MentionList';
 import 'tippy.js/dist/tippy.css';
 
 export default {
   items: ({ query }: { query: string }) => {
-    const { entries } = useVaultStore.getState();
+    const { entries } = useStore.getState();
     
     // Flatten entries to get all notes
     const allNotes: { id: string; label: string }[] = [];

@@ -1,8 +1,6 @@
 import { useCallback } from "react";
 import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, MoreHorizontal, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon } from "lucide-react";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useHomeStore } from "@/stores/useHomeStore";
-import { useDialogStore } from "@/stores/useDialogStore";
+import { useStore } from "@/store";
 import { motion } from "framer-motion";
 import {
   DropdownMenu,
@@ -20,14 +18,28 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
-  const { selectNote, duplicateNote } = useVaultStore();
-  const { pinNote, unpinNote } = useHomeStore();
-  const { openRename, openDelete } = useDialogStore();
+  const selectNote = useStore((state) => state.selectNote);
+  const duplicateNote = useStore((state) => state.duplicateNote);
+  const pinNote = useStore((state) => state.pinNote);
+  const unpinNote = useStore((state) => state.unpinNote);
+  const openRename = useStore((state) => state.openRename);
+  const openDelete = useStore((state) => state.openDelete);
+  const prefetchNote = useStore((state) => state.prefetchNote);
 
   const handleClick = useCallback(async () => {
-    await selectNote(card.path);
+    // Pass partial data for optimistic UI
+    await selectNote(card.path, {
+      path: card.path,
+      title: card.title,
+      tags: card.tags,
+      preview: card.preview,
+    });
     onOpen?.();
-  }, [card.path, selectNote, onOpen]);
+  }, [card, selectNote, onOpen]);
+
+  const handleMouseEnter = useCallback(() => {
+    prefetchNote(card.path);
+  }, [card.path, prefetchNote]);
 
   const tags = card.tags.slice(0, 3);
   const dateLabel = card.modified ? formatShortDate(card.modified) : "";
@@ -35,6 +47,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   return (
     <motion.div
       onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
       tabIndex={0}
       role="button"
       onKeyDown={(e) => {

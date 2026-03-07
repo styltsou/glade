@@ -1,12 +1,13 @@
 import { useEffect } from "react";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useDialogStore } from "@/stores/useDialogStore";
+import { useStore } from "@/store";
 
 export function useCommandShortcuts(
   setOpen: (open: boolean | ((prev: boolean) => boolean)) => void,
 ) {
-  const { activeNote, createNote } = useVaultStore();
-  const { openDelete, openSettings } = useDialogStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const createNote = useStore((state) => state.createNote);
+  const openDelete = useStore((state) => state.openDelete);
+  const openSettings = useStore((state) => state.openSettings);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

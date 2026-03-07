@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { NoteHeader } from "@/components/editor/NoteHeader";
 import { NoteEditor } from "@/components/editor/NoteEditor";
@@ -12,7 +12,9 @@ import { formatNoteDate } from "@/lib/dates";
 const AUTOSAVE_DELAY = 1500;
 
 export function Editor() {
-  const { activeNote, saveNote, createNote } = useVaultStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const saveNote = useStore((state) => state.saveNote);
+  const createNote = useStore((state) => state.createNote);
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
@@ -54,8 +56,12 @@ export function Editor() {
   // Update editor content when switching notes
   useEffect(() => {
     if (editor && activeNote) {
-      editor.commands.setContent(activeNote.body || "");
-      setRawContent(activeNote.body || "");
+      // If we have a body (from cache or server), set it. 
+      // If not, we keep the previous content or show empty until it arrives.
+      if (activeNote.body !== undefined) {
+        editor.commands.setContent(activeNote.body || "");
+        setRawContent(activeNote.body || "");
+      }
       setIsRawMode(false);
       setSaveStatus("idle");
     }
@@ -118,7 +124,12 @@ export function Editor() {
 
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
-      <NoteHeader dateLabel={dateLabel} saveStatus={saveStatus} />
+      <NoteHeader 
+        notePath={activeNote.path}
+        noteTitle={activeNote.title}
+        dateLabel={dateLabel} 
+        saveStatus={saveStatus} 
+      />
       <EditorToolbar
         editor={editor}
         isRawMode={isRawMode}

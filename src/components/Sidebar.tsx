@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useVaultsStore } from "@/stores/useVaultsStore";
-import { useHomeStore } from "@/stores/useHomeStore";
-import { useSidebarStore } from "@/stores/useSidebarStore";
+import { useStore } from "@/store";
 import { motion } from "framer-motion";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { SidebarSearch } from "@/components/sidebar/SidebarSearch";
@@ -15,17 +12,20 @@ import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export function Sidebar() {
-  const { loadVault, loadTags } = useVaultStore();
-  const { activeVault } = useVaultsStore();
-  const { loadAll: loadHome } = useHomeStore();
-  const { loadState, toggleCollapsed } = useSidebarStore();
+  const loadVault = useStore((state) => state.loadVault);
+  const loadTags = useStore((state) => state.loadTags);
+  const activeVault = useStore((state) => state.activeVault);
+  const loadHome = useStore((state) => state.loadAll);
+  const loadSidebarState = useStore((state) => state.loadSidebarState);
+  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const [isSearchActive, setIsSearchActive] = useState(false);
 
   useEffect(() => {
     loadVault();
     loadTags();
-    loadState();
-  }, [loadVault, loadTags, loadState]);
+    loadSidebarState();
+  }, [loadVault, loadTags, loadSidebarState]);
 
   useEffect(() => {
     if (activeVault) {
@@ -39,22 +39,22 @@ export function Sidebar() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "b") {
         e.preventDefault();
-        toggleCollapsed();
+        toggleSidebarCollapsed();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [toggleCollapsed]);
+  }, [toggleSidebarCollapsed]);
 
-  const { collapsed } = useSidebarStore();
+  // Removed redundant const { collapsed } = useSidebarStore() here
 
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 0 : 260 }}
+      animate={{ width: sidebarCollapsed ? 0 : 260 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className="sidebar flex flex-col h-full bg-sidebar select-none overflow-hidden shrink-0 border-r border-border"
-      aria-hidden={collapsed}
+      aria-hidden={sidebarCollapsed}
     >
       <div className="w-[260px] flex flex-col h-full">
         <SidebarHeader />
@@ -73,11 +73,12 @@ export function Sidebar() {
 // ─── Collapse toggle shown when sidebar is collapsed ─────────────────────────
 
 export function SidebarCollapseToggle() {
-  const { collapsed, toggleCollapsed } = useSidebarStore();
-  if (!collapsed) return null;
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
+  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
+  if (!sidebarCollapsed) return null;
   return (
     <button
-      onClick={toggleCollapsed}
+      onClick={toggleSidebarCollapsed}
       className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
       title="Expand sidebar (Ctrl+B)"
     >

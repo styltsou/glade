@@ -692,6 +692,51 @@ button, a, input, [role="button"] {
   color: hsl(var(--editor-text));
 }
 
+.tiptap-editor .code-block .hljs-keyword,
+.tiptap-editor .code-block .hljs-operator,
+.tiptap-editor .code-block .hljs-pattern-match {
+  color: hsl(var(--syntax-keyword));
+}
+
+.tiptap-editor .code-block .hljs-string,
+.tiptap-editor .code-block .hljs-meta .hljs-string {
+  color: hsl(var(--syntax-string));
+}
+
+.tiptap-editor .code-block .hljs-comment {
+  color: hsl(var(--syntax-comment));
+  font-style: italic;
+}
+
+.tiptap-editor .code-block .hljs-number {
+  color: hsl(var(--syntax-number));
+}
+
+.tiptap-editor .code-block .hljs-built_in,
+.tiptap-editor .code-block .hljs-class .hljs-title {
+  color: hsl(var(--primary));
+}
+
+.tiptap-editor .code-block .hljs-title.function_,
+.tiptap-editor .code-block .hljs-function .hljs-title {
+  color: hsl(var(--ring));
+}
+
+.tiptap-editor .code-block .hljs-variable,
+.tiptap-editor .code-block .hljs-attr,
+.tiptap-editor .code-block .hljs-params {
+  color: hsl(var(--editor-text));
+}
+
+.tiptap-editor .code-block .hljs-type,
+.tiptap-editor .code-block .hljs-literal {
+  color: hsl(var(--syntax-keyword));
+}
+
+.tiptap-editor .code-block .hljs-regexp {
+  color: hsl(var(--syntax-string));
+}
+
 /* Inline code */
 .tiptap-editor code:not(.code-block code) {
   font-family: "JetBrains Mono", "Fira Code", monospace;

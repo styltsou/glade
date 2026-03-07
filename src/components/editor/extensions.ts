@@ -5,11 +5,19 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { all, createLowlight } from "lowlight";
+
+const lowlight = createLowlight(all);
 
 export const extensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3, 4] },
-    codeBlock: { HTMLAttributes: { class: "code-block" } },
+    codeBlock: false,
+  }),
+  CodeBlockLowlight.configure({
+    lowlight,
+    HTMLAttributes: { class: "code-block" },
   }),
   Link.configure({
     openOnClick: false,

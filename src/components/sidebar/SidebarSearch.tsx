@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Search as MagnifyingGlassIcon } from "lucide-react";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 
 interface SidebarSearchProps {
   onSearchChange?: (isActive: boolean) => void;
 }
 
 export function SidebarSearch({ onSearchChange }: SidebarSearchProps) {
-  const { searchNotes, setSidebarQuery } = useVaultStore();
+  const searchNotes = useStore((state) => state.searchNotes);
+  const setSidebarQuery = useStore((state) => state.setSidebarQuery);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {

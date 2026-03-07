@@ -1,4 +1,4 @@
-import { useThemeStore } from "@/stores/useThemeStore";
+import { useStore } from "@/store";
 import { themes, type ThemeId, type ThemeMode } from "@/themes";
 import {
   Dialog,
@@ -19,7 +19,10 @@ const modeOptions: { value: ThemeMode; label: string }[] = [
 ];
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const { theme, mode, setTheme, setMode } = useThemeStore();
+  const theme = useStore((state) => state.theme);
+  const mode = useStore((state) => state.mode);
+  const setTheme = useStore((state) => state.setTheme);
+  const setMode = useStore((state) => state.setMode);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

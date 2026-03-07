@@ -1,6 +1,6 @@
-import { create } from "zustand";
+import { StateCreator } from "zustand";
 
-interface DialogState {
+export interface DialogSlice {
   // Rename dialog
   renameOpen: boolean;
   renamePath: string | null;
@@ -22,8 +22,7 @@ interface DialogState {
   closeSettings: () => void;
 }
 
-export const useDialogStore = create<DialogState>((set) => ({
-  // Rename
+export const createDialogSlice: StateCreator<DialogSlice, [], [], DialogSlice> = (set) => ({
   renameOpen: false,
   renamePath: null,
   renameInitialTitle: "",
@@ -32,7 +31,6 @@ export const useDialogStore = create<DialogState>((set) => ({
   closeRename: () =>
     set({ renameOpen: false, renamePath: null, renameInitialTitle: "" }),
 
-  // Delete
   deleteOpen: false,
   deletePath: null,
   deleteName: "",
@@ -42,8 +40,7 @@ export const useDialogStore = create<DialogState>((set) => ({
   closeDelete: () =>
     set({ deleteOpen: false, deletePath: null, deleteName: "", deleteIsFolder: false }),
 
-  // Settings
   settingsOpen: false,
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
-}));
+});

@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import { useHomeStore } from "@/stores/useHomeStore";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 import { NoteCard } from "@/components/NoteCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteCard as NoteCardType } from "@/types";
@@ -23,8 +22,11 @@ function NoteCardSkeleton() {
 }
 
 export function HomeView() {
-  const { pinnedNotes, recentNotes, isLoading, loadAll } = useHomeStore();
-  const { activeNote } = useVaultStore();
+  const pinnedNotes = useStore((state) => state.pinnedNotes);
+  const recentNotes = useStore((state) => state.recentNotes);
+  const isHomeLoading = useStore((state) => state.isHomeLoading);
+  const loadAll = useStore((state) => state.loadAll);
+  const activeNote = useStore((state) => state.activeNote);
 
   useEffect(() => {
     // Reload home data whenever we come back to the home view
@@ -37,7 +39,9 @@ export function HomeView() {
   const hasRecents = recentNotes.length > 0;
   const hasData = hasPinned || hasRecents;
 
-  if (isLoading && !hasData) {
+  // Optimized loading: Only show skeleton if we are loading AND have no data yet.
+  // This enables "stale-while-revalidate" feel.
+  if (isHomeLoading && !hasData) {
     return (
       <div className="flex-1 overflow-auto px-8 py-10 max-w-5xl mx-auto w-full">
         <section className="mb-10">

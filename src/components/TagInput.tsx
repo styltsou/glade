@@ -1,15 +1,18 @@
 import { useState, useRef, useCallback } from "react";
 import { X as Cross2Icon } from "lucide-react";
-import { useVaultStore } from "@/stores/useVaultStore";
+import { useStore } from "@/store";
 import {
   Command,
   CommandGroup,
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import type { TagCount } from "@/types";
 
 export function TagInput() {
-  const { activeNote, updateNoteTags, tags: allTags } = useVaultStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const updateNoteTags = useStore((state) => state.updateNoteTags);
+  const allTags = useStore((state) => state.tags);
   const tags = activeNote?.tags ?? [];
 
   const [inputValue, setInputValue] = useState("");
@@ -23,11 +26,11 @@ export function TagInput() {
   const suggestions = query
     ? allTags
         .filter(
-          (t) =>
+          (t: TagCount) =>
             t.name.toLowerCase().includes(query) &&
             !tags.includes(t.name.toLowerCase()),
         )
-        .sort((a, b) => {
+        .sort((a: TagCount, b: TagCount) => {
           const aName = a.name.toLowerCase();
           const bName = b.name.toLowerCase();
           const aStarts = aName.startsWith(query);
@@ -62,7 +65,7 @@ export function TagInput() {
 
   const removeTag = useCallback(
     (tag: string) => {
-      updateNoteTags(tags.filter((t) => t !== tag));
+      updateNoteTags(tags.filter((t: string) => t !== tag));
     },
     [tags, updateNoteTags],
   );
@@ -103,7 +106,7 @@ export function TagInput() {
 
   return (
     <div className="relative flex items-center gap-1.5 flex-wrap">
-      {tags.map((tag) => (
+      {tags.map((tag: string) => (
         <span
           key={tag}
           className="group inline-flex items-center h-7 px-2.5 rounded-sm bg-muted text-[13px] text-muted-foreground border border-border/10 hover:border-border transition-all cursor-default select-none"
@@ -153,7 +156,7 @@ export function TagInput() {
           >
             <CommandList>
               <CommandGroup>
-                {suggestions.map((s) => (
+                {suggestions.map((s: TagCount) => (
                   <CommandItem
                     key={s.name}
                     value={s.name}

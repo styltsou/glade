@@ -6,9 +6,7 @@ import {
   PinOff as PinOffIcon,
   Trash2 as TrashIcon,
 } from "lucide-react";
-import { useVaultStore } from "@/stores/useVaultStore";
-import { useHomeStore } from "@/stores/useHomeStore";
-import { useDialogStore } from "@/stores/useDialogStore";
+import { useStore } from "@/store";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,10 +14,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { NoteCard } from "@/types";
 
 export function PinnedSection() {
-  const { activeNote, selectNote } = useVaultStore();
-  const { pinnedNotes, unpinNote } = useHomeStore();
+  const activeNote = useStore((state) => state.activeNote);
+  const selectNote = useStore((state) => state.selectNote);
+  const pinnedNotes = useStore((state) => state.pinnedNotes);
+  const unpinNote = useStore((state) => state.unpinNote);
 
   if (pinnedNotes.length === 0) return null;
 
@@ -31,7 +32,7 @@ export function PinnedSection() {
         </span>
       </div>
       <div className="space-y-0.5">
-        {pinnedNotes.map((note) => (
+        {pinnedNotes.map((note: NoteCard) => (
           <PinnedItem
             key={note.path}
             path={note.path}
@@ -61,8 +62,9 @@ function PinnedItem({
   onUnpin: () => void;
 }) {
   const [, setMenuOpen] = useState(false);
-  const { duplicateNote } = useVaultStore();
-  const { openRename, openDelete } = useDialogStore();
+  const duplicateNote = useStore((state) => state.duplicateNote);
+  const openRename = useStore((state) => state.openRename);
+  const openDelete = useStore((state) => state.openDelete);
 
   return (
     <div className="relative group/note">
@@ -84,21 +86,21 @@ function PinnedItem({
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={2}>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(path, name); }}>
+          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); openRename(path, name); }}>
             <PencilIcon className="mr-2 h-4 w-4" />
             Rename
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateNote(path); }}>
+          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); duplicateNote(path); }}>
             <CopyIcon className="mr-2 h-4 w-4" />
             Duplicate
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onUnpin(); }}>
+          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); onUnpin(); }}>
             <PinOffIcon className="mr-2 h-4 w-4" />
             Unpin note
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); openDelete(path, name); }}>
+          <DropdownMenuItem variant="destructive" onClick={(e: any) => { e.stopPropagation(); openDelete(path, name); }}>
             <TrashIcon className="mr-2 h-4 w-4" />
             Delete
           </DropdownMenuItem>
