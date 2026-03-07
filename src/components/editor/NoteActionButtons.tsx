@@ -73,13 +73,13 @@ export function NoteActionButtons({
         uncheckedIcon={<FileText className="h-4 w-4" />}
       />
 
-      <div className="flex h-8 items-center rounded-md border border-input bg-muted shadow-xs overflow-hidden">
+      <div className="flex h-8 items-center rounded-md border border-input bg-muted shadow-xs">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleCopyMarkdown}
           disabled={!notePath}
-          className={`h-full px-3 rounded-none gap-1.5 ${copied ? "bg-primary/10 text-primary" : ""}`}
+          className={`h-full px-3 rounded-l-[calc(var(--radius-md)-1px)] rounded-r-none gap-1.5 ${copied ? "bg-primary/10 text-primary" : ""}`}
         >
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           <span className="text-sm font-medium">{copied ? "Copied" : "Copy"}</span>
@@ -94,28 +94,28 @@ export function NoteActionButtons({
             title="Export"
             disabled={!notePath}
             onClick={() => setExportMenuOpen((v) => !v)}
-            className={`h-full w-8 p-0 rounded-none ${exportMenuOpen ? "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary" : ""}`}
+            className={`h-full w-8 p-0 rounded-l-none rounded-r-[calc(var(--radius-md)-1px)] ${exportMenuOpen ? "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary" : ""}`}
           >
-          <Download className="h-4 w-4" />
-        </Button>
-        </div>
+            <Download className="h-4 w-4" />
+          </Button>
 
-        {exportMenuOpen && (
-          <div className="absolute right-0 top-full mt-1 z-[100] min-w-[180px] rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-            <button
-              className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-              onClick={() => handleExport("markdown")}
-            >
-              Export
-            </button>
-            <button
-              className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-              onClick={() => handleExport("pdf")}
-            >
-              Export as PDF
-            </button>
-          </div>
-        )}
+          {exportMenuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
+              <button
+                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                onClick={() => handleExport("markdown")}
+              >
+                Export
+              </button>
+              <button
+                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                onClick={() => handleExport("pdf")}
+              >
+                Export as PDF
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {notePath && noteTitle && (

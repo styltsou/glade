@@ -12,7 +12,8 @@ interface GroupProps {
 }
 
 export function HeadingGroup({ editor }: GroupProps) {
-  const value = editor?.isActive("heading", { level: 1 }) ? "h1" :
+  const value = !editor?.isFocused ? "" :
+                editor?.isActive("heading", { level: 1 }) ? "h1" :
                 editor?.isActive("heading", { level: 2 }) ? "h2" :
                 editor?.isActive("heading", { level: 3 }) ? "h3" :
                 editor?.isActive("heading", { level: 4 }) ? "h4" : "";
@@ -53,9 +54,11 @@ export function HeadingGroup({ editor }: GroupProps) {
 
 export function InlineGroup({ editor }: GroupProps) {
   const value = [];
-  if (editor?.isActive("bold")) value.push("bold");
-  if (editor?.isActive("italic")) value.push("italic");
-  if (editor?.isActive("strike")) value.push("strike");
+  if (editor?.isFocused) {
+    if (editor.isActive("bold")) value.push("bold");
+    if (editor.isActive("italic")) value.push("italic");
+    if (editor.isActive("strike")) value.push("strike");
+  }
 
   return (
     <ToggleGroup type="multiple" value={value} variant="outline" size="sm" className="bg-muted">
@@ -85,7 +88,8 @@ export function InlineGroup({ editor }: GroupProps) {
 }
 
 export function ListGroup({ editor }: GroupProps) {
-  const value = editor?.isActive("bulletList") ? "bulletList" :
+  const value = !editor?.isFocused ? "" :
+                editor?.isActive("bulletList") ? "bulletList" :
                 editor?.isActive("orderedList") ? "orderedList" :
                 editor?.isActive("taskList") ? "taskList" : "";
 
@@ -117,7 +121,8 @@ export function ListGroup({ editor }: GroupProps) {
 }
 
 export function BlockGroup({ editor }: GroupProps) {
-  const value = editor?.isActive("blockquote") ? "blockquote" :
+  const value = !editor?.isFocused ? "" :
+                editor?.isActive("blockquote") ? "blockquote" :
                 editor?.isActive("codeBlock") ? "codeBlock" : "";
 
   return (
@@ -141,7 +146,7 @@ export function BlockGroup({ editor }: GroupProps) {
 }
 
 export function InsertGroup({ editor }: GroupProps) {
-  const value = editor?.isActive("link") ? "link" : "";
+  const value = editor?.isFocused && editor?.isActive("link") ? "link" : "";
 
   return (
     <ToggleGroup type="single" value={value} variant="outline" size="sm" className="bg-muted">

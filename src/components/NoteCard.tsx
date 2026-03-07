@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, MoreHorizontal, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon } from "lucide-react";
 import { useStore } from "@/store";
-import { motion } from "framer-motion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,9 +25,10 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const openDelete = useStore((state) => state.openDelete);
   const prefetchNote = useStore((state) => state.prefetchNote);
 
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(() => {
     // Pass partial data for optimistic UI
-    await selectNote(card.path, {
+    // Do not await so navigation feels instant
+    selectNote(card.path, {
       path: card.path,
       title: card.title,
       tags: card.tags,
@@ -45,7 +45,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const dateLabel = card.modified ? formatShortDate(card.modified) : "";
 
   return (
-    <motion.div
+    <div
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       tabIndex={0}
@@ -56,8 +56,6 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           handleClick();
         }
       }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
       className="
         group relative flex flex-col gap-2 text-left w-full
         rounded-lg p-3.5 cursor-pointer
@@ -114,16 +112,22 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       </div>
 
       {/* Title */}
-      <span className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 pr-2">
-        {card.title}
-      </span>
+      <div className="min-h-[2.4em]">
+        <span className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 pr-2">
+          {card.title}
+        </span>
+      </div>
 
       {/* Preview */}
-      {card.preview && (
-        <span className="text-[12px] text-muted-foreground leading-relaxed line-clamp-2">
-          {card.preview}
-        </span>
-      )}
+      <div className="min-h-[3.2em]">
+        {card.preview ? (
+          <span className="text-[12px] text-muted-foreground leading-relaxed line-clamp-2">
+            {card.preview}
+          </span>
+        ) : (
+          <div className="h-full w-full" />
+        )}
+      </div>
 
       {/* Footer: tags + date */}
       <div className="flex items-center justify-between gap-2 mt-auto pt-3">
@@ -148,7 +152,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           </span>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 

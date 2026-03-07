@@ -117,7 +117,7 @@ export function FileTree() {
 
 export function SearchResultsList() {
   const searchResults = useStore((state) => state.searchResults);
-  const activeNote = useStore((state) => state.activeNote);
+  const activeNotePath = useStore((state) => state.activeNote?.path);
   const selectNote = useStore((state) => state.selectNote);
   const prefetchNote = useStore((state) => state.prefetchNote);
   const sidebarQuery = useStore((state) => state.sidebarQuery);
@@ -143,7 +143,7 @@ export function SearchResultsList() {
     <div className="space-y-0.5 px-2 py-1 border-t border-border/40">
       {searchResults.map((note: NoteData) => {
         const isPinned = pinnedPaths.has(note.path);
-        const isActive = activeNote?.path === note.path;
+        const isActive = activeNotePath === note.path;
 
         // Extract folder path (e.g., "Work/Projects/Note.md" -> "Work/Projects")
         const pathParts = note.path.split("/");
@@ -152,7 +152,7 @@ export function SearchResultsList() {
         return (
           <div key={note.path} className="relative group/note">
             <button
-              onClick={() => selectNote(note.path, { path: note.path, title: note.title, tags: note.tags, preview: note.preview })}
+              onClick={() => { selectNote(note.path, { path: note.path, title: note.title, tags: note.tags, preview: note.preview }); }}
               onMouseEnter={() => prefetchNote(note.path)}
               className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-normal ${
                 isActive
@@ -254,7 +254,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 // ─── FileTreeNode (recursive, reads from stores) ──────────────────────────────
 
 function FileTreeNode({ entry }: { entry: VaultEntry }) {
-  const activeNote = useStore((state) => state.activeNote);
+  const activeNotePath = useStore((state) => state.activeNote?.path);
   const selectNote = useStore((state) => state.selectNote);
   const duplicateNote = useStore((state) => state.duplicateNote);
 
@@ -323,12 +323,12 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
     );
   }
 
-  const isActive = activeNote?.path === entry.path;
+  const isActive = activeNotePath === entry.path;
 
   return (
     <div className="relative group/note">
       <button
-        onClick={() => selectNote(entry.path, { path: entry.path, title: entry.name })}
+        onClick={() => { selectNote(entry.path, { path: entry.path, title: entry.name }); }}
         onMouseEnter={() => prefetchNote(entry.path)}
         className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
           isActive

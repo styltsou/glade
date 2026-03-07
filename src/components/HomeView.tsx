@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useStore } from "@/store";
 import { NoteCard } from "@/components/NoteCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,14 +26,32 @@ export function HomeView() {
   const recentNotes = useStore((state) => state.recentNotes);
   const isHomeLoading = useStore((state) => state.isHomeLoading);
   const loadAll = useStore((state) => state.loadAll);
-  const activeNote = useStore((state) => state.activeNote);
+
+  const homeScrollPos = useStore((state) => state.homeScrollPos);
+  const setHomeScrollPos = useStore((state) => state.setHomeScrollPos);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Reload home data whenever we come back to the home view
-    if (!activeNote) {
-      loadAll();
+    loadAll();
+  }, [loadAll]);
+
+  // Scroll restoration
+  useEffect(() => {
+    if (containerRef.current) {
+      // Use a small timeout to ensure content has rendered and stabilized
+      const timer = setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = homeScrollPos;
+        }
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [activeNote, loadAll]);
+  }, [homeScrollPos]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setHomeScrollPos(e.currentTarget.scrollTop);
+  };
 
   const hasPinned = pinnedNotes.length > 0;
   const hasRecents = recentNotes.length > 0;
@@ -57,42 +75,48 @@ export function HomeView() {
   }
 
   return (
-    <div className="flex-1 overflow-auto px-8 py-10 max-w-5xl mx-auto w-full">
-      {/* Pinned section */}
-      {hasPinned && (
-        <section className="mb-10">
-          <SectionHeader label="Pinned" />
-          <div className="grid grid-cols-3 gap-3">
-            {pinnedNotes.map((card: NoteCardType) => (
-              <NoteCard key={card.path} card={card} showPin={false} />
-            ))}
-          </div>
-        </section>
-      )}
+    <div 
+      ref={containerRef}
+      onScroll={handleScroll}
+      className="flex-1 overflow-auto w-full"
+    >
+      <div className="px-8 py-10 max-w-5xl mx-auto w-full">
+        {/* Pinned section */}
+        {hasPinned && (
+          <section className="mb-10">
+            <SectionHeader label="Pinned" />
+            <div className="grid grid-cols-3 gap-3">
+              {pinnedNotes.map((card: NoteCardType) => (
+                <NoteCard key={card.path} card={card} showPin={false} />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* Recently Opened section */}
-      {hasRecents && (
-        <section className="mb-10">
-          <SectionHeader label="Recently Opened" />
-          <div className="grid grid-cols-3 gap-3">
-            {recentNotes.map((card: NoteCardType) => (
-              <NoteCard key={card.path} card={card} />
-            ))}
-          </div>
-        </section>
-      )}
+        {/* Recently Opened section */}
+        {hasRecents && (
+          <section className="mb-10">
+            <SectionHeader label="Recently Opened" />
+            <div className="grid grid-cols-3 gap-3">
+              {recentNotes.map((card: NoteCardType) => (
+                <NoteCard key={card.path} card={card} />
+              ))}
+            </div>
+          </section>
+        )}
 
-      {/* Empty state */}
-      {!hasPinned && !hasRecents && (
-        <div className="flex flex-col items-center justify-center h-64 gap-2 text-center">
-          <p className="text-[14px] font-medium text-muted-foreground">
-            Your notes will appear here
-          </p>
-          <p className="text-[12px] text-muted-foreground">
-            Open a note to add it to recents, or pin a note to keep it at the top.
-          </p>
-        </div>
-      )}
+        {/* Empty state */}
+        {!hasPinned && !hasRecents && (
+          <div className="flex flex-col items-center justify-center h-64 gap-2 text-center">
+            <p className="text-[14px] font-medium text-muted-foreground">
+              Your notes will appear here
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              Open a note to add it to recents, or pin a note to keep it at the top.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

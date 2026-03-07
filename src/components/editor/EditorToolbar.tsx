@@ -24,7 +24,7 @@ export function EditorToolbar({
   noteTitle,
 }: EditorToolbarProps) {
   return (
-    <div className="flex items-center h-9 px-4 shrink-0 bg-background sticky top-0 z-50 w-full gap-1.5">
+    <div className="flex items-center h-9 px-6 shrink-0 bg-background sticky top-0 z-50 w-full gap-1.5">
       <HeadingGroup editor={editor} />
       <InlineGroup editor={editor} />
       <ListGroup editor={editor} />

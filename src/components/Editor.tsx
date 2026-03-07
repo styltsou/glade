@@ -19,6 +19,7 @@ export function Editor() {
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastLoadedPathRef = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions,
@@ -53,19 +54,41 @@ export function Editor() {
     [activeNote, saveNote],
   );
 
-  // Update editor content when switching notes
+  // Update editor content when switching notes OR when body arrives from bg fetch
   useEffect(() => {
     if (editor && activeNote) {
-      // If we have a body (from cache or server), set it. 
-      // If not, we keep the previous content or show empty until it arrives.
+      // If we have a body and it differs from current editor content, set it.
+      // We check the specific field to allow background updates for optimistic notes.
       if (activeNote.body !== undefined) {
-        editor.commands.setContent(activeNote.body || "");
-        setRawContent(activeNote.body || "");
+        const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
+        
+        // Only update if the content is different to avoid cursor jumps during autosave cycle
+        // and only if we don't have existing content (initial load) OR if it's a new path.
+        if (currentMarkdown === "" || activeNote.path !== lastLoadedPathRef.current) {
+          editor.commands.setContent(activeNote.body || "");
+          setRawContent(activeNote.body || "");
+          lastLoadedPathRef.current = activeNote.path;
+        }
       }
       setIsRawMode(false);
       setSaveStatus("idle");
     }
-  }, [activeNote?.path, editor]);
+  }, [activeNote?.path, activeNote?.body, editor]);
+
+  // Update recents list when note is opened
+  const onNoteOpened = useStore((state) => state.onNoteOpened);
+  useEffect(() => {
+    if (activeNote) {
+      onNoteOpened({
+        path: activeNote.path,
+        title: activeNote.title,
+        tags: activeNote.tags,
+        preview: activeNote.preview,
+        modified: new Date().toISOString(),
+        pinned: false
+      });
+    }
+  }, [activeNote?.path, onNoteOpened]);
 
   // Cleanup
   useEffect(() => {

@@ -23,7 +23,9 @@ export function applyToDOM(theme: ThemeId, resolvedMode: "light" | "dark") {
   el.setAttribute("data-mode", resolvedMode);
 }
 
-export const createThemeSlice: StateCreator<any, [], [], ThemeSlice> = (set) => ({
+import type { StoreState } from "../index";
+
+export const createThemeSlice: StateCreator<StoreState, [], [], ThemeSlice> = (set) => ({
   theme: "claude",
   mode: "dark",
   resolvedMode: "dark",

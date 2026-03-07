@@ -9,8 +9,8 @@
 
 ## Organization
 
-- [ ] Pinned notes — pin to top of sidebar via frontmatter flag
-- [ ] Recently opened — recents section at top of sidebar
+- [x] Pinned notes — pin to top of sidebar via frontmatter flag
+- [x] Recently opened — recents section at top of sidebar
 - [ ] Note linking — `[[note name]]` wiki-style links between notes
 
 ## Git / Sync
@@ -20,7 +20,7 @@
 
 ## Export
 
-- [ ] Export note as clean `.md` or PDF
+- [x] Export note as clean `.md` or PDF
 
 ## UI / UX
 

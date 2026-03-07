@@ -16,8 +16,9 @@ export interface SidebarSlice {
   cycleSidebarSort: () => Promise<void>;
   setSidebarSort: (sort: SortMode) => Promise<void>;
 }
+import type { StoreState } from "../index";
 
-export const createSidebarSlice: StateCreator<any, [], [], SidebarSlice> = (set, get) => ({
+export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> = (set, get) => ({
   sidebarCollapsed: false,
   tagsCollapsed: true,
   sidebarSort: "name-asc",

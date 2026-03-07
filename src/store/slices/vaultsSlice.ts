@@ -16,7 +16,9 @@ export interface VaultsSlice {
   deleteVault: (vaultId: string) => Promise<void>;
 }
 
-export const createVaultsSlice: StateCreator<any, [], [], VaultsSlice> = (set, get) => ({
+import type { StoreState } from "../index";
+
+export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = (set, get) => ({
   vaults: [],
   activeVault: null,
   isVaultsLoading: false,

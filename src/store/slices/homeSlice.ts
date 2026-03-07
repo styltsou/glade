@@ -15,13 +15,19 @@ export interface HomeSlice {
   unpinNote: (path: string) => Promise<void>;
   prefetchNote: (path: string) => Promise<void>;
   clearCache: () => void;
+  onNoteOpened: (note: NoteCard) => void;
+  homeScrollPos: number;
+  setHomeScrollPos: (pos: number) => void;
 }
 
-export const createHomeSlice: StateCreator<any, [], [], HomeSlice> = (set, get) => ({
+import type { StoreState } from "../index";
+
+export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set, get) => ({
   pinnedNotes: [],
   recentNotes: [],
   isHomeLoading: false,
   noteCache: {},
+  homeScrollPos: 0,
 
   loadPinned: async () => {
     try {
@@ -35,7 +41,7 @@ export const createHomeSlice: StateCreator<any, [], [], HomeSlice> = (set, get) 
   loadRecents: async () => {
     try {
       const recentNotes = await invoke<NoteCard[]>("get_recent_notes");
-      set({ recentNotes });
+      set({ recentNotes: recentNotes.slice(0, 9) });
     } catch (e) {
       console.error("Failed to load recent notes:", e);
     }
@@ -71,6 +77,19 @@ export const createHomeSlice: StateCreator<any, [], [], HomeSlice> = (set, get) 
 
   clearCache: () => {
     set({ noteCache: {} });
+  },
+
+  onNoteOpened: (note: NoteCard) => {
+    const { recentNotes } = get();
+    // Move to top if already exists, else add to top
+    const filtered = recentNotes.filter((n) => n.path !== note.path);
+    set({
+      recentNotes: [{ ...note, modified: new Date().toISOString() }, ...filtered].slice(0, 9),
+    });
+  },
+
+  setHomeScrollPos: (pos: number) => {
+    set({ homeScrollPos: pos });
   },
 
   pinNote: async (path: string) => {

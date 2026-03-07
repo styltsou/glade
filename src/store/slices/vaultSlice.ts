@@ -29,8 +29,9 @@ export interface VaultSlice {
   goHome: () => void;
   setSidebarQuery: (query: string) => void;
 }
+import type { StoreState } from "../index";
 
-export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get) => ({
+export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (set, get) => ({
   entries: [],
   activeNote: null,
   isVaultLoading: false,
@@ -74,10 +75,16 @@ export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get
 
     try {
       const note = await invoke<NoteData>("read_note", { path });
-      set({ activeNote: note, vaultError: null });
       
       // Update cache
-      set({ noteCache: { ...get().noteCache, [path]: note } });
+      set((state: StoreState) => ({ 
+        noteCache: { ...state.noteCache, [path]: note } 
+      }));
+
+      // Only update activeNote if the user hasn't switched to another note in the meantime
+      if (get().activeNote?.path === path) {
+        set({ activeNote: note, vaultError: null });
+      }
       
       invoke("record_note_opened", { path }).catch(() => {});
     } catch (e) {
@@ -92,7 +99,13 @@ export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get
     try {
       await invoke("write_note", { path, content });
       const note = await invoke<NoteData>("read_note", { path });
-      set({ activeNote: note, vaultError: null });
+      
+      // Update cache and current note
+      set((state: StoreState) => ({
+        activeNote: state.activeNote?.path === path ? note : state.activeNote,
+        noteCache: { ...state.noteCache, [path]: note },
+        vaultError: null
+      }));
     } catch (e) {
       set({ vaultError: String(e) });
     }
@@ -112,10 +125,21 @@ export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get
   renameNote: async (path: string, newTitle: string) => {
     try {
       await invoke("rename_note", { path, newTitle });
-      const { activeNote } = get();
+      
+      // Invalidate old cache entry
+      const { noteCache, activeNote } = get();
+      const newCache = { ...noteCache };
+      delete newCache[path];
+      
       if (activeNote?.path === path) {
-        set({ activeNote: { ...activeNote, title: newTitle } });
+        set({ 
+          activeNote: { ...activeNote, title: newTitle },
+          noteCache: newCache
+        });
+      } else {
+        set({ noteCache: newCache });
       }
+      
       await get().loadVault();
       await get().loadAll();
     } catch (e) {
@@ -136,9 +160,15 @@ export const createVaultSlice: StateCreator<any, [], [], VaultSlice> = (set, get
   deleteEntry: async (path: string) => {
     try {
       await invoke("delete_entry", { path });
-      const { activeNote } = get();
+      const { activeNote, noteCache } = get();
+      
+      const newCache = { ...noteCache };
+      delete newCache[path];
+
       if (activeNote?.path === path) {
-        set({ activeNote: null });
+        set({ activeNote: null, noteCache: newCache });
+      } else {
+        set({ noteCache: newCache });
       }
       await get().loadVault();
       await get().loadAll();

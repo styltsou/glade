@@ -22,7 +22,9 @@ export interface DialogSlice {
   closeSettings: () => void;
 }
 
-export const createDialogSlice: StateCreator<DialogSlice, [], [], DialogSlice> = (set) => ({
+import type { StoreState } from "../index";
+
+export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = (set) => ({
   renameOpen: false,
   renamePath: null,
   renameInitialTitle: "",
