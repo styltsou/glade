@@ -27,31 +27,12 @@ export function HomeView() {
   const isHomeLoading = useStore((state) => state.isHomeLoading);
   const loadAll = useStore((state) => state.loadAll);
 
-  const homeScrollPos = useStore((state) => state.homeScrollPos);
-  const setHomeScrollPos = useStore((state) => state.setHomeScrollPos);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Reload home data whenever we come back to the home view
     loadAll();
   }, [loadAll]);
-
-  // Scroll restoration
-  useEffect(() => {
-    if (containerRef.current) {
-      // Use a small timeout to ensure content has rendered and stabilized
-      const timer = setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop = homeScrollPos;
-        }
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [homeScrollPos]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    setHomeScrollPos(e.currentTarget.scrollTop);
-  };
 
   const hasPinned = pinnedNotes.length > 0;
   const hasRecents = recentNotes.length > 0;
@@ -77,7 +58,6 @@ export function HomeView() {
   return (
     <div 
       ref={containerRef}
-      onScroll={handleScroll}
       className="flex-1 overflow-auto w-full"
     >
       <div className="px-8 py-10 max-w-5xl mx-auto w-full">

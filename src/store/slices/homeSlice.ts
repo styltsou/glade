@@ -16,8 +16,6 @@ export interface HomeSlice {
   prefetchNote: (path: string) => Promise<void>;
   clearCache: () => void;
   onNoteOpened: (note: NoteCard) => void;
-  homeScrollPos: number;
-  setHomeScrollPos: (pos: number) => void;
 }
 
 import type { StoreState } from "../index";
@@ -27,7 +25,6 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   recentNotes: [],
   isHomeLoading: false,
   noteCache: {},
-  homeScrollPos: 0,
 
   loadPinned: async () => {
     try {
@@ -86,10 +83,6 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     set({
       recentNotes: [{ ...note, modified: new Date().toISOString() }, ...filtered].slice(0, 9),
     });
-  },
-
-  setHomeScrollPos: (pos: number) => {
-    set({ homeScrollPos: pos });
   },
 
   pinNote: async (path: string) => {
