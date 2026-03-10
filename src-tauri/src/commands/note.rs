@@ -102,6 +102,9 @@ pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
     let full_path = target_dir.join(&filename);
     fs::write(&full_path, &full_content)?;
 
+    // Invalidate vault tree cache since we added a new note
+    vault::invalidate_vault_cache();
+
     let relative_path = full_path
         .strip_prefix(&vault_path)
         .unwrap_or(&full_path)
@@ -138,6 +141,9 @@ pub async fn rename_note(path: String, new_title: String) -> Result<(), AppError
     let frontmatter = vault::build_frontmatter(&meta);
     let full_content = format!("{}\n\n{}", frontmatter, body);
     fs::write(&full_path, full_content)?;
+
+    // Invalidate vault tree cache since title changed
+    vault::invalidate_vault_cache();
 
     Ok(())
 }
@@ -189,6 +195,9 @@ pub async fn duplicate_note(path: String) -> Result<NoteData, AppError> {
     let full_content = format!("{}\n\n{}", frontmatter, body);
     fs::write(&new_full_path, &full_content)?;
     
+    // Invalidate vault tree cache since we added a new note
+    vault::invalidate_vault_cache();
+    
     let relative_path = new_full_path.strip_prefix(&vault_path).unwrap_or(&new_full_path).to_string_lossy().to_string();
     
     Ok(NoteData {
@@ -202,14 +211,11 @@ pub async fn duplicate_note(path: String) -> Result<NoteData, AppError> {
     })
 }
 
-/// Retrieve all pinned notes as NoteCards (scans the whole vault).
+/// Retrieve all pinned notes as NoteCards (uses cache when available).
 #[tauri::command]
 pub async fn get_pinned_notes() -> Result<Vec<NoteCard>, AppError> {
     let vault_path = vault::get_vault_path()?;
-    let mut cards = Vec::new();
-    collect_note_cards_recursive(&vault_path, &vault_path, &mut cards, |m| m.pinned)?;
-    cards.sort_by(|a, b| b.modified.cmp(&a.modified));
-    Ok(cards)
+    vault::get_pinned_notes_cached(&vault_path)
 }
 
 /// Retrieve up to 12 recently-opened notes as NoteCards (excludes pinned notes).
@@ -219,8 +225,8 @@ pub async fn get_recent_notes() -> Result<Vec<NoteCard>, AppError> {
     let config = config::load_config()?;
     let mut cards = Vec::new();
 
-    for entry in &config.recents {
-        let full_path = vault_path.join(&entry.path);
+    for path in &config.recents {
+        let full_path = vault_path.join(path);
         if !full_path.exists() {
             continue;
         }
@@ -243,7 +249,7 @@ pub async fn get_recent_notes() -> Result<Vec<NoteCard>, AppError> {
         });
 
         cards.push(NoteCard {
-            path: entry.path.clone(),
+            path: path.clone(),
             title,
             tags: meta.tags,
             modified,
@@ -268,6 +274,25 @@ pub async fn pin_note(path: String) -> Result<(), AppError> {
     meta.pinned = true;
     let frontmatter = vault::build_frontmatter(&meta);
     fs::write(&full_path, format!("{}\n\n{}", frontmatter, body))?;
+    
+    // Update pinned cache
+    let filename = full_path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default();
+    let title = meta.title.filter(|t| !t.is_empty()).unwrap_or(filename);
+    let fs_meta = fs::metadata(&full_path)?;
+    let modified = fs_meta.modified().ok().and_then(|t| {
+        let dt: chrono::DateTime<Utc> = t.into();
+        Some(dt.to_rfc3339())
+    });
+    let note_card = NoteCard {
+        path: path.clone(),
+        title,
+        tags: meta.tags,
+        modified,
+        preview: vault::make_preview(&body),
+        pinned: true,
+    };
+    vault::update_pinned_cache(&path, true, Some(note_card));
+    
     Ok(())
 }
 
@@ -280,10 +305,15 @@ pub async fn unpin_note(path: String) -> Result<(), AppError> {
         return Err(AppError::NotFound(format!("Note not found: {}", path)));
     }
     let content = fs::read_to_string(&full_path)?;
-    let (mut meta, body) = vault::parse_frontmatter(&content);
+    let (meta, body) = vault::parse_frontmatter(&content);
+    let (mut meta, body) = (meta, body);
     meta.pinned = false;
     let frontmatter = vault::build_frontmatter(&meta);
     fs::write(&full_path, format!("{}\n\n{}", frontmatter, body))?;
+    
+    // Update pinned cache
+    vault::update_pinned_cache(&path, false, None);
+    
     Ok(())
 }
 
@@ -293,57 +323,5 @@ pub async fn record_note_opened(path: String) -> Result<(), AppError> {
     let mut cfg = config::load_config()?;
     config::record_opened(&mut cfg, &path);
     config::save_config(&cfg)?;
-    Ok(())
-}
-
-pub fn collect_note_cards_recursive(
-    root: &std::path::Path,
-    dir: &std::path::Path,
-    cards: &mut Vec<NoteCard>,
-    predicate: impl Fn(&NoteMeta) -> bool + Copy,
-) -> Result<(), AppError> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let name = entry.file_name().to_string_lossy().to_string();
-
-        if name.starts_with('.') {
-            continue;
-        }
-
-        if path.is_dir() {
-            collect_note_cards_recursive(root, &path, cards, predicate)?;
-        } else if name.ends_with(".md") {
-            let content = fs::read_to_string(&path)?;
-            let (meta, body) = vault::parse_frontmatter(&content);
-
-            if predicate(&meta) {
-                let filename = path
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-                    .unwrap_or_default();
-                let title = meta.title.filter(|t| !t.is_empty()).unwrap_or(filename);
-                let relative = path
-                    .strip_prefix(root)
-                    .unwrap_or(&path)
-                    .to_string_lossy()
-                    .to_string();
-                let fs_meta = fs::metadata(&path)?;
-                let modified = fs_meta.modified().ok().and_then(|t| {
-                    let dt: chrono::DateTime<Utc> = t.into();
-                    Some(dt.to_rfc3339())
-                });
-
-                cards.push(NoteCard {
-                    path: relative,
-                    title,
-                    tags: meta.tags,
-                    modified,
-                    preview: vault::make_preview(&body),
-                    pinned: meta.pinned,
-                });
-            }
-        }
-    }
     Ok(())
 }

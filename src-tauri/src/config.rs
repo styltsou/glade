@@ -1,13 +1,14 @@
 use std::fs;
 use std::path::PathBuf;
+use std::sync::RwLock;
 
 use chrono::Utc;
 use uuid::Uuid;
 
 use crate::error::AppError;
-use crate::types::{AppConfig, Vault};
+use crate::types::{AppConfig, Vault, MAX_RECENTS};
 
-const MAX_RECENTS: usize = 12;
+static CONFIG_CACHE: RwLock<Option<AppConfig>> = RwLock::new(None);
 
 /// Returns the path to the local app-config JSON file.
 /// Uses Tauri's app data directory: e.g. ~/.config/glade/glade-config.json on Linux.
@@ -34,42 +35,49 @@ pub fn get_config_path() -> Result<PathBuf, AppError> {
 }
 
 /// Load the app config from disk. Returns a default config if the file doesn't exist.
+/// Uses in-memory cache to avoid repeated disk reads.
 pub fn load_config() -> Result<AppConfig, AppError> {
+    // Check cache first
+    if let Some(cached) = CONFIG_CACHE.read().unwrap().clone() {
+        return Ok(cached);
+    }
+
+    // Load from disk
     let path = get_config_path()?;
     if !path.exists() {
-        return Ok(AppConfig::default());
+        let default = AppConfig::default();
+        *CONFIG_CACHE.write().unwrap() = Some(default.clone());
+        return Ok(default);
     }
     let content = fs::read_to_string(&path)?;
     let config: AppConfig = serde_json::from_str(&content).unwrap_or_default();
+
+    // Cache it
+    *CONFIG_CACHE.write().unwrap() = Some(config.clone());
     Ok(config)
 }
 
-/// Save the app config to disk.
+/// Invalidate the config cache, forcing a reload from disk on next access.
+pub fn invalidate_cache() {
+    *CONFIG_CACHE.write().unwrap() = None;
+}
+
+/// Save the app config to disk and update cache.
 pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     let path = get_config_path()?;
     let content =
         serde_json::to_string_pretty(config).map_err(|e| AppError::InvalidPath(e.to_string()))?;
     fs::write(&path, content)?;
+
+    // Update cache
+    *CONFIG_CACHE.write().unwrap() = Some(config.clone());
     Ok(())
 }
 
 /// Record that a note was opened: prepends to recents list, deduplicates, trims to MAX_RECENTS.
 pub fn record_opened(config: &mut AppConfig, path: &str) {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64;
-
-    // Remove existing entry for this path, then prepend the fresh one
-    config.recents.retain(|r| r.path != path);
-    config.recents.insert(
-        0,
-        crate::types::RecentEntry {
-            path: path.to_string(),
-            last_opened: now,
-        },
-    );
+    config.recents.retain(|p| p != path);
+    config.recents.insert(0, path.to_string());
     config.recents.truncate(MAX_RECENTS);
 }
 

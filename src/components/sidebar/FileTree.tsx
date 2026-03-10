@@ -58,6 +58,27 @@ export function filterPinnedEntries(
     });
 }
 
+function filterByTags(
+  entries: VaultEntry[],
+  tagFilters: string[]
+): VaultEntry[] {
+  if (tagFilters.length === 0) return entries;
+  
+  return entries
+    .map((entry) => {
+      if (entry.is_dir) {
+        const filteredChildren = filterByTags(entry.children, tagFilters);
+        return { ...entry, children: filteredChildren };
+      }
+      return entry;
+    })
+    .filter((entry) => {
+      if (entry.is_dir) return entry.children.length > 0;
+      // Show note if it has ANY of the selected tags
+      return entry.tags.some((tag) => tagFilters.includes(tag));
+    });
+}
+
 // ─── FileTree (exported for use in Sidebar) ───────────────────────────────────
 
 export function FileTree() {
@@ -66,38 +87,40 @@ export function FileTree() {
   const createNote = useStore((state) => state.createNote);
   const pinnedNotes = useStore((state) => state.pinnedNotes);
   const sidebarSort = useStore((state) => state.sidebarSort);
+  const activeTagFilters = useStore((state) => state.activeTagFilters);
 
   const pinnedPaths = new Set<string>(pinnedNotes.map((n: NoteCard) => n.path));
-  const filteredEntries = filterPinnedEntries(entries, pinnedPaths);
-  const sortedEntries = sortEntries(filteredEntries, sidebarSort);
+  const filteredByPinned = filterPinnedEntries(entries, pinnedPaths);
+  const filteredByTags = filterByTags(filteredByPinned, activeTagFilters);
+  const sortedEntries = sortEntries(filteredByTags, sidebarSort);
 
   return (
-    <div className="flex-1 overflow-auto px-2 py-1">
+    <div className="flex-1 overflow-auto px-2 py-1 [scrollbar-gutter:stable]">
       {!isVaultLoading && sortedEntries.length > 0 && (
         <div className="flex items-center justify-between pb-1.5 pl-2">
-          <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
+          <span className="text-xs font-bold text-foreground uppercase tracking-widest">
             Notes
           </span>
           <button
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
             onClick={() => createNote()}
             title="New note"
           >
-            <PlusIcon className="h-3.5 w-3.5" />
+            <PlusIcon className="h-4 w-4" />
           </button>
         </div>
       )}
 
       {isVaultLoading ? (
-        <div className="px-2.5 py-4 text-[12px] text-muted-foreground text-center">
+        <div className="px-2.5 py-4 text-xs text-muted-foreground text-center">
           Loading…
         </div>
       ) : sortedEntries.length === 0 ? (
         <div className="px-2.5 py-8 text-center">
-          <p className="text-[12px] text-muted-foreground mb-2">No notes yet</p>
+          <p className="text-xs text-muted-foreground mb-2">No notes yet</p>
           <button
             onClick={() => createNote()}
-            className="text-[12px] text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Create your first note
           </button>
@@ -131,7 +154,7 @@ export function SearchResultsList() {
 
   if (searchResults.length === 0 && sidebarQuery.trim().length > 0) {
     return (
-      <div className="px-2.5 py-8 text-center text-[12px] text-muted-foreground">
+      <div className="px-2.5 py-8 text-center text-xs text-muted-foreground">
         No matching notes found
       </div>
     );
@@ -154,17 +177,17 @@ export function SearchResultsList() {
             <button
               onClick={() => { selectNote(note.path, { path: note.path, title: note.title, tags: note.tags, preview: note.preview }); }}
               onMouseEnter={() => prefetchNote(note.path)}
-              className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-normal ${
+              className={`flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm text-left transition-colors cursor-pointer font-normal ${
                 isActive
                   ? "bg-sidebar-accent text-foreground font-medium"
-                  : "text-muted-foreground group-hover:text-foreground group-hover:bg-sidebar-accent"
+                  : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
               }`}
             >
               <div className="flex flex-col min-w-0 flex-1 pr-1">
                 {folderPath && (
                   <div className="flex items-center gap-1 mb-0.5 opacity-60">
                     <Folder className="h-2.5 w-2.5 shrink-0" />
-                    <span className="text-[10px] font-normal truncate">
+                    <span className="text-xs font-normal truncate">
                       {folderPath}
                     </span>
                   </div>
@@ -173,17 +196,17 @@ export function SearchResultsList() {
                   {isPinned && (
                     <DrawingPinFilledIcon className="h-3.5 w-3.5 shrink-0 text-primary rotate-45" />
                   )}
-                  <span className="truncate flex-1">
-                    <Highlight text={note.title} query={sidebarQuery} />
-                  </span>
+                <span className="truncate pr-8">
+                  <Highlight text={note.title} query={sidebarQuery} />
+                </span>
                 </div>
               </div>
             </button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/btn:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
-                  <MoreHorizontal className="h-4 w-4" />
+                <button className="cursor-pointer absolute right-0 top-0 bottom-0 w-7 px-2 flex items-center justify-center rounded-sm text-foreground/70 opacity-0 group-hover/btn:opacity-100 data-[state=open]:opacity-100 hover:text-foreground group-hover/btn:bg-sidebar-accent data-[state=open]:bg-sidebar-accent transition-colors z-10">
+                  <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" sideOffset={2}>
@@ -278,20 +301,20 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
         <div className="relative group/folder">
           <button
             onClick={() => setExpanded((e) => !e)}
-            className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-[12px] font-medium transition-colors cursor-pointer text-foreground group-hover/folder:bg-sidebar-accent"
+            className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground hover:bg-sidebar-accent"
           >
             {expanded ? (
               <FolderOpen className="h-3.5 w-3.5 shrink-0" />
             ) : (
               <Folder className="h-3.5 w-3.5 shrink-0" />
             )}
-            <span className="truncate pr-1">{entry.name}</span>
+            <span className="truncate pr-8">{entry.name}</span>
           </button>
 
           <DropdownMenu onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <button className="cursor-pointer absolute right-1 top-1.5 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
-                <MoreHorizontal className="h-4 w-4" />
+              <button className="cursor-pointer absolute right-0 top-0 bottom-0 w-7 px-2 flex items-center justify-center rounded-sm text-foreground/70 opacity-0 group-hover/folder:opacity-100 data-[state=open]:opacity-100 hover:text-foreground group-hover/folder:bg-sidebar-accent data-[state=open]:bg-sidebar-accent transition-colors z-10">
+                <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={2}>
@@ -328,12 +351,19 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
   return (
     <div className="relative group/note">
       <button
-        onClick={() => { selectNote(entry.path, { path: entry.path, title: entry.name }); }}
+        onClick={() => { 
+          selectNote(entry.path, { 
+            path: entry.path, 
+            title: entry.name,
+            tags: entry.tags,
+            updated: entry.modified
+          }); 
+        }}
         onMouseEnter={() => prefetchNote(entry.path)}
-        className={`flex items-center w-full rounded-md py-1.5 px-2 text-[13px] text-left transition-colors cursor-pointer font-medium ${
+        className={`flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium ${
           isActive
             ? "bg-sidebar-accent text-foreground font-medium"
-            : "text-muted-foreground font-normal group-hover/note:text-foreground group-hover/note:bg-sidebar-accent"
+            : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
         }`}
       >
         <span className="truncate pr-1">{entry.name}</span>
@@ -341,8 +371,8 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
-            <MoreHorizontal className="h-4 w-4" />
+          <button className="cursor-pointer absolute right-0 top-0 bottom-0 w-7 px-2 flex items-center justify-center rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground group-hover/note:bg-sidebar-accent active:bg-sidebar-accent data-[state=open]:bg-sidebar-accent transition-colors z-10">
+            <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={2}>

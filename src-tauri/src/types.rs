@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+pub const MAX_RECENTS: usize = 12;
+pub const PREVIEW_LENGTH: usize = 120;
+
 /// A vault directory under ~/.glade/vaults/
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vault {
@@ -24,6 +27,8 @@ pub struct VaultEntry {
     pub children: Vec<VaultEntry>,
     /// Last modified timestamp (ISO 8601)
     pub modified: Option<String>,
+    /// Tags from frontmatter (only populated for notes)
+    pub tags: Vec<String>,
 }
 
 /// Full note data including parsed frontmatter and body.
@@ -74,15 +79,6 @@ pub struct NoteCard {
     pub pinned: bool,
 }
 
-/// A single entry in the local recents list.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RecentEntry {
-    /// Relative path from vault root
-    pub path: String,
-    /// Unix timestamp of when the note was last opened
-    pub last_opened: i64,
-}
-
 /// The persistent sidebar UI state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SidebarState {
@@ -109,7 +105,7 @@ pub struct AppConfig {
     pub vaults: Vec<Vault>,
     pub active_vault_id: Option<String>,
     #[serde(default)]
-    pub recents: Vec<RecentEntry>,
+    pub recents: Vec<String>,
     #[serde(default)]
     pub sidebar: SidebarState,
 }

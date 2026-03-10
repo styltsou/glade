@@ -1,11 +1,16 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::RwLock;
 
 use chrono::Utc;
 
 use crate::config;
 use crate::error::AppError;
-use crate::types::{NoteMeta, VaultEntry};
+use crate::types::{NoteCard, NoteMeta, TagCount, VaultEntry, PREVIEW_LENGTH};
+
+static VAULT_TREE_CACHE: RwLock<Option<(PathBuf, Vec<VaultEntry>)>> = RwLock::new(None);
+static PINNED_NOTES_CACHE: RwLock<Vec<NoteCard>> = RwLock::new(Vec::new());
+static TAGS_CACHE: RwLock<Option<(PathBuf, Vec<TagCount>)>> = RwLock::new(None);
 
 fn get_home_dir() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
@@ -65,8 +70,22 @@ pub fn get_vault_path() -> Result<PathBuf, AppError> {
 /// `vault_root` is always the top-level vault path so that all `path` values
 /// returned by this function are relative to the vault root, never to a
 /// subdirectory.
+/// Uses in-memory cache to avoid repeated filesystem scans.
 pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> {
-    build_vault_tree_inner(vault_root, vault_root)
+    // Check cache
+    let cached = VAULT_TREE_CACHE.read().unwrap();
+    if let Some((cached_path, entries)) = cached.as_ref() {
+        if cached_path == vault_root {
+            return Ok(entries.clone());
+        }
+    }
+    drop(cached);
+
+    // Build and cache
+    let entries = build_vault_tree_inner(vault_root, vault_root)?;
+    *VAULT_TREE_CACHE.write().unwrap() = Some((vault_root.to_path_buf(), entries.clone()));
+
+    Ok(entries)
 }
 
 fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntry>, AppError> {
@@ -105,6 +124,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 is_dir: true,
                 children: sub_children,
                 modified,
+                tags: vec![],
             });
         } else if name.ends_with(".md") {
             let content = fs::read_to_string(&path).unwrap_or_default();
@@ -121,6 +141,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 is_dir: false,
                 children: vec![],
                 modified,
+                tags: meta.tags,
             });
         }
     }
@@ -237,9 +258,140 @@ pub fn make_preview(body: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ");
 
-    if preview.len() > 120 {
-        format!("{}…", &preview[..120])
+    if preview.len() > PREVIEW_LENGTH {
+        format!("{}…", &preview[..PREVIEW_LENGTH])
     } else {
         preview
+    }
+}
+
+/// Walk all .md files in a vault, calling a callback for each.
+/// Callback receives: (full_path, relative_path, note_meta, body)
+/// Callback returns: Some(T) to include in results, None to skip
+pub fn walk_notes<T>(
+    root: &Path,
+    dir: &Path,
+    mut callback: impl FnMut(&Path, &str, &NoteMeta, &str) -> Option<T>,
+) -> Result<Vec<T>, AppError> {
+    let mut results = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+
+    while let Some(current_dir) = stack.pop() {
+        let entries: Vec<_> = fs::read_dir(&current_dir)?.filter_map(|e| e.ok()).collect();
+
+        for entry in entries {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+
+            if name.starts_with('.') {
+                continue;
+            }
+
+            if path.is_dir() {
+                stack.push(path);
+            } else if name.ends_with(".md") {
+                let relative = path
+                    .strip_prefix(root)
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .to_string();
+
+                let content = fs::read_to_string(&path).unwrap_or_default();
+                let (meta, body) = parse_frontmatter(&content);
+
+                if let Some(result) = callback(&path, &relative, &meta, &body) {
+                    results.push(result);
+                }
+            }
+        }
+    }
+
+    Ok(results)
+}
+
+/// Invalidate the vault tree cache. Call this after any mutation (create, delete, rename).
+pub fn invalidate_vault_cache() {
+    *VAULT_TREE_CACHE.write().unwrap() = None;
+    *PINNED_NOTES_CACHE.write().unwrap() = Vec::new();
+    *TAGS_CACHE.write().unwrap() = None;
+}
+
+/// Get tags cache for a specific vault, returns None if not cached or different vault.
+pub fn get_tags_cache(vault_path: &Path) -> Option<Vec<crate::types::TagCount>> {
+    let cached = TAGS_CACHE.read().unwrap();
+    if let Some((cached_path, tags)) = cached.as_ref() {
+        if cached_path == vault_path {
+            return Some(tags.clone());
+        }
+    }
+    None
+}
+
+/// Set tags cache for a specific vault.
+pub fn set_tags_cache(vault_path: &Path, tags: Vec<crate::types::TagCount>) {
+    *TAGS_CACHE.write().unwrap() = Some((vault_path.to_path_buf(), tags));
+}
+
+/// Get cached pinned notes, or scan if not cached.
+pub fn get_pinned_notes_cached(vault_root: &Path) -> Result<Vec<NoteCard>, AppError> {
+    // Check cache first
+    let cached = PINNED_NOTES_CACHE.read().unwrap();
+    if !cached.is_empty() {
+        return Ok(cached.clone());
+    }
+    drop(cached);
+
+    // Scan and cache using walk_notes
+    let cards: Vec<NoteCard> = walk_notes(vault_root, vault_root, |path, relative, meta, body| {
+        if !meta.pinned {
+            return None;
+        }
+
+        let filename = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_default();
+        let title = meta
+            .title
+            .clone()
+            .filter(|t| !t.is_empty())
+            .unwrap_or(filename);
+        let fs_meta = match fs::metadata(path) {
+            Ok(m) => m,
+            Err(_) => return None,
+        };
+        let modified = fs_meta.modified().ok().and_then(|t| {
+            let dt: chrono::DateTime<Utc> = t.into();
+            Some(dt.to_rfc3339())
+        });
+
+        Some(NoteCard {
+            path: relative.to_string(),
+            title,
+            tags: meta.tags.clone(),
+            modified,
+            preview: make_preview(body),
+            pinned: meta.pinned,
+        })
+    })?;
+
+    let mut cards = cards;
+    cards.sort_by(|a, b| b.modified.cmp(&a.modified));
+
+    *PINNED_NOTES_CACHE.write().unwrap() = cards.clone();
+    Ok(cards)
+}
+
+/// Update pinned cache after pin/unpin operations.
+pub fn update_pinned_cache(path: &str, pinned: bool, note_card: Option<NoteCard>) {
+    let mut cache = PINNED_NOTES_CACHE.write().unwrap();
+    if pinned {
+        if let Some(card) = note_card {
+            cache.retain(|c| c.path != path);
+            cache.push(card);
+            cache.sort_by(|a, b| b.modified.cmp(&a.modified));
+        }
+    } else {
+        cache.retain(|c| c.path != path);
     }
 }

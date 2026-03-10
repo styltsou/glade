@@ -28,6 +28,9 @@ pub async fn delete_entry(path: String) -> Result<(), AppError> {
         fs::remove_file(&full_path)?;
     }
 
+    // Invalidate vault tree cache
+    vault::invalidate_vault_cache();
+
     Ok(())
 }
 
@@ -45,12 +48,28 @@ pub async fn create_folder(path: String) -> Result<(), AppError> {
     }
 
     fs::create_dir_all(&full_path)?;
+    
+    // Invalidate vault tree cache
+    vault::invalidate_vault_cache();
+    
     Ok(())
 }
 
 #[tauri::command]
 pub async fn initialize_app() -> Result<AppConfig, AppError> {
-    config::load_config()
+    let config = config::load_config()?;
+    
+    // Auto-create default vault if none exist
+    if config.vaults.is_empty() {
+        let vault = config::create_vault("My Vault", "my-vault")?;
+        let mut new_config = config;
+        new_config.vaults = vec![vault.clone()];
+        new_config.active_vault_id = Some(vault.id);
+        config::save_config(&new_config)?;
+        return Ok(new_config);
+    }
+    
+    Ok(config)
 }
 
 #[tauri::command]
@@ -77,6 +96,10 @@ pub async fn set_active_vault(vault_id: String) -> Result<(), AppError> {
     }
     config.active_vault_id = Some(vault_id);
     config::save_config(&config)?;
+    
+    // Invalidate vault caches when switching vaults
+    vault::invalidate_vault_cache();
+    
     Ok(())
 }
 

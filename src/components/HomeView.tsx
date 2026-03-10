@@ -6,7 +6,7 @@ import type { NoteCard as NoteCardType } from "@/types";
 
 function NoteCardSkeleton() {
   return (
-    <div className="flex flex-col gap-2 p-3.5 rounded-lg border border-border bg-card/50">
+    <div className="flex flex-col gap-2 p-4 rounded-lg border border-border bg-card/50">
       <Skeleton className="h-4 w-3/4 mb-1" />
       <Skeleton className="h-3 w-full" />
       <Skeleton className="h-3 w-5/6" />
@@ -42,10 +42,10 @@ export function HomeView() {
   // This enables "stale-while-revalidate" feel.
   if (isHomeLoading && !hasData) {
     return (
-      <div className="flex-1 overflow-auto px-8 py-10 max-w-5xl mx-auto w-full">
+      <div className="flex-1 overflow-auto px-4 py-10 max-w-6xl mx-auto w-full">
         <section className="mb-10">
           <Skeleton className="h-3 w-16 mb-4" />
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {[...Array(6)].map((_, i) => (
               <NoteCardSkeleton key={i} />
             ))}
@@ -60,12 +60,12 @@ export function HomeView() {
       ref={containerRef}
       className="flex-1 overflow-auto w-full"
     >
-      <div className="px-8 py-10 max-w-5xl mx-auto w-full">
+      <div className="px-4 py-10 max-w-6xl mx-auto w-full">
         {/* Pinned section */}
         {hasPinned && (
           <section className="mb-10">
             <SectionHeader label="Pinned" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4">
               {pinnedNotes.map((card: NoteCardType) => (
                 <NoteCard key={card.path} card={card} showPin={false} />
               ))}
@@ -77,7 +77,7 @@ export function HomeView() {
         {hasRecents && (
           <section className="mb-10">
             <SectionHeader label="Recently Opened" />
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-4">
               {recentNotes.map((card: NoteCardType) => (
                 <NoteCard key={card.path} card={card} />
               ))}
@@ -88,10 +88,10 @@ export function HomeView() {
         {/* Empty state */}
         {!hasPinned && !hasRecents && (
           <div className="flex flex-col items-center justify-center h-64 gap-2 text-center">
-            <p className="text-[14px] font-medium text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               Your notes will appear here
             </p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Open a note to add it to recents, or pin a note to keep it at the top.
             </p>
           </div>
@@ -103,7 +103,7 @@ export function HomeView() {
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-3">
       {label}
     </h2>
   );

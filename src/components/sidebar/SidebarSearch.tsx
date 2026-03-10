@@ -29,7 +29,7 @@ export function SidebarSearch({ onSearchChange }: SidebarSearchProps) {
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full h-8 pl-8 pr-3 text-[13px] bg-sidebar-accent/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+          className="w-full h-8 pl-8 pr-3 text-sm bg-sidebar-accent/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
         />
       </div>
     </div>

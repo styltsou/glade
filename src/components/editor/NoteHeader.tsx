@@ -61,7 +61,7 @@ export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteH
       </div>
 
       <div className="flex items-center gap-4 shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
-        <span className="w-14 text-right opacity-70">
+        <span className={saveStatus === "saved" ? "text-primary font-medium" : saveStatus === "saving" ? "opacity-70" : "w-14"}>
           {saveStatus === "saving"
             ? "Saving…"
             : saveStatus === "saved"

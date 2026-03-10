@@ -1,20 +1,17 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { NoteCard, NoteData } from "@/types";
+import type { NoteCard } from "@/types";
 
 export interface HomeSlice {
   pinnedNotes: NoteCard[];
   recentNotes: NoteCard[];
   isHomeLoading: boolean;
-  noteCache: Record<string, NoteData>;
 
   loadPinned: () => Promise<void>;
   loadRecents: () => Promise<void>;
   loadAll: () => Promise<void>;
   pinNote: (path: string) => Promise<void>;
   unpinNote: (path: string) => Promise<void>;
-  prefetchNote: (path: string) => Promise<void>;
-  clearCache: () => void;
   onNoteOpened: (note: NoteCard) => void;
 }
 
@@ -24,7 +21,6 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   pinnedNotes: [],
   recentNotes: [],
   isHomeLoading: false,
-  noteCache: {},
 
   loadPinned: async () => {
     try {
@@ -38,7 +34,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   loadRecents: async () => {
     try {
       const recentNotes = await invoke<NoteCard[]>("get_recent_notes");
-      set({ recentNotes: recentNotes.slice(0, 9) });
+      set({ recentNotes: recentNotes.slice(0, 6) });
     } catch (e) {
       console.error("Failed to load recent notes:", e);
     }
@@ -58,22 +54,6 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     } finally {
       set({ isHomeLoading: false });
     }
-  },
-
-  prefetchNote: async (path: string) => {
-    const { noteCache } = get();
-    if (noteCache[path]) return;
-
-    try {
-      const note = await invoke<NoteData>("read_note", { path });
-      set({ noteCache: { ...get().noteCache, [path]: note } });
-    } catch (e) {
-      // Silently fail for prefetch
-    }
-  },
-
-  clearCache: () => {
-    set({ noteCache: {} });
   },
 
   onNoteOpened: (note: NoteCard) => {

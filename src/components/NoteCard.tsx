@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { NoteCard as NoteCardType } from "@/types";
+import { formatShortDate } from "@/lib/dates";
 
 interface NoteCardProps {
   card: NoteCardType;
@@ -58,7 +59,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       }}
       className="
         group relative flex flex-col gap-2 text-left w-full
-        rounded-lg p-3.5 cursor-pointer
+        rounded-lg p-4 cursor-pointer
         bg-card border border-border
         hover:border-foreground/20 hover:bg-muted/50
         hover:shadow-md
@@ -78,7 +79,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="cursor-pointer p-1 rounded-md text-foreground/70 hover:bg-muted/50 transition-colors">
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" avoidCollisions={true} sideOffset={4}>
@@ -112,16 +113,16 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       </div>
 
       {/* Title */}
-      <div className="min-h-[2.4em]">
-        <span className="text-[13px] font-semibold text-foreground leading-snug line-clamp-2 pr-2">
+      <div className="min-h-[2lh]">
+        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2 pr-2">
           {card.title}
         </span>
       </div>
 
       {/* Preview */}
-      <div className="min-h-[3.2em]">
+      <div className="min-h-[2lh]">
         {card.preview ? (
-          <span className="text-[12px] text-muted-foreground leading-relaxed line-clamp-2">
+          <span className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
             {card.preview}
           </span>
         ) : (
@@ -135,35 +136,23 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           {tags.map((tag) => (
             <span
               key={tag}
-              className="text-[10px] font-medium text-primary/80 bg-primary/5 border border-primary/20 rounded-sm px-2 py-0.5 leading-none truncate tracking-tight"
+              className="text-xs font-medium text-primary/80 bg-primary/5 border border-primary/20 rounded-sm px-2 py-0.5 leading-none truncate tracking-tight"
             >
               {tag}
             </span>
           ))}
           {card.tags.length > 3 && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-xs text-muted-foreground">
               +{card.tags.length - 3}
             </span>
           )}
         </div>
         {dateLabel && (
-          <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+          <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
             {dateLabel}
           </span>
         )}
       </div>
     </div>
   );
-}
-
-function formatShortDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const diffDays = Math.floor(
-    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

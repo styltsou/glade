@@ -27,7 +27,7 @@ export function PinnedSection() {
   return (
     <div className="px-2 py-1 shrink-0">
       <div className="pb-1.5 px-2 flex items-center">
-        <span className="text-[10px] font-bold text-foreground uppercase tracking-widest pt-[1px]">
+        <span className="text-xs font-bold text-foreground uppercase tracking-widest">
           Pinned
         </span>
       </div>
@@ -70,19 +70,19 @@ function PinnedItem({
     <div className="relative group/note">
       <button
         onClick={onClick}
-        className={`flex items-center gap-1 w-full rounded-md pr-2 pl-2 py-1.5 text-[13px] text-left transition-all cursor-pointer font-medium ${
+        className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm text-left transition-colors cursor-pointer font-medium ${
           active
             ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground group-hover/note:text-foreground group-hover/note:bg-sidebar-accent"
+            : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
         }`}
       >
-        <span className="truncate pr-1">{name}</span>
+          <span className="truncate pr-8">{name}</span>
       </button>
 
       <DropdownMenu onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground bg-sidebar-accent transition-all z-10">
-            <MoreHorizontal className="h-4 w-4" />
+          <button className="cursor-pointer absolute right-0 top-0 bottom-0 w-7 px-2 flex items-center justify-center rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground group-hover/note:bg-sidebar-accent active:bg-sidebar-accent data-[state=open]:bg-sidebar-accent transition-colors z-10">
+            <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={2}>

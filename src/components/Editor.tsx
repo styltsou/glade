@@ -15,11 +15,18 @@ export function Editor() {
   const activeNote = useStore((state) => state.activeNote);
   const saveNote = useStore((state) => state.saveNote);
   const createNote = useStore((state) => state.createNote);
+  const onNoteOpened = useStore((state) => state.onNoteOpened);
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastLoadedPathRef = useRef<string | null>(null);
+  
+  // Track last saved content to avoid saving unchanged content
+  const lastSavedContentRef = useRef<string>("");
+  // Track if we're programmatically loading content (not user typing)
+  const isLoadingRef = useRef(false);
+  // Track the path that was used when setting the timer (for race condition fix)
+  const pendingSaveRef = useRef<{ path: string; content: string } | null>(null);
 
   const editor = useEditor({
     extensions,
@@ -28,55 +35,87 @@ export function Editor() {
       attributes: { class: "tiptap-editor" },
     },
     onUpdate: ({ editor }) => {
-      if (!activeNote) return;
+      if (!activeNote || isLoadingRef.current) return;
       const markdown = (editor.storage as any).markdown.getMarkdown();
-      debouncedSave(markdown);
+      debouncedSave(activeNote.path, markdown);
     },
   });
 
-  // Debounced autosave
+  // Debounced autosave with content comparison and path capture
   const debouncedSave = useCallback(
-    (content: string) => {
-      if (!activeNote) return;
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    (path: string, content: string) => {
+      // Skip if content hasn't changed from last save
+      if (content === lastSavedContentRef.current) {
+        return;
+      }
+
+      // Clear existing timer
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+
+      // Capture the path at the time of setting the timer (fixes race condition)
+      pendingSaveRef.current = { path, content };
 
       saveTimerRef.current = setTimeout(async () => {
+        const pending = pendingSaveRef.current;
+        if (!pending) return;
+        
         setSaveStatus("saving");
         try {
-          await saveNote(activeNote.path, content);
+          await saveNote(pending.path, pending.content);
+          lastSavedContentRef.current = pending.content;
           setSaveStatus("saved");
           setTimeout(() => setSaveStatus("idle"), 2000);
         } catch {
           setSaveStatus("idle");
         }
+        pendingSaveRef.current = null;
       }, AUTOSAVE_DELAY);
     },
-    [activeNote, saveNote],
+    [saveNote]
   );
+
+  // Track current path to detect switching
+  const currentPathRef = useRef<string | null>(null);
 
   // Update editor content when switching notes OR when body arrives from bg fetch
   useEffect(() => {
     if (editor && activeNote) {
-      // If we have a body and it differs from current editor content, set it.
-      // We check the specific field to allow background updates for optimistic notes.
-      if (activeNote.body !== undefined) {
-        const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
-        
-        // Only update if the content is different to avoid cursor jumps during autosave cycle
-        // and only if we don't have existing content (initial load) OR if it's a new path.
-        if (currentMarkdown === "" || activeNote.path !== lastLoadedPathRef.current) {
-          editor.commands.setContent(activeNote.body || "");
-          setRawContent(activeNote.body || "");
-          lastLoadedPathRef.current = activeNote.path;
-        }
+      const pathChanged = currentPathRef.current !== activeNote.path;
+      isLoadingRef.current = true;
+      
+      // Get current editor content
+      const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
+      
+      // Update if path changed OR if content is different (e.g. background load)
+      if (pathChanged || currentMarkdown !== activeNote.body) {
+        editor.commands.setContent(activeNote.body || "");
+        setRawContent(activeNote.body || "");
+        // Update last saved to current content so we don't re-save immediately
+        lastSavedContentRef.current = activeNote.body || "";
       }
-      setIsRawMode(false);
+      
+      if (pathChanged) {
+        currentPathRef.current = activeNote.path;
+        // Reset scroll or other state if needed
+      }
+      
+      isLoadingRef.current = false;
       setSaveStatus("idle");
     }
   }, [activeNote?.path, activeNote?.body, editor]);
 
+  // Clear timer on note switch to prevent race conditions
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
   // Update recents list when note is opened
-  const onNoteOpened = useStore((state) => state.onNoteOpened);
   useEffect(() => {
     if (activeNote) {
       onNoteOpened({
@@ -89,13 +128,6 @@ export function Editor() {
       });
     }
   }, [activeNote?.path, onNoteOpened]);
-
-  // Cleanup
-  useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, []);
 
   // Toggle raw mode
   const toggleRawMode = useCallback(async () => {
@@ -119,9 +151,9 @@ export function Editor() {
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
-      if (activeNote) debouncedSave(value);
+      if (activeNote) debouncedSave(activeNote.path, value);
     },
-    [activeNote, debouncedSave],
+    [activeNote, debouncedSave]
   );
 
   if (!activeNote) {

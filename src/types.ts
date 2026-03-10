@@ -20,6 +20,8 @@ export interface VaultEntry {
   children: VaultEntry[];
   /** Last modified timestamp (ISO 8601) */
   modified: string | null;
+  /** Tags from frontmatter (only populated for notes) */
+  tags: string[];
 }
 
 /** Full note data including parsed frontmatter and body. */

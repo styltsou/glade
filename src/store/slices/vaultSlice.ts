@@ -2,6 +2,48 @@ import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { VaultEntry, NoteData, TagCount } from "@/types";
 
+// Helper: Add entry to tree at specific folder path
+function addEntryToTree(entries: VaultEntry[], folder: string | undefined, newEntry: VaultEntry): VaultEntry[] {
+  if (!folder) {
+    // Add to root level
+    return [newEntry, ...entries];
+  }
+  
+  // Recursively find the folder and add to its children
+  return entries.map(entry => {
+    if (entry.path === folder && entry.is_dir) {
+      return { ...entry, children: [newEntry, ...entry.children] };
+    }
+    if (entry.children.length > 0) {
+      return { ...entry, children: addEntryToTree(entry.children, folder, newEntry) };
+    }
+    return entry;
+  });
+}
+
+// Helper: Remove entry from tree by path
+function removeEntryFromTree(entries: VaultEntry[], path: string): VaultEntry[] {
+  return entries
+    .filter(entry => entry.path !== path)
+    .map(entry => ({
+      ...entry,
+      children: entry.children.length > 0 ? removeEntryFromTree(entry.children, path) : [],
+    }));
+}
+
+// Helper: Update entry in tree by path
+function updateEntryInTree(entries: VaultEntry[], path: string, changes: Partial<VaultEntry>): VaultEntry[] {
+  return entries.map(entry => {
+    if (entry.path === path) {
+      return { ...entry, ...changes };
+    }
+    if (entry.children.length > 0) {
+      return { ...entry, children: updateEntryInTree(entry.children, path, changes) };
+    }
+    return entry;
+  });
+}
+
 export interface VaultSlice {
   entries: VaultEntry[];
   activeNote: NoteData | null;
@@ -11,6 +53,7 @@ export interface VaultSlice {
   activeTagFilters: string[];
   searchResults: NoteData[];
   sidebarQuery: string;
+  noteCache: Record<string, NoteData>;
 
   loadVault: () => Promise<void>;
   selectNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
@@ -21,6 +64,7 @@ export interface VaultSlice {
   deleteEntry: (path: string) => Promise<void>;
   createFolder: (path: string) => Promise<void>;
   loadTags: () => Promise<void>;
+  clearTags: () => void;
   toggleTagFilter: (tag: string) => void;
   clearTagFilters: () => void;
   searchNotes: (query: string, titleOnly?: boolean) => Promise<void>;
@@ -28,6 +72,8 @@ export interface VaultSlice {
   updateNoteTags: (tags: string[]) => Promise<void>;
   goHome: () => void;
   setSidebarQuery: (query: string) => void;
+  prefetchNote: (path: string) => Promise<void>;
+  clearCache: () => void;
 }
 import type { StoreState } from "../index";
 
@@ -40,6 +86,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   activeTagFilters: [],
   searchResults: [],
   sidebarQuery: "",
+  noteCache: {},
 
   loadVault: async () => {
     set({ isVaultLoading: true, vaultError: null });
@@ -54,8 +101,8 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   selectNote: async (path: string, partial?: Partial<NoteData>) => {
     const { noteCache } = get();
     
-    // Optimistic update: If we have partial data (from a card or tree), set it immediately
-    // so the editor can show the title and transition instantly.
+    // 1. Optimistic Update: Set activeNote immediately with whatever we have
+    // This makes navigation feel instant.
     if (partial || noteCache[path]) {
       const cached = noteCache[path];
       set({ 
@@ -73,6 +120,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
       });
     }
 
+    // 2. Fetch Latest: Always load the full note to ensure we have complete data
     try {
       const note = await invoke<NoteData>("read_note", { path });
       
@@ -81,14 +129,15 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
         noteCache: { ...state.noteCache, [path]: note } 
       }));
 
-      // Only update activeNote if the user hasn't switched to another note in the meantime
+      // 3. Final Update: Only update activeNote if the user is still on this note
+      // This prevents race conditions when switching notes rapidly.
       if (get().activeNote?.path === path) {
         set({ activeNote: note, vaultError: null });
       }
       
       invoke("record_note_opened", { path }).catch(() => {});
     } catch (e) {
-      // Only show error if we don't have even partial data
+      // If we don't have even partial data and loading failed
       if (!get().activeNote) {
         set({ vaultError: String(e) });
       }
@@ -114,65 +163,107 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   createNote: async (folder?: string) => {
     try {
       const note = await invoke<NoteData>("create_note", { folder: folder ?? null });
-      await get().loadVault();
-      await get().loadAll();
-      set({ activeNote: note, vaultError: null });
+      
+      // Optimistically update entries tree
+      const newEntry: VaultEntry = {
+        name: note.title,
+        path: note.path,
+        is_dir: false,
+        children: [],
+        modified: note.updated,
+        tags: note.tags,
+      };
+      
+      const newEntries = addEntryToTree(get().entries, folder, newEntry);
+      
+      // Also add to noteCache
+      set((state: StoreState) => ({
+        entries: newEntries,
+        activeNote: note,
+        noteCache: { ...state.noteCache, [note.path]: note },
+        vaultError: null
+      }));
     } catch (e) {
       set({ vaultError: String(e) });
     }
   },
 
   renameNote: async (path: string, newTitle: string) => {
+    // Optimistically update entries tree
+    const newEntries = updateEntryInTree(get().entries, path, { name: newTitle });
+    
+    // Also update note cache if it exists
+    const { noteCache, activeNote } = get();
+    const newCache = { ...noteCache };
+    if (newCache[path]) {
+      newCache[path] = { ...newCache[path]!, title: newTitle };
+    }
+    
+    if (activeNote?.path === path) {
+      set({ 
+        entries: newEntries,
+        activeNote: { ...activeNote, title: newTitle },
+        noteCache: newCache,
+      });
+    } else {
+      set({ entries: newEntries, noteCache: newCache });
+    }
+    
     try {
       await invoke("rename_note", { path, newTitle });
-      
-      // Invalidate old cache entry
-      const { noteCache, activeNote } = get();
-      const newCache = { ...noteCache };
-      delete newCache[path];
-      
-      if (activeNote?.path === path) {
-        set({ 
-          activeNote: { ...activeNote, title: newTitle },
-          noteCache: newCache
-        });
-      } else {
-        set({ noteCache: newCache });
-      }
-      
-      await get().loadVault();
-      await get().loadAll();
     } catch (e) {
+      // On error, reload vault to sync state
+      await get().loadVault();
       set({ vaultError: String(e) });
     }
   },
 
   duplicateNote: async (path: string) => {
     try {
-      await invoke<NoteData>("duplicate_note", { path });
-      await get().loadVault();
-      await get().loadAll();
+      const note = await invoke<NoteData>("duplicate_note", { path });
+      
+      // Optimistically add to entries tree
+      const newEntry: VaultEntry = {
+        name: note.title,
+        path: note.path,
+        is_dir: false,
+        children: [],
+        modified: note.updated,
+        tags: note.tags,
+      };
+      
+      // Determine parent folder from path
+      const parentPath = note.path.includes('/') 
+        ? note.path.substring(0, note.path.lastIndexOf('/'))
+        : undefined;
+      
+      const newEntries = addEntryToTree(get().entries, parentPath, newEntry);
+      set({ entries: newEntries });
     } catch (e) {
       set({ vaultError: String(e) });
     }
   },
 
   deleteEntry: async (path: string) => {
+    // Optimistically update UI first
+    const { activeNote, entries, noteCache } = get();
+    
+    const newEntries = removeEntryFromTree(entries, path);
+    const newCache = { ...noteCache };
+    delete newCache[path];
+
+    set({
+      entries: newEntries,
+      activeNote: activeNote?.path === path ? null : activeNote,
+      noteCache: newCache,
+    });
+    
+    // Then call backend
     try {
       await invoke("delete_entry", { path });
-      const { activeNote, noteCache } = get();
-      
-      const newCache = { ...noteCache };
-      delete newCache[path];
-
-      if (activeNote?.path === path) {
-        set({ activeNote: null, noteCache: newCache });
-      } else {
-        set({ noteCache: newCache });
-      }
-      await get().loadVault();
-      await get().loadAll();
     } catch (e) {
+      // On error, reload vault to sync state
+      await get().loadVault();
       set({ vaultError: String(e) });
     }
   },
@@ -193,6 +284,10 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     } catch (e) {
       set({ vaultError: String(e) });
     }
+  },
+
+  clearTags: () => {
+    set({ tags: [] });
   },
 
   toggleTagFilter: (tag: string) => {
@@ -231,9 +326,13 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     try {
       await invoke("update_tags", { path: activeNote.path, tags });
       const note = await invoke<NoteData>("read_note", { path: activeNote.path });
-      set({ activeNote: note });
+      
+      // Update both activeNote and noteCache
+      set((state: StoreState) => ({
+        activeNote: note,
+        noteCache: { ...state.noteCache, [activeNote.path]: note },
+      }));
       await get().loadTags();
-      await get().loadAll();
     } catch (e) {
       set({ vaultError: String(e) });
     }
@@ -245,5 +344,23 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
 
   setSidebarQuery: (query: string) => {
     set({ sidebarQuery: query });
+  },
+
+  prefetchNote: async (path: string) => {
+    const { noteCache } = get();
+    if (noteCache[path]) return;
+
+    try {
+      const note = await invoke<NoteData>("read_note", { path });
+      set((state: StoreState) => ({
+        noteCache: { ...state.noteCache, [path]: note }
+      }));
+    } catch (e) {
+      // Silently fail for prefetch
+    }
+  },
+
+  clearCache: () => {
+    set({ noteCache: {} });
   },
 });

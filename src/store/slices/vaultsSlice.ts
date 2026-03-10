@@ -54,6 +54,10 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       
       // Clear caches for the new vault
       get().clearCache();
+      get().clearTags();
+      
+      // Reload tags for the new vault
+      get().loadTags();
       
       set({ activeVault, isVaultsLoading: false });
     } catch (e) {

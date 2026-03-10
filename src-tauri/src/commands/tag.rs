@@ -1,16 +1,30 @@
+use std::collections::HashMap;
 use std::fs;
 use chrono::Utc;
 use crate::error::AppError;
 use crate::types::TagCount;
 use crate::vault;
 
-/// List all unique tags across all notes with their counts.
+/// List all unique tags across all notes with their counts (uses cache when available).
 #[tauri::command]
 pub async fn list_tags() -> Result<Vec<TagCount>, AppError> {
     let vault_path = vault::get_vault_path()?;
-    let mut tag_map: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    
+    // Check cache first
+    let cached = vault::get_tags_cache(&vault_path);
+    if let Some(tags) = cached {
+        return Ok(tags);
+    }
+    
+    // Scan and cache
+    let mut tag_map: HashMap<String, u32> = HashMap::new();
 
-    collect_tags_recursive(&vault_path, &mut tag_map)?;
+    vault::walk_notes(&vault_path, &vault_path, |_path, _relative, meta, _body| {
+        for tag in &meta.tags {
+            *tag_map.entry(tag.clone()).or_insert(0) += 1;
+        }
+        None::<()>
+    })?;
 
     let mut tags: Vec<TagCount> = tag_map
         .into_iter()
@@ -18,34 +32,11 @@ pub async fn list_tags() -> Result<Vec<TagCount>, AppError> {
         .collect();
 
     tags.sort_by(|a, b| a.name.cmp(&b.name));
+    
+    // Cache the result
+    vault::set_tags_cache(&vault_path, tags.clone());
+    
     Ok(tags)
-}
-
-/// Recursively collect tags from all .md files.
-pub fn collect_tags_recursive(
-    dir: &std::path::Path,
-    tag_map: &mut std::collections::HashMap<String, u32>,
-) -> Result<(), AppError> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let name = entry.file_name().to_string_lossy().to_string();
-
-        if name.starts_with('.') {
-            continue;
-        }
-
-        if path.is_dir() {
-            collect_tags_recursive(&path, tag_map)?;
-        } else if name.ends_with(".md") {
-            let content = fs::read_to_string(&path)?;
-            let (meta, _) = vault::parse_frontmatter(&content);
-            for tag in meta.tags {
-                *tag_map.entry(tag).or_insert(0) += 1;
-            }
-        }
-    }
-    Ok(())
 }
 
 /// Update the tags for a specific note.
@@ -67,6 +58,9 @@ pub async fn update_tags(path: String, tags: Vec<String>) -> Result<(), AppError
     let frontmatter = vault::build_frontmatter(&meta);
     let full_content = format!("{}\n\n{}", frontmatter, body);
     fs::write(&full_path, full_content)?;
+
+    // Invalidate tags cache since tags changed
+    vault::invalidate_vault_cache();
 
     Ok(())
 }
