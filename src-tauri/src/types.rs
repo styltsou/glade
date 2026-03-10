@@ -84,6 +84,8 @@ pub struct NoteCard {
 pub struct SidebarState {
     pub collapsed: bool,
     pub tags_collapsed: bool,
+    pub width: u32,
+    pub tags_height: u32,
     /// One of: "name-asc", "name-desc", "modified"
     pub sort: String,
 }
@@ -93,6 +95,8 @@ impl Default for SidebarState {
         Self {
             collapsed: false,
             tags_collapsed: true,
+            width: 260,
+            tags_height: 200,
             sort: "name-asc".to_string(),
         }
     }

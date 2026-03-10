@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { SidebarSearch } from "@/components/sidebar/SidebarSearch";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
@@ -19,6 +20,9 @@ export function Sidebar() {
   const loadSidebarState = useStore((state) => state.loadSidebarState);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
+  const sidebarWidth = useStore((state) => state.sidebarWidth);
+  const setSidebarWidth = useStore((state) => state.setSidebarWidth);
+  const [isResizing, setIsResizing] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
 
   useEffect(() => {
@@ -46,27 +50,69 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", handler);
   }, [toggleSidebarCollapsed]);
 
-  // Removed redundant const { collapsed } = useSidebarStore() here
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newWidth = Math.max(200, Math.min(600, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      useStore.getState().saveSidebarState();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "col-resize";
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "default";
+    };
+  }, [isResizing, setSidebarWidth]);
 
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: sidebarCollapsed ? 0 : 260 }}
-      transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-      className="sidebar flex flex-col h-full bg-sidebar select-none overflow-hidden shrink-0 border-r border-border"
-      aria-hidden={sidebarCollapsed}
-    >
-      <div className="w-[260px] flex flex-col h-full">
-        <SidebarHeader />
-        <SidebarSearch onSearchChange={setIsSearchActive} />
-        {!isSearchActive && <PinnedSection />}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          {isSearchActive ? <SearchResultsList /> : <FileTree />}
+    <div className="relative h-full flex shrink-0">
+      <motion.aside
+        initial={false}
+        animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        transition={{ 
+          width: isResizing ? { duration: 0 } : { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
+        }}
+        className="sidebar flex flex-col h-full bg-sidebar select-none overflow-hidden border-r border-border"
+        aria-hidden={sidebarCollapsed}
+      >
+        <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
+          <SidebarHeader />
+          <SidebarSearch onSearchChange={setIsSearchActive} />
+          {!isSearchActive && <PinnedSection />}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {isSearchActive ? <SearchResultsList /> : <FileTree />}
+          </div>
+          <TagsPanel />
+          <SidebarFooter />
         </div>
-        <TagsPanel />
-        <SidebarFooter />
-      </div>
-    </motion.aside>
+      </motion.aside>
+
+      {/* Resize handle */}
+      {!sidebarCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20",
+            isResizing && "bg-primary/50"
+          )}
+        />
+      )}
+    </div>
   );
 }
 

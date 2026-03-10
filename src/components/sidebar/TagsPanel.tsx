@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useStore } from "@/store";
 import { ChevronDown, ChevronRight, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,9 +12,57 @@ export function TagsPanel() {
 
   const tagsCollapsed = useStore((state) => state.tagsCollapsed);
   const toggleTagsCollapsed = useStore((state) => state.toggleTagsCollapsed);
+  const tagsHeight = useStore((state) => state.tagsHeight);
+  const setTagsHeight = useStore((state) => state.setTagsHeight);
+
+  const [isResizing, setIsResizing] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Tags panel is at the bottom, so dragging UP (smaller Y) increases height
+      // The tags panel container itself is at the bottom of the sidebar.
+      // We need to calculate height based on the difference from the current position.
+      // A simpler way: use the window height minus the mouse position to get distance from bottom.
+      const newHeight = Math.max(100, Math.min(600, window.innerHeight - e.clientY - 60)); // 60 is approx footer + header height
+      setTagsHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      useStore.getState().saveSidebarState();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "row-resize";
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "default";
+    };
+  }, [isResizing, setTagsHeight]);
 
   return (
-    <div className="shrink-0 mt-1 border-t border-border bg-sidebar/50">
+    <div className="shrink-0 mt-1 border-t border-border bg-sidebar/50 relative">
+      {/* Resize handle */}
+      {!tagsCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "absolute top-0 left-0 right-0 h-1 cursor-row-resize hover:bg-primary/30 transition-colors z-20",
+            isResizing && "bg-primary/50"
+          )}
+        />
+      )}
+
       <div className="flex items-center">
         <button 
           onClick={() => toggleTagsCollapsed()}
@@ -48,7 +97,10 @@ export function TagsPanel() {
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-2 pb-3 space-y-0.5 pt-0.5 max-h-[200px] overflow-y-auto pr-1 [scrollbar-gutter:stable]">
+          <div 
+            style={{ maxHeight: tagsHeight }}
+            className="px-2 pb-3 space-y-0.5 pt-0.5 overflow-y-auto pr-1 [scrollbar-gutter:stable]"
+          >
             {tags.length === 0 ? (
               <div className="px-2.5 py-1 text-xs text-muted-foreground italic">
                 No tags yet
