@@ -317,6 +317,66 @@ pub async fn unpin_note(path: String) -> Result<(), AppError> {
     Ok(())
 }
 
+
+/// Retrieve all notes in a specific folder (or vault root) as NoteCards.
+#[tauri::command]
+pub async fn get_notes_in_folder(folder: Option<String>) -> Result<Vec<NoteCard>, AppError> {
+    let vault_path = vault::get_vault_path()?;
+    let target_dir = match &folder {
+        Some(f) => vault_path.join(f),
+        None => vault_path.clone(),
+    };
+
+    if !target_dir.exists() {
+        return Ok(vec![]);
+    }
+
+    let mut cards = Vec::new();
+    let entries = fs::read_dir(&target_dir)?;
+
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        
+        if path.is_file() && path.extension().map_or(false, |ext| ext == "md") {
+            let content = fs::read_to_string(&path)?;
+            let (meta, body) = vault::parse_frontmatter(&content);
+
+            let filename = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let title = meta.title.filter(|t| !t.is_empty()).unwrap_or(filename);
+            
+            let fs_meta = entry.metadata()?;
+            let modified = fs_meta.modified().ok().and_then(|t| {
+                let dt: chrono::DateTime<Utc> = t.into();
+                Some(dt.to_rfc3339())
+            });
+
+            let relative_path = path
+                .strip_prefix(&vault_path)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .to_string();
+
+            cards.push(NoteCard {
+                path: relative_path,
+                title,
+                tags: meta.tags,
+                modified,
+                preview: vault::make_preview(&body),
+                pinned: meta.pinned,
+            });
+        }
+    }
+
+    // Sort by modified date (descending) by default
+    cards.sort_by(|a, b| b.modified.cmp(&a.modified));
+
+    Ok(cards)
+}
+
 /// Record that a note was opened, updating the local recents list.
 #[tauri::command]
 pub async fn record_note_opened(path: String) -> Result<(), AppError> {

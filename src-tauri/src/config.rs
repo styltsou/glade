@@ -57,11 +57,6 @@ pub fn load_config() -> Result<AppConfig, AppError> {
     Ok(config)
 }
 
-/// Invalidate the config cache, forcing a reload from disk on next access.
-pub fn invalidate_cache() {
-    *CONFIG_CACHE.write().unwrap() = None;
-}
-
 /// Save the app config to disk and update cache.
 pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     let path = get_config_path()?;

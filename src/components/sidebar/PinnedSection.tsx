@@ -1,6 +1,4 @@
-import { useState } from "react";
 import {
-  MoreHorizontal,
   Pencil as PencilIcon,
   Copy as CopyIcon,
   PinOff as PinOffIcon,
@@ -8,12 +6,12 @@ import {
 } from "lucide-react";
 import { useStore } from "@/store";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import type { NoteCard } from "@/types";
 
 export function PinnedSection() {
@@ -61,51 +59,46 @@ function PinnedItem({
   onClick: () => void;
   onUnpin: () => void;
 }) {
-  const [, setMenuOpen] = useState(false);
   const duplicateNote = useStore((state) => state.duplicateNote);
   const openRename = useStore((state) => state.openRename);
   const openDelete = useStore((state) => state.openDelete);
 
   return (
-    <div className="relative group/note">
-      <button
-        onClick={onClick}
-        className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm text-left transition-colors cursor-pointer font-medium ${
-          active
-            ? "bg-sidebar-accent text-foreground"
-            : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-        }`}
-      >
-          <span className="truncate pr-8">{name}</span>
-      </button>
-
-      <DropdownMenu onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <button className="cursor-pointer absolute right-0 top-0 bottom-0 w-7 px-2 flex items-center justify-center rounded-sm text-foreground/70 opacity-0 group-hover/note:opacity-100 data-[state=open]:opacity-100 hover:text-foreground group-hover/note:bg-sidebar-accent active:bg-sidebar-accent data-[state=open]:bg-sidebar-accent transition-colors z-10">
-            <MoreHorizontal className="h-4 w-4" strokeWidth={3} />
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div className="relative group/note">
+          <button
+            onClick={onClick}
+            className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm text-left transition-colors cursor-pointer font-medium ${
+              active
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+            }`}
+          >
+            <span className="truncate">{name}</span>
           </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" sideOffset={2}>
-          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); openRename(path, name); }}>
-            <PencilIcon className="mr-2 h-4 w-4" />
-            Rename
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); duplicateNote(path); }}>
-            <CopyIcon className="mr-2 h-4 w-4" />
-            Duplicate
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={(e: any) => { e.stopPropagation(); onUnpin(); }}>
-            <PinOffIcon className="mr-2 h-4 w-4" />
-            Unpin note
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={(e: any) => { e.stopPropagation(); openDelete(path, name); }}>
-            <TrashIcon className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => openRename(path, name)}>
+          <PencilIcon className="mr-2 h-4 w-4" />
+          Rename
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => duplicateNote(path)}>
+          <CopyIcon className="mr-2 h-4 w-4" />
+          Duplicate
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onUnpin()}>
+          <PinOffIcon className="mr-2 h-4 w-4" />
+          Unpin note
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem variant="destructive" onClick={() => openDelete(path, name)}>
+          <TrashIcon className="mr-2 h-4 w-4" />
+          Delete
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

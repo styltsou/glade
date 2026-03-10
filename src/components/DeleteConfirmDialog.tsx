@@ -27,7 +27,14 @@ export function DeleteConfirmDialog({
 }: DeleteConfirmDialogProps) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent 
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            onConfirm();
+          }
+        }}
+      >
         <AlertDialogHeader>
           <AlertDialogTitle>
             Delete {isFolder ? "folder" : "note"}?

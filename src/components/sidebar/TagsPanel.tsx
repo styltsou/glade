@@ -30,7 +30,7 @@ export function TagsPanel() {
       // The tags panel container itself is at the bottom of the sidebar.
       // We need to calculate height based on the difference from the current position.
       // A simpler way: use the window height minus the mouse position to get distance from bottom.
-      const newHeight = Math.max(100, Math.min(600, window.innerHeight - e.clientY - 60)); // 60 is approx footer + header height
+      const newHeight = Math.max(40, Math.min(600, window.innerHeight - e.clientY - 60)); // 60 is approx footer + header height
       setTagsHeight(newHeight);
     };
 
@@ -98,33 +98,38 @@ export function TagsPanel() {
       >
         <div className="overflow-hidden">
           <div 
-            style={{ maxHeight: tagsHeight }}
-            className="px-2 pb-3 space-y-0.5 pt-0.5 overflow-y-auto pr-1 [scrollbar-gutter:stable]"
+            style={{ height: tags.length === 0 ? tagsHeight : undefined, maxHeight: tagsHeight }}
+            className={cn(
+              "px-2 overflow-y-auto pr-1 flex flex-col",
+              tags.length === 0 ? "pb-0 pt-0 overflow-hidden" : "pb-3 pt-0.5 [scrollbar-gutter:stable]"
+            )}
           >
             {tags.length === 0 ? (
-              <div className="px-2.5 py-1 text-xs text-muted-foreground italic">
-                No tags yet
+              <div className="flex-1 flex items-center justify-center py-2">
+                <p className="text-xs text-muted-foreground">No tags yet</p>
               </div>
             ) : (
-              tags.map((tag: TagCount) => (
-                <button
-                  key={tag.name}
-                  onClick={() => toggleTagFilter(tag.name)}
-                  className={`group flex items-center justify-between w-full rounded-md px-2 py-1.5 text-sm transition-all cursor-pointer font-medium ${
-                    activeTagFilters.includes(tag.name)
-                      ? "bg-sidebar-accent text-foreground"
-                      : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-                  }`}
-                >
-                  <span className="truncate flex items-center gap-2">
-                    <Hash className="h-3 w-3 text-muted-foreground/40" />
-                    {tag.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground/70 tabular-nums group-hover:text-foreground transition-colors">
-                    {tag.count}
-                  </span>
-                </button>
-              ))
+              <div className="space-y-0.5">
+                {tags.map((tag: TagCount) => (
+                  <button
+                    key={tag.name}
+                    onClick={() => toggleTagFilter(tag.name)}
+                    className={`group flex items-center justify-between w-full rounded-md px-2 py-1.5 text-sm transition-all cursor-pointer font-medium ${
+                      activeTagFilters.includes(tag.name)
+                        ? "bg-sidebar-accent text-foreground"
+                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                    }`}
+                  >
+                    <span className="truncate flex items-center gap-2">
+                      <Hash className="h-3 w-3 text-muted-foreground/40" />
+                      {tag.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground/70 tabular-nums group-hover:text-foreground transition-colors">
+                      {tag.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         </div>

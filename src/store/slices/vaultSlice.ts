@@ -31,6 +31,66 @@ function removeEntryFromTree(entries: VaultEntry[], path: string): VaultEntry[] 
     }));
 }
 
+// Helper: Update paths of an entry and all its children recursively
+function updatePathsRecursive(entry: VaultEntry, oldPath: string, newPath: string): VaultEntry {
+  const relativePath = entry.path.substring(oldPath.length);
+  const updatedPath = newPath + relativePath;
+  
+  return {
+    ...entry,
+    path: updatedPath,
+    children: entry.children.map(child => updatePathsRecursive(child, oldPath, newPath))
+  };
+}
+
+// Helper: Move entry in tree from one path to another
+function moveEntryInTree(entries: VaultEntry[], fromPath: string, toPath: string): VaultEntry[] {
+  let movingEntry: VaultEntry | null = null;
+  
+  // 1. Remove the entry from its old position and find it
+  function findAndRemove(list: VaultEntry[]): VaultEntry[] {
+    return list.filter(e => {
+      if (e.path === fromPath) {
+        movingEntry = e;
+        return false;
+      }
+      return true;
+    }).map(e => ({
+      ...e,
+      children: e.children.length > 0 ? findAndRemove(e.children) : [],
+    }));
+  }
+  
+  const treeWithoutEntry = findAndRemove(entries);
+  if (!movingEntry) return entries;
+
+  // Update entry paths (relevant if it's a folder)
+  const updatedEntry = updatePathsRecursive(movingEntry, fromPath, toPath);
+  updatedEntry.name = toPath.split("/").pop() || updatedEntry.name;
+
+  // 2. Insert into the new position
+  const targetParentPath = toPath.substring(0, toPath.lastIndexOf('/'));
+  
+  if (!targetParentPath) {
+    // Drop at root
+    return [updatedEntry, ...treeWithoutEntry];
+  }
+
+  function insertIntoParent(list: VaultEntry[]): VaultEntry[] {
+    return list.map(e => {
+      if (e.path === targetParentPath && e.is_dir) {
+        return { ...e, children: [updatedEntry, ...(e.children || [])] };
+      }
+      return {
+        ...e,
+        children: e.children.length > 0 ? insertIntoParent(e.children) : [],
+      };
+    });
+  }
+
+  return insertIntoParent(treeWithoutEntry);
+}
+
 // Helper: Update entry in tree by path
 function updateEntryInTree(entries: VaultEntry[], path: string, changes: Partial<VaultEntry>): VaultEntry[] {
   return entries.map(entry => {
@@ -74,6 +134,7 @@ export interface VaultSlice {
   goHome: () => void;
   setSidebarQuery: (query: string) => void;
   prefetchNote: (path: string) => Promise<void>;
+  moveEntry: (fromPath: string, toPath: string) => Promise<void>;
   clearCache: () => void;
 }
 import type { StoreState } from "../index";
@@ -117,7 +178,8 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
           updated: cached?.updated || null,
           ...partial,
         } as NoteData,
-        vaultError: null 
+        vaultError: null,
+        currentFolder: null
       });
     }
 
@@ -193,8 +255,12 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     // Optimistically update entries tree
     const newEntries = updateEntryInTree(get().entries, path, { name: newTitle });
     
-    // Also update note cache if it exists
-    const { noteCache, activeNote } = get();
+    const { noteCache, activeNote, pinnedNotes, recentNotes } = get();
+    
+    // Update pinned and recent notes lists
+    const newPinned = pinnedNotes.map(n => n.path === path ? { ...n, title: newTitle } : n);
+    const newRecents = recentNotes.map(n => n.path === path ? { ...n, title: newTitle } : n);
+
     const newCache = { ...noteCache };
     if (newCache[path]) {
       newCache[path] = { ...newCache[path]!, title: newTitle };
@@ -205,9 +271,16 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
         entries: newEntries,
         activeNote: { ...activeNote, title: newTitle },
         noteCache: newCache,
+        pinnedNotes: newPinned,
+        recentNotes: newRecents,
       });
     } else {
-      set({ entries: newEntries, noteCache: newCache });
+      set({ 
+        entries: newEntries, 
+        noteCache: newCache,
+        pinnedNotes: newPinned,
+        recentNotes: newRecents,
+      });
     }
     
     try {
@@ -257,16 +330,21 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
 
   deleteEntry: async (path: string) => {
     // Optimistically update UI first
-    const { activeNote, entries, noteCache } = get();
+    const { activeNote, entries, noteCache, pinnedNotes, recentNotes } = get();
     
     const newEntries = removeEntryFromTree(entries, path);
     const newCache = { ...noteCache };
     delete newCache[path];
 
+    const newPinned = pinnedNotes.filter(n => n.path !== path);
+    const newRecents = recentNotes.filter(n => n.path !== path);
+
     set({
       entries: newEntries,
       activeNote: activeNote?.path === path ? null : activeNote,
       noteCache: newCache,
+      pinnedNotes: newPinned,
+      recentNotes: newRecents,
     });
     
     // Then call backend
@@ -371,7 +449,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   },
 
   goHome: () => {
-    set({ activeNote: null });
+    set({ activeNote: null, currentFolder: null });
   },
 
   setSidebarQuery: (query: string) => {
@@ -389,6 +467,23 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
       }));
     } catch (e) {
       // Silently fail for prefetch
+    }
+  },
+
+  moveEntry: async (fromPath: string, toPath: string) => {
+    const originalEntries = get().entries;
+    const newEntries = moveEntryInTree(originalEntries, fromPath, toPath);
+    
+    set({ entries: newEntries });
+    
+    try {
+      await invoke("move_entry", { fromPath, toPath });
+      // Reload everything to stay in sync with backend state (tags, etc.)
+      await get().loadVault();
+      await get().loadTags();
+    } catch (e) {
+      // Rollback on error
+      set({ entries: originalEntries, vaultError: String(e) });
     }
   },
 

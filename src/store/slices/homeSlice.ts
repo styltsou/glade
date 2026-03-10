@@ -4,23 +4,27 @@ import type { NoteCard } from "@/types";
 
 export interface HomeSlice {
   pinnedNotes: NoteCard[];
-  recentNotes: NoteCard[];
+  folderNotes: NoteCard[];
   isHomeLoading: boolean;
+  currentFolder: string | null;
 
   loadPinned: () => Promise<void>;
-  loadRecents: () => Promise<void>;
+  loadFolderNotes: (path?: string | null) => Promise<void>;
   loadAll: () => Promise<void>;
   pinNote: (path: string) => Promise<void>;
   unpinNote: (path: string) => Promise<void>;
   onNoteOpened: (note: NoteCard) => void;
+  setCurrentFolder: (path: string | null) => void;
+  navigateToFolder: (path: string | null) => void;
 }
 
 import type { StoreState } from "../index";
 
 export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set, get) => ({
   pinnedNotes: [],
-  recentNotes: [],
+  folderNotes: [],
   isHomeLoading: false,
+  currentFolder: null,
 
   loadPinned: async () => {
     try {
@@ -31,87 +35,92 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     }
   },
 
-  loadRecents: async () => {
+  loadFolderNotes: async (path) => {
     try {
-      const recentNotes = await invoke<NoteCard[]>("get_recent_notes");
-      set({ recentNotes: recentNotes.slice(0, 6) });
+      const folderPath = path === undefined ? get().currentFolder : path;
+      const folderNotes = await invoke<NoteCard[]>("get_notes_in_folder", { 
+        folder: folderPath || null 
+      });
+      set({ folderNotes });
     } catch (e) {
-      console.error("Failed to load recent notes:", e);
+      console.error("Failed to load folder notes:", e);
     }
   },
 
   loadAll: async () => {
-    const { pinnedNotes, recentNotes } = get();
-    const hasData = pinnedNotes.length > 0 || recentNotes.length > 0;
+    const { folderNotes, pinnedNotes } = get();
+    const hasData = pinnedNotes.length > 0 || folderNotes.length > 0;
 
-    // Only show loading if we have no data at all
     if (!hasData) {
       set({ isHomeLoading: true });
     }
 
     try {
-      await Promise.all([get().loadPinned(), get().loadRecents()]);
+      await Promise.all([get().loadPinned(), get().loadFolderNotes()]);
     } finally {
       set({ isHomeLoading: false });
     }
   },
 
   onNoteOpened: (note: NoteCard) => {
-    const { recentNotes } = get();
-    // Move to top if already exists, else add to top
-    const filtered = recentNotes.filter((n) => n.path !== note.path);
-    set({
-      recentNotes: [{ ...note, modified: new Date().toISOString() }, ...filtered].slice(0, 9),
-    });
+    // We no longer manage local recents list, 
+    // but we might want to refresh current folder if needed.
+    // For now, doing nothing is fine as we refresh on view enter.
   },
 
   pinNote: async (path: string) => {
     const previousPinned = get().pinnedNotes;
-    const previousRecents = get().recentNotes;
 
-    const noteToPin = previousRecents.find((n: NoteCard) => n.path === path);
+    const noteToPin = get().folderNotes.find((n: NoteCard) => n.path === path);
     if (noteToPin) {
       set({
         pinnedNotes: [...previousPinned, { ...noteToPin, pinned: true }],
-        recentNotes: previousRecents.filter((n: NoteCard) => n.path !== path),
+        folderNotes: get().folderNotes.map((n: NoteCard) => 
+          n.path === path ? { ...n, pinned: true } : n
+        ),
       });
     }
 
     try {
       await invoke("pin_note", { path });
-      const [pinned, recents] = await Promise.all([
-        invoke<NoteCard[]>("get_pinned_notes"),
-        invoke<NoteCard[]>("get_recent_notes"),
-      ]);
-      set({ pinnedNotes: pinned, recentNotes: recents });
+      get().loadPinned();
+      get().loadFolderNotes();
     } catch (e) {
       console.error("Failed to pin note:", e);
-      set({ pinnedNotes: previousPinned, recentNotes: previousRecents });
+      set({ pinnedNotes: previousPinned });
     }
   },
 
   unpinNote: async (path: string) => {
     const previousPinned = get().pinnedNotes;
-    const previousRecents = get().recentNotes;
 
     const noteToUnpin = previousPinned.find((n: NoteCard) => n.path === path);
     if (noteToUnpin) {
       set({
         pinnedNotes: previousPinned.filter((n: NoteCard) => n.path !== path),
-        recentNotes: [...previousRecents, { ...noteToUnpin, pinned: false }],
+        folderNotes: get().folderNotes.map((n: NoteCard) => 
+          n.path === path ? { ...n, pinned: false } : n
+        ),
       });
     }
 
     try {
       await invoke("unpin_note", { path });
-      const [pinned, recents] = await Promise.all([
-        invoke<NoteCard[]>("get_pinned_notes"),
-        invoke<NoteCard[]>("get_recent_notes"),
-      ]);
-      set({ pinnedNotes: pinned, recentNotes: recents });
+      get().loadPinned();
+      get().loadFolderNotes();
     } catch (e) {
       console.error("Failed to unpin note:", e);
-      set({ pinnedNotes: previousPinned, recentNotes: previousRecents });
+      set({ pinnedNotes: previousPinned });
     }
+  },
+
+  setCurrentFolder: (path: string | null) => {
+    set({ currentFolder: path });
+    get().loadFolderNotes(path);
+  },
+
+  navigateToFolder: (path: string | null) => {
+    set({ activeNote: null, currentFolder: path });
+    get().loadFolderNotes(path);
   },
 });

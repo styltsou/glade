@@ -143,7 +143,7 @@ export function CommandPalette() {
           </CommandItem>
         </CommandGroup>
 
-        <CommandSeparator />
+        {allNotes.length > 0 && <CommandSeparator />}
 
         {(searchResults.length > 0 || allNotes.length > 0) && (
           <CommandGroup

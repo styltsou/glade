@@ -84,6 +84,32 @@ pub async fn rename_folder(path: String, new_name: String) -> Result<(), AppErro
     Ok(())
 }
 
+/// Move a file or directory to a new location in the vault.
+#[tauri::command]
+pub async fn move_entry(from_path: String, to_path: String) -> Result<(), AppError> {
+    let vault_path = vault::get_vault_path()?;
+    let full_from = vault_path.join(&from_path);
+    let full_to = vault_path.join(&to_path);
+
+    if !full_from.exists() {
+        return Err(AppError::NotFound(format!("Entry not found: {}", from_path)));
+    }
+
+    // Ensure parent of destination exists
+    if let Some(parent) = full_to.parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    fs::rename(&full_from, &full_to)?;
+    
+    // Invalidate vault tree cache
+    vault::invalidate_vault_cache();
+    
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn initialize_app() -> Result<AppConfig, AppError> {
     let config = config::load_config()?;

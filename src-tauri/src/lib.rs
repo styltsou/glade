@@ -10,6 +10,7 @@ use commands::{
     get_sidebar_state, initialize_app, list_tags, list_vault, list_vaults, pin_note, read_note,
     read_note_raw, record_note_opened, rename_folder, rename_note, rename_vault, save_sidebar_state,
     search_notes, set_active_vault, unpin_note, update_tags, update_vault_last_opened, write_note,
+    move_entry, get_notes_in_folder,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -43,12 +44,14 @@ pub fn run() {
             get_recent_notes,
             pin_note,
             unpin_note,
+            get_notes_in_folder,
             record_note_opened,
             get_sidebar_state,
             save_sidebar_state,
             read_note_raw,
             export_markdown,
             export_pdf,
+            move_entry,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
