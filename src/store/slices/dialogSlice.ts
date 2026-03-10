@@ -1,6 +1,17 @@
 import { StateCreator } from "zustand";
 
 export interface DialogSlice {
+  // Current view
+  currentView: "home" | "editor" | "settings";
+  setCurrentView: (view: "home" | "editor" | "settings") => void;
+
+  // Settings page
+  settingsSection: "vaults" | "appearance" | "about";
+  setSettingsSection: (section: "vaults" | "appearance" | "about") => void;
+  openSettingsPage: (section?: "vaults" | "appearance" | "about") => void;
+  closeSettingsPage: () => void;
+
+  // Rename dialog
   renameOpen: boolean;
   renamePath: string | null;
   renameInitialTitle: string;
@@ -59,4 +70,16 @@ export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = 
   settingsOpen: false,
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
+
+  currentView: "home",
+  setCurrentView: (view) => set({ currentView: view }),
+
+  settingsSection: "vaults",
+  setSettingsSection: (section) => set({ settingsSection: section }),
+  openSettingsPage: (section) => set({ 
+    currentView: "settings", 
+    settingsSection: section || "vaults",
+    settingsOpen: false 
+  }),
+  closeSettingsPage: () => set({ currentView: "home" }),
 });

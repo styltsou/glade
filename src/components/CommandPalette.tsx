@@ -3,6 +3,7 @@ import {
   Plus as PlusIcon,
   Trash2 as TrashIcon,
   Palette as PaletteIcon,
+  FolderCog as FolderCogIcon,
 } from "lucide-react";
 import {
   CommandDialog,
@@ -30,7 +31,7 @@ export function CommandPalette() {
   const clearSearch = useStore((state) => state.clearSearch);
 
   const openDelete = useStore((state) => state.openDelete);
-  const openSettings = useStore((state) => state.openSettings);
+  const openSettingsPage = useStore((state) => state.openSettingsPage);
 
   // Register global shortcuts
   useCommandShortcuts(setOpen);
@@ -49,8 +50,11 @@ export function CommandPalette() {
             openDelete(activeNote.path, activeNote.title);
           }
           break;
-        case "settings":
-          openSettings();
+        case "manage-vaults":
+          openSettingsPage("vaults");
+          break;
+        case "appearance":
+          openSettingsPage("appearance");
           break;
         default:
           if (action.startsWith("note:")) {
@@ -59,7 +63,7 @@ export function CommandPalette() {
           break;
       }
     },
-    [activeNote, createNote, openDelete, openSettings, selectNote, clearSearch],
+    [activeNote, createNote, openDelete, openSettingsPage, selectNote, clearSearch],
   );
 
   // Debounced search
@@ -134,8 +138,16 @@ export function CommandPalette() {
           )}
 
           <CommandItem
-            value="appearance settings"
-            onSelect={() => handleSelect("settings")}
+            value="manage vaults"
+            onSelect={() => handleSelect("manage-vaults")}
+          >
+            <FolderCogIcon />
+            <span>Manage Vaults</span>
+          </CommandItem>
+
+          <CommandItem
+            value="appearance"
+            onSelect={() => handleSelect("appearance")}
           >
             <PaletteIcon />
             <span>Appearance</span>

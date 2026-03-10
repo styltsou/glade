@@ -150,6 +150,8 @@ export function HomeView() {
               
               <div className="flex items-center gap-3">
                 <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => createNote(currentFolder || undefined)}
                   className="shadow-md active:scale-95 font-semibold"
                 >
@@ -158,6 +160,7 @@ export function HomeView() {
                 </Button>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => openCreateFolder(currentFolder || undefined)}
                   className="shadow-sm active:scale-95 font-semibold"
                 >

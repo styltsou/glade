@@ -62,7 +62,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     }
   },
 
-  onNoteOpened: (note: NoteCard) => {
+  onNoteOpened: (_note: NoteCard) => {
     // We no longer manage local recents list, 
     // but we might want to refresh current folder if needed.
     // For now, doing nothing is fine as we refresh on view enter.

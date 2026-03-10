@@ -7,6 +7,7 @@ import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { SettingsPage } from "@/components/SettingsPage";
 import { useStore } from "@/store";
 import { useEffect, useState } from "react";
 
@@ -84,6 +85,8 @@ function App() {
   const loadAll = useStore((state) => state.loadAll);
   const initializeApp = useStore((state) => state.initializeApp);
   const activeVault = useStore((state) => state.activeVault);
+  const currentView = useStore((state) => state.currentView);
+  const openSettingsPage = useStore((state) => state.openSettingsPage);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -100,6 +103,17 @@ function App() {
     }
   }, [isReady, activeVault, loadAll]);
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === ",") {
+        e.preventDefault();
+        openSettingsPage("appearance");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [openSettingsPage]);
+
   if (!isReady) {
     return (
       <main className="flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
@@ -111,10 +125,16 @@ function App() {
   return (
     <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
       <div className="flex flex-1 overflow-hidden w-full relative">
-        <Sidebar />
-        {sidebarCollapsed && <SidebarCollapseToggle />}
+        {currentView !== "settings" && (
+          <>
+            <Sidebar />
+            {sidebarCollapsed && <SidebarCollapseToggle />}
+          </>
+        )}
         <div className="flex-1 overflow-hidden flex flex-col relative">
-            {activeNote ? (
+            {currentView === "settings" ? (
+              <SettingsPage />
+            ) : activeNote ? (
               <div className="flex-1 flex flex-col overflow-hidden">
                 <Editor />
               </div>
@@ -126,7 +146,7 @@ function App() {
         </div>
       </div>
       <StatusBar />
-      <CommandPalette />
+      {currentView !== "settings" && <CommandPalette />}
       <SharedDialogs />
     </main>
   );

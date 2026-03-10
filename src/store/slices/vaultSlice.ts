@@ -255,11 +255,10 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     // Optimistically update entries tree
     const newEntries = updateEntryInTree(get().entries, path, { name: newTitle });
     
-    const { noteCache, activeNote, pinnedNotes, recentNotes } = get();
+    const { noteCache, activeNote, pinnedNotes } = get();
     
-    // Update pinned and recent notes lists
+    // Update pinned notes list
     const newPinned = pinnedNotes.map(n => n.path === path ? { ...n, title: newTitle } : n);
-    const newRecents = recentNotes.map(n => n.path === path ? { ...n, title: newTitle } : n);
 
     const newCache = { ...noteCache };
     if (newCache[path]) {
@@ -272,14 +271,12 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
         activeNote: { ...activeNote, title: newTitle },
         noteCache: newCache,
         pinnedNotes: newPinned,
-        recentNotes: newRecents,
       });
     } else {
       set({ 
         entries: newEntries, 
         noteCache: newCache,
         pinnedNotes: newPinned,
-        recentNotes: newRecents,
       });
     }
     
@@ -330,21 +327,19 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
 
   deleteEntry: async (path: string) => {
     // Optimistically update UI first
-    const { activeNote, entries, noteCache, pinnedNotes, recentNotes } = get();
+    const { activeNote, entries, noteCache, pinnedNotes } = get();
     
     const newEntries = removeEntryFromTree(entries, path);
     const newCache = { ...noteCache };
     delete newCache[path];
 
-    const newPinned = pinnedNotes.filter(n => n.path !== path);
-    const newRecents = recentNotes.filter(n => n.path !== path);
+    const newPinned = pinnedNotes.filter((n: { path: string }) => n.path !== path);
 
     set({
       entries: newEntries,
       activeNote: activeNote?.path === path ? null : activeNote,
       noteCache: newCache,
       pinnedNotes: newPinned,
-      recentNotes: newRecents,
     });
     
     // Then call backend
