@@ -1,12 +1,18 @@
 import { StateCreator } from "zustand";
 
 export interface DialogSlice {
-  // Rename dialog
   renameOpen: boolean;
   renamePath: string | null;
   renameInitialTitle: string;
-  openRename: (path: string, title: string) => void;
+  renameIsFolder: boolean;
+  openRename: (path: string, title: string, isFolder?: boolean) => void;
   closeRename: () => void;
+
+  // Create Folder dialog
+  createFolderOpen: boolean;
+  createFolderParentPath: string | null;
+  openCreateFolder: (parentPath?: string) => void;
+  closeCreateFolder: () => void;
 
   // Delete dialog
   deleteOpen: boolean;
@@ -28,10 +34,18 @@ export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = 
   renameOpen: false,
   renamePath: null,
   renameInitialTitle: "",
-  openRename: (path, title) =>
-    set({ renameOpen: true, renamePath: path, renameInitialTitle: title }),
+  renameIsFolder: false,
+  openRename: (path, title, isFolder = false) =>
+    set({ renameOpen: true, renamePath: path, renameInitialTitle: title, renameIsFolder: isFolder }),
   closeRename: () =>
-    set({ renameOpen: false, renamePath: null, renameInitialTitle: "" }),
+    set({ renameOpen: false, renamePath: null, renameInitialTitle: "", renameIsFolder: false }),
+
+  createFolderOpen: false,
+  createFolderParentPath: null,
+  openCreateFolder: (parentPath) =>
+    set({ createFolderOpen: true, createFolderParentPath: parentPath || null }),
+  closeCreateFolder: () =>
+    set({ createFolderOpen: false, createFolderParentPath: null }),
 
   deleteOpen: false,
   deletePath: null,

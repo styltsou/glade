@@ -2,11 +2,12 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
+import BubbleMenu from "@tiptap/extension-bubble-menu";
+import { CustomTaskItem } from "./CustomTaskItem";
 import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
+import { CustomCodeBlock } from "./CustomCodeBlock";
 
 const lowlight = createLowlight(all);
 
@@ -15,7 +16,7 @@ export const extensions = [
     heading: { levels: [1, 2, 3, 4] },
     codeBlock: false,
   }),
-  CodeBlockLowlight.configure({
+  CustomCodeBlock.configure({
     lowlight,
     HTMLAttributes: { class: "code-block" },
   }),
@@ -25,8 +26,11 @@ export const extensions = [
   }),
   Placeholder.configure({ placeholder: "Start writing…" }),
   TaskList,
-  TaskItem.configure({ nested: true }),
+  CustomTaskItem.configure({ nested: true }),
   Image.configure({ inline: false }),
+  BubbleMenu.configure({
+    element: null, // Component will provide the element
+  }),
   Markdown.configure({
     html: true,
     transformCopiedText: true,

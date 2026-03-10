@@ -3,6 +3,7 @@ import { Editor } from "@/components/Editor";
 import { HomeView } from "@/components/HomeView";
 import { StatusBar } from "@/components/StatusBar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -13,6 +14,7 @@ function SharedDialogs() {
   const renameOpen = useStore((state) => state.renameOpen);
   const renamePath = useStore((state) => state.renamePath);
   const renameInitialTitle = useStore((state) => state.renameInitialTitle);
+  const renameIsFolder = useStore((state) => state.renameIsFolder);
   const closeRename = useStore((state) => state.closeRename);
 
   const deleteOpen = useStore((state) => state.deleteOpen);
@@ -21,10 +23,16 @@ function SharedDialogs() {
   const deleteIsFolder = useStore((state) => state.deleteIsFolder);
   const closeDelete = useStore((state) => state.closeDelete);
 
+  const createFolderOpen = useStore((state) => state.createFolderOpen);
+  const createFolderParentPath = useStore((state) => state.createFolderParentPath);
+  const closeCreateFolder = useStore((state) => state.closeCreateFolder);
+
   const settingsOpen = useStore((state) => state.settingsOpen);
   const closeSettings = useStore((state) => state.closeSettings);
 
+  const createFolder = useStore((state) => state.createFolder);
   const renameNote = useStore((state) => state.renameNote);
+  const renameFolder = useStore((state) => state.renameFolder);
   const deleteEntry = useStore((state) => state.deleteEntry);
 
   return (
@@ -33,8 +41,15 @@ function SharedDialogs() {
         isOpen={renameOpen}
         onOpenChange={(open) => { if (!open) closeRename(); }}
         initialTitle={renameInitialTitle}
+        isFolder={renameIsFolder}
         onRename={(newTitle) => {
-          if (renamePath) renameNote(renamePath, newTitle);
+          if (renamePath) {
+            if (renameIsFolder) {
+              renameFolder(renamePath, newTitle);
+            } else {
+              renameNote(renamePath, newTitle);
+            }
+          }
           closeRename();
         }}
       />
@@ -46,6 +61,16 @@ function SharedDialogs() {
         onConfirm={() => {
           if (deletePath) deleteEntry(deletePath);
           closeDelete();
+        }}
+      />
+      <CreateFolderDialog
+        isOpen={createFolderOpen}
+        onOpenChange={(open) => { if (!open) closeCreateFolder(); }}
+        onCreate={(folderName) => {
+          const newPath = createFolderParentPath 
+            ? `${createFolderParentPath}/${folderName}`
+            : folderName;
+          createFolder(newPath);
         }}
       />
       <SettingsDialog open={settingsOpen} onOpenChange={(open) => { if (!open) closeSettings(); }} />

@@ -85,6 +85,7 @@ export function FileTree() {
   const entries = useStore((state) => state.entries);
   const isVaultLoading = useStore((state) => state.isVaultLoading);
   const createNote = useStore((state) => state.createNote);
+  const openCreateFolder = useStore((state) => state.openCreateFolder);
   const pinnedNotes = useStore((state) => state.pinnedNotes);
   const sidebarSort = useStore((state) => state.sidebarSort);
   const activeTagFilters = useStore((state) => state.activeTagFilters);
@@ -95,23 +96,33 @@ export function FileTree() {
   const sortedEntries = sortEntries(filteredByTags, sidebarSort);
 
   return (
-    <div className="flex-1 overflow-auto px-2 py-1 [scrollbar-gutter:stable]">
+    <div className="flex flex-col h-full overflow-hidden">
       {!isVaultLoading && sortedEntries.length > 0 && (
-        <div className="flex items-center justify-between pb-1.5 pl-2">
+        <div className="flex items-center justify-between px-2 pl-4 pt-3 pb-2 shrink-0">
           <span className="text-xs font-bold text-foreground uppercase tracking-widest">
             Notes
           </span>
-          <button
-            className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-            onClick={() => createNote()}
-            title="New note"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <button
+              className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+              onClick={() => openCreateFolder()}
+              title="New folder"
+            >
+              <Folder className="h-4 w-4" />
+            </button>
+            <button
+              className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+              onClick={() => createNote()}
+              title="New note"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
 
-      {isVaultLoading ? (
+      <div className="flex-1 overflow-auto px-2 pb-1 [scrollbar-gutter:stable]">
+        {isVaultLoading ? (
         <div className="px-2.5 py-4 text-xs text-muted-foreground text-center">
           Loading…
         </div>
@@ -132,6 +143,7 @@ export function FileTree() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -280,6 +292,9 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
   const activeNotePath = useStore((state) => state.activeNote?.path);
   const selectNote = useStore((state) => state.selectNote);
   const duplicateNote = useStore((state) => state.duplicateNote);
+  const createNote = useStore((state) => state.createNote);
+
+  const openCreateFolder = useStore((state) => state.openCreateFolder);
 
   const pinNote = useStore((state) => state.pinNote);
   const prefetchNote = useStore((state) => state.prefetchNote);
@@ -293,7 +308,6 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
 
   if (entry.is_dir) {
     const children = sortEntries(entry.children, sidebarSort);
-    if (children.length === 0) return null;
 
     return (
       <div>
@@ -318,6 +332,20 @@ function FileTreeNode({ entry }: { entry: VaultEntry }) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" sideOffset={2}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); createNote(entry.path); }}>
+                <PlusIcon className="mr-2 h-4 w-4" />
+                New note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openCreateFolder(entry.path); }}>
+                <Folder className="mr-2 h-4 w-4" />
+                New folder
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openRename(entry.path, entry.name, true); }}>
+                <PencilIcon className="mr-2 h-4 w-4" />
+                Rename folder
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 onClick={(e) => { e.stopPropagation(); openDelete(entry.path, entry.name, true); }}

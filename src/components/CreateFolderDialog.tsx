@@ -10,33 +10,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface RenameDialogProps {
+interface CreateFolderDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  initialTitle: string;
-  isFolder?: boolean;
-  onRename: (newTitle: string) => void;
+  onCreate: (folderName: string) => void;
 }
 
-export function RenameDialog({
+export function CreateFolderDialog({
   isOpen,
   onOpenChange,
-  initialTitle,
-  isFolder,
-  onRename,
-}: RenameDialogProps) {
-  const [title, setTitle] = useState(initialTitle);
+  onCreate,
+}: CreateFolderDialogProps) {
+  const [name, setName] = useState("");
 
   useEffect(() => {
     if (isOpen) {
-      setTitle(initialTitle);
+      setName("");
     }
-  }, [isOpen, initialTitle]);
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (title.trim() && title !== initialTitle) {
-      onRename(title.trim());
+    if (name.trim()) {
+      onCreate(name.trim());
     }
     onOpenChange(false);
   };
@@ -45,25 +41,25 @@ export function RenameDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isFolder ? "Rename Folder" : "Rename Note"}</DialogTitle>
+          <DialogTitle>New Folder</DialogTitle>
           <DialogDescription>
-            Enter a new name.
+            Enter a name for the new folder.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             autoFocus
             className="w-full"
-            placeholder={isFolder ? "Folder name..." : "Note title..."}
+            placeholder="Folder name..."
           />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || title === initialTitle}>
-              Save
+            <Button type="submit" disabled={!name.trim()}>
+              Create
             </Button>
           </DialogFooter>
         </form>

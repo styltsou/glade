@@ -19,7 +19,7 @@ export function HeadingGroup({ editor }: GroupProps) {
                 editor?.isActive("heading", { level: 4 }) ? "h4" : "";
 
   return (
-    <ToggleGroup type="single" value={value} variant="outline" size="sm" className="bg-muted">
+    <ToggleGroup type="single" value={value} variant="outline" size="sm">
       <ToggleGroupItem
         value="h1"
         data-state={editor?.isActive("heading", { level: 1 }) ? "on" : "off"}
@@ -61,7 +61,7 @@ export function InlineGroup({ editor }: GroupProps) {
   }
 
   return (
-    <ToggleGroup type="multiple" value={value} variant="outline" size="sm" className="bg-muted">
+    <ToggleGroup type="multiple" value={value} variant="outline" size="sm">
       <ToggleGroupItem
         value="bold"
         data-state={editor?.isActive("bold") ? "on" : "off"}
@@ -94,7 +94,7 @@ export function ListGroup({ editor }: GroupProps) {
                 editor?.isActive("taskList") ? "taskList" : "";
 
   return (
-    <ToggleGroup type="single" value={value} variant="outline" size="sm" className="bg-muted">
+    <ToggleGroup type="single" value={value} variant="outline" size="sm">
       <ToggleGroupItem
         value="bulletList"
         data-state={editor?.isActive("bulletList") ? "on" : "off"}
@@ -126,7 +126,7 @@ export function BlockGroup({ editor }: GroupProps) {
                 editor?.isActive("codeBlock") ? "codeBlock" : "";
 
   return (
-    <ToggleGroup type="single" value={value} variant="outline" size="sm" className="bg-muted">
+    <ToggleGroup type="single" value={value} variant="outline" size="sm">
       <ToggleGroupItem
         value="blockquote"
         data-state={editor?.isActive("blockquote") ? "on" : "off"}
@@ -149,7 +149,7 @@ export function InsertGroup({ editor }: GroupProps) {
   const value = editor?.isFocused && editor?.isActive("link") ? "link" : "";
 
   return (
-    <ToggleGroup type="single" value={value} variant="outline" size="sm" className="bg-muted">
+    <ToggleGroup type="single" value={value} variant="outline" size="sm">
       <ToggleGroupItem
         value="hr"
         onClick={() => editor?.chain().focus().setHorizontalRule().run()}

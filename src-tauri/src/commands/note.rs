@@ -218,7 +218,7 @@ pub async fn get_pinned_notes() -> Result<Vec<NoteCard>, AppError> {
     vault::get_pinned_notes_cached(&vault_path)
 }
 
-/// Retrieve up to 12 recently-opened notes as NoteCards (excludes pinned notes).
+/// Retrieve up to 6 recently-opened notes as NoteCards (excludes pinned notes).
 #[tauri::command]
 pub async fn get_recent_notes() -> Result<Vec<NoteCard>, AppError> {
     let vault_path = vault::get_vault_path()?;

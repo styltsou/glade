@@ -100,39 +100,41 @@
 
   --editor-bg:              0 0% 100%;
   --editor-text:            0 0% 7%;
-  --syntax-keyword:         0 0% 7%;
-  --syntax-string:          0 0% 27%;
-  --syntax-comment:         0 0% 53%;
-  --syntax-number:          0 0% 20%;
+  --syntax-keyword:         270 45% 45%;
+  --syntax-string:          150 35% 35%;
+  --syntax-comment:         220 15% 55%;
+  --syntax-number:          40 50% 40%;
+  --syntax-function:        200 45% 45%;
+  --syntax-parameter:       0 0% 15%;
 }
 
 [data-theme="monochrome"][data-mode="dark"] {
-  --background:             0 0% 10%;
+  --background:             0 0% 0%;
   --foreground:             0 0% 93%;
 
-  --card:                   0 0% 13%;
+  --card:                   0 0% 4%;
   --card-foreground:        0 0% 93%;
 
-  --popover:                0 0% 13%;
+  --popover:                0 0% 4%;
   --popover-foreground:     0 0% 93%;
 
   --primary:                0 0% 93%;
-  --primary-foreground:     0 0% 7%;
+  --primary-foreground:     0 0% 0%;
 
-  --secondary:              0 0% 16%;
+  --secondary:              0 0% 6%;
   --secondary-foreground:   0 0% 93%;
 
-  --muted:                  0 0% 16%;
-  --muted-foreground:       0 0% 40%;
+  --muted:                  0 0% 6%;
+  --muted-foreground:       0 0% 45%;
 
-  --accent:                 0 0% 20%;
+  --accent:                 0 0% 12%;
   --accent-foreground:      0 0% 93%;
 
   --destructive:            0 62% 48%;
   --destructive-foreground: 0 0% 100%;
 
-  --border:                 0 0% 17%;
-  --input:                  0 0% 17%;
+  --border:                 0 0% 12%;
+  --input:                  0 0% 12%;
   --ring:                   0 0% 93%;
 
   --radius:                 0.375rem;
@@ -143,21 +145,23 @@
   --chart-4:                0 0% 35%;
   --chart-5:                0 0% 20%;
 
-  --sidebar:                0 0% 11%;
+  --sidebar:                0 0% 2%;
   --sidebar-foreground:     0 0% 93%;
   --sidebar-primary:        0 0% 93%;
-  --sidebar-primary-foreground: 0 0% 7%;
-  --sidebar-accent:         0 0% 20%;
+  --sidebar-primary-foreground: 0 0% 0%;
+  --sidebar-accent:         0 0% 12%;
   --sidebar-accent-foreground: 0 0% 93%;
-  --sidebar-border:         0 0% 17%;
+  --sidebar-border:         0 0% 12%;
   --sidebar-ring:           0 0% 93%;
 
-  --editor-bg:              0 0% 10%;
+  --editor-bg:              0 0% 0%;
   --editor-text:            0 0% 93%;
-  --syntax-keyword:         0 0% 93%;
-  --syntax-string:          0 0% 67%;
-  --syntax-comment:         0 0% 40%;
-  --syntax-number:          0 0% 80%;
+  --syntax-keyword:         270 40% 75%;
+  --syntax-string:          150 25% 65%;
+  --syntax-comment:         220 12% 45%;
+  --syntax-number:          40 45% 75%;
+  --syntax-function:        200 35% 70%;
+  --syntax-parameter:       0 0% 85%;
 }
 
 /* ── Claude Theme ──────────────────────────────────────── */
@@ -214,6 +218,8 @@
   --syntax-string:          100 28% 38%;
   --syntax-comment:         25 10% 50%;
   --syntax-number:          210 40% 42%;
+  --syntax-function:        210 40% 42%;
+  --syntax-parameter:       28 18% 9%;
 }
 
 [data-theme="claude"][data-mode="dark"] {
@@ -268,6 +274,8 @@
   --syntax-string:          100 30% 58%;
   --syntax-comment:         25 12% 52%;
   --syntax-number:          210 40% 62%;
+  --syntax-function:        210 40% 62%;
+  --syntax-parameter:       35 20% 94%;
 }
 
 /* ── Everforest Theme ─────────────────────────────────────── */
@@ -324,6 +332,8 @@
   --syntax-string:          67 99% 32%;
   --syntax-comment:         116 7% 55%;
   --syntax-number:          319 65% 64%;
+  --syntax-function:        201 55% 50%;
+  --syntax-parameter:       202 11% 40%;
 }
 
 [data-theme="everforest"][data-mode="dark"] {
@@ -378,6 +388,8 @@
   --syntax-string:          83 34% 63%;
   --syntax-comment:         111 5% 49%;
   --syntax-number:          331 43% 72%;
+  --syntax-function:        172 31% 62%;
+  --syntax-parameter:       41 32% 75%;
 }
 
 /* ── Rosé Pine Theme ──────────────────────────────────────── */
@@ -434,6 +446,8 @@
   --syntax-string:          35 81% 56%;
   --syntax-comment:         257 9% 61%;
   --syntax-number:          189 30% 48%;
+  --syntax-function:        197 53% 34%;
+  --syntax-parameter:       248 19% 40%;
 }
 
 [data-theme="rose-pine"][data-mode="dark"] {
@@ -488,6 +502,8 @@
   --syntax-string:          35 88% 72%;
   --syntax-comment:         248 12% 47%;
   --syntax-number:          189 43% 73%;
+  --syntax-function:        197 49% 38%;
+  --syntax-parameter:       245 50% 91%;
 }
 
 /* ── Base Layer ─────────────────────────────────────────── */
@@ -548,6 +564,8 @@ button, a, input, [role="button"] {
 
 .toolbar {
   border-bottom: 1px solid hsl(var(--border));
+  background: transparent !important;
+  backdrop-filter: blur(8px);
 }
 
 .statusbar {
@@ -714,18 +732,18 @@ button, a, input, [role="button"] {
 
 .tiptap-editor .code-block .hljs-built_in,
 .tiptap-editor .code-block .hljs-class .hljs-title {
-  color: hsl(var(--primary));
+  color: hsl(var(--syntax-function));
 }
 
 .tiptap-editor .code-block .hljs-title.function_,
 .tiptap-editor .code-block .hljs-function .hljs-title {
-  color: hsl(var(--ring));
+  color: hsl(var(--syntax-function));
 }
 
 .tiptap-editor .code-block .hljs-variable,
 .tiptap-editor .code-block .hljs-attr,
 .tiptap-editor .code-block .hljs-params {
-  color: hsl(var(--editor-text));
+  color: hsl(var(--syntax-parameter));
 }
 
 .tiptap-editor .code-block .hljs-type,

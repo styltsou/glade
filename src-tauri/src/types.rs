@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const MAX_RECENTS: usize = 12;
+pub const MAX_RECENTS: usize = 6;
 pub const PREVIEW_LENGTH: usize = 120;
 
 /// A vault directory under ~/.glade/vaults/

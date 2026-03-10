@@ -12,9 +12,9 @@ function addEntryToTree(entries: VaultEntry[], folder: string | undefined, newEn
   // Recursively find the folder and add to its children
   return entries.map(entry => {
     if (entry.path === folder && entry.is_dir) {
-      return { ...entry, children: [newEntry, ...entry.children] };
+      return { ...entry, children: [newEntry, ...(entry.children || [])] };
     }
-    if (entry.children.length > 0) {
+    if (entry.children && entry.children.length > 0) {
       return { ...entry, children: addEntryToTree(entry.children, folder, newEntry) };
     }
     return entry;
@@ -60,6 +60,7 @@ export interface VaultSlice {
   saveNote: (path: string, content: string) => Promise<void>;
   createNote: (folder?: string) => Promise<void>;
   renameNote: (path: string, newTitle: string) => Promise<void>;
+  renameFolder: (path: string, newName: string) => Promise<void>;
   duplicateNote: (path: string) => Promise<void>;
   deleteEntry: (path: string) => Promise<void>;
   createFolder: (path: string) => Promise<void>;
@@ -218,6 +219,16 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     }
   },
 
+  renameFolder: async (path: string, newName: string) => {
+    try {
+      await invoke("rename_folder", { path, new_name: newName });
+      // Reload vault entirely to update all nested note paths correctly
+      await get().loadVault();
+    } catch (e) {
+      set({ vaultError: String(e) });
+    }
+  },
+
   duplicateNote: async (path: string) => {
     try {
       const note = await invoke<NoteData>("duplicate_note", { path });
@@ -270,10 +281,31 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
 
   createFolder: async (path: string) => {
     try {
+      // Optimistically update entries tree
+      const folderName = path.split("/").pop() || path;
+      const parentPath = path.includes("/")
+        ? path.substring(0, path.lastIndexOf("/"))
+        : undefined;
+
+      const newEntry: VaultEntry = {
+        name: folderName,
+        path: path,
+        is_dir: true,
+        children: [],
+        modified: new Date().toISOString(),
+        tags: [],
+      };
+
+      const newEntries = addEntryToTree(get().entries, parentPath, newEntry);
+      set({ entries: newEntries, vaultError: null });
+
       await invoke("create_folder", { path });
+      // Reload vault to sync with server (ensures correct modification times etc)
       await get().loadVault();
     } catch (e) {
       set({ vaultError: String(e) });
+      // Re-sync on error
+      await get().loadVault();
     }
   },
 

@@ -113,14 +113,14 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       </div>
 
       {/* Title */}
-      <div className="min-h-[2lh]">
+      <div>
         <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2 pr-2">
           {card.title}
         </span>
       </div>
 
       {/* Preview */}
-      <div className="min-h-[2lh]">
+      <div>
         {card.preview ? (
           <span className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
             {card.preview}

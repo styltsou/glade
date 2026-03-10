@@ -13,7 +13,7 @@ export function TagsPanel() {
   const toggleTagsCollapsed = useStore((state) => state.toggleTagsCollapsed);
 
   return (
-    <div className="shrink-0 border-t border-border bg-sidebar/50">
+    <div className="shrink-0 mt-1 border-t border-border bg-sidebar/50">
       <div className="flex items-center">
         <button 
           onClick={() => toggleTagsCollapsed()}

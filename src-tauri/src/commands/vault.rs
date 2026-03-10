@@ -55,6 +55,35 @@ pub async fn create_folder(path: String) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Rename a folder inside the vault.
+#[tauri::command]
+pub async fn rename_folder(path: String, new_name: String) -> Result<(), AppError> {
+    let vault_path = vault::get_vault_path()?;
+    let full_path = vault_path.join(&path);
+
+    if !full_path.exists() {
+        return Err(AppError::NotFound(format!("Folder not found: {}", path)));
+    }
+
+    if !full_path.is_dir() {
+        return Err(AppError::InvalidPath(format!("Path is not a folder: {}", path)));
+    }
+
+    let parent = full_path.parent().unwrap_or(&vault_path);
+    let new_full_path = parent.join(&new_name);
+
+    if new_full_path.exists() {
+        return Err(AppError::InvalidPath(format!("Folder already exists: {}", new_name)));
+    }
+
+    fs::rename(&full_path, &new_full_path)?;
+    
+    // Invalidate vault tree cache
+    vault::invalidate_vault_cache();
+    
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn initialize_app() -> Result<AppConfig, AppError> {
     let config = config::load_config()?;

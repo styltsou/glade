@@ -25,7 +25,7 @@ export function PinnedSection() {
   if (pinnedNotes.length === 0) return null;
 
   return (
-    <div className="px-2 py-1 shrink-0">
+    <div className="px-2 pt-2 pb-1 shrink-0">
       <div className="pb-1.5 px-2 flex items-center">
         <span className="text-xs font-bold text-foreground uppercase tracking-widest">
           Pinned
@@ -43,7 +43,7 @@ export function PinnedSection() {
           />
         ))}
       </div>
-      <div className="mt-2 mb-1 border-t border-border" />
+      <div className="mt-3 mb-2 border-t border-border/50" />
     </div>
   );
 }
