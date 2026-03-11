@@ -26,8 +26,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
-
-// ─── Static version of Node for DragOverlay ──────────────────────────────────
+import { calculateDropPosition, isDropIntoFolder } from "./dropPosition";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
@@ -45,26 +44,54 @@ export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   );
 }
 
-// ─── FileTreeNode (recursive, reads from stores) ──────────────────────────────
-
-export function FileTreeNode({ entry }: { entry: VaultEntry }) {
+function useFileTreeStore() {
   const activeNotePath = useStore((state) => state.activeNote?.path);
   const selectNote = useStore((state) => state.selectNote);
   const duplicateNote = useStore((state) => state.duplicateNote);
   const createNote = useStore((state) => state.createNote);
-
   const openCreateFolder = useStore((state) => state.openCreateFolder);
-
   const pinNote = useStore((state) => state.pinNote);
   const prefetchNote = useStore((state) => state.prefetchNote);
   const sidebarSort = useStore((state) => state.sidebarSort);
-
   const openRename = useStore((state) => state.openRename);
   const openDelete = useStore((state) => state.openDelete);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
-
   const expandedFolders = useStore((state) => state.expandedFolders);
   const toggleFolderExpanded = useStore((state) => state.toggleFolderExpanded);
+
+  return {
+    activeNotePath,
+    selectNote,
+    duplicateNote,
+    createNote,
+    openCreateFolder,
+    pinNote,
+    prefetchNote,
+    sidebarSort,
+    openRename,
+    openDelete,
+    navigateToFolder,
+    expandedFolders,
+    toggleFolderExpanded,
+  };
+}
+
+export function FileTreeNode({ entry }: { entry: VaultEntry }) {
+  const {
+    activeNotePath,
+    selectNote,
+    duplicateNote,
+    createNote,
+    openCreateFolder,
+    pinNote,
+    prefetchNote,
+    sidebarSort,
+    openRename,
+    openDelete,
+    navigateToFolder,
+    expandedFolders,
+    toggleFolderExpanded,
+  } = useFileTreeStore();
 
   const expanded = expandedFolders.has(entry.path);
 
@@ -80,7 +107,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
     over,
   } = useSortable({ id: entry.path });
 
-  // Auto-expand folder on hover
   useEffect(() => {
     if (isOver && entry.is_dir && !expanded) {
       const timer = setTimeout(() => {
@@ -96,44 +122,8 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
     opacity: isDragging ? 0.3 : 1,
   };
 
-  // Calculate drop position (top, bottom, or middle/into)
-  let dropPosition: "top" | "bottom" | "into" | null = null;
-  if (isOver && active) {
-    const overRect = over?.rect;
-    const activeRect = active.rect.current.translated;
-    
-    if (overRect && activeRect) {
-      const overTop = overRect.top;
-      const overHeight = overRect.height;
-      const activeCenter = activeRect.top + activeRect.height / 2;
-      
-      // For folders, we only want to consider the header row for drop logic
-      // The header row is roughly 32px high. 
-      const HEADER_HEIGHT = 32;
-      const threshold = 6; // pixels
-
-      if (entry.is_dir) {
-        const distFromTop = activeCenter - overTop;
-        if (distFromTop < threshold) {
-          dropPosition = "top";
-        } else if (distFromTop > HEADER_HEIGHT - threshold) {
-          // If folder is closed, bottom 6px of header is "bottom"
-          // If folder is open, we usually want to drop "into" or "top" of first child
-          // But for the folder itself, we'll stick to 'into' for most of it.
-          if (!expanded) dropPosition = "bottom";
-          else dropPosition = "into";
-        } else {
-          dropPosition = "into";
-        }
-      } else {
-        const relativePos = (activeCenter - overTop) / overHeight;
-        if (relativePos < 0.5) dropPosition = "top";
-        else dropPosition = "bottom";
-      }
-    }
-  }
-
-  const isIntoFolder = dropPosition === "into" && entry.is_dir;
+  const dropPosition = calculateDropPosition(isOver, active, over, entry.is_dir, expanded);
+  const isIntoFolder = isDropIntoFolder(dropPosition, entry.is_dir);
 
   if (entry.is_dir) {
     const children = sortEntries(entry.children, sidebarSort);
@@ -207,7 +197,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
           </ContextMenuContent>
         </ContextMenu>
 
-        {/* Children rendered inside a margin-left container which doubles as the indent line base */}
         <AnimatePresence initial={false}>
           {expanded && (
             <motion.div
@@ -218,7 +207,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
               className="overflow-hidden"
             >
               <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5">
-                {/* Indent guide line — absolutely positioned to not take space, drawn down the left edge */}
                 <div className={cn(
                   "absolute top-0 bottom-1 left-0 w-[1px] transition-colors",
                   isIntoFolder ? "bg-primary/40" : "bg-border/80"

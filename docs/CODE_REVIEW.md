@@ -30,7 +30,7 @@ The codebase is well-structured overall with good separation of concerns using Z
 
 ## Larger Refactoring (Higher Risk)
 
-- [ ] 7. Split FileTreeNode.tsx with hooks (DnD logic, drop position)
+- [x] 7. Split FileTreeNode.tsx with hooks (DnD logic, drop position)
 
 ---
 
