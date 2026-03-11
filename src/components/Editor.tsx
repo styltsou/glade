@@ -9,7 +9,8 @@ import { NoteEditor } from "@/components/editor/NoteEditor";
 import { extensions } from "./editor/extensions";
 import { formatNoteDate } from "@/lib/dates";
 
-const AUTOSAVE_DELAY = 1500;
+const AUTOSAVE_DELAY = 800;
+const SAVED_BADGE_TIMEOUT = 2000;
 
 export function Editor() {
   const activeNote = useStore((state) => state.activeNote);
@@ -19,12 +20,13 @@ export function Editor() {
   const selectNote = useStore((state) => state.selectNote);
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved">("saved");
+  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const lastSavedContentRef = useRef<string>("");
+  const latestContentRef = useRef<string>("");
   const isLoadingRef = useRef(false);
-  const pendingSaveRef = useRef<{ path: string; content: string } | null>(null);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
 
@@ -50,63 +52,68 @@ export function Editor() {
       if (!activeNote || isLoadingRef.current) return;
       const markdown = (editor.storage as any).markdown.getMarkdown();
       cursorPositionRef.current = editor.state.selection.from;
+      latestContentRef.current = markdown;
       
-      if (saveStatus !== "unsaved") {
+      if (markdown !== lastSavedContentRef.current) {
         setSaveStatus("unsaved");
+        debouncedSave(activeNote.path, markdown);
       }
-      debouncedSave(activeNote.path, markdown);
     },
   });
 
   const debouncedSave = useCallback(
     (path: string, content: string) => {
-      if (content === lastSavedContentRef.current) {
-        return;
-      }
-
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
 
-      pendingSaveRef.current = { path, content };
-
       saveTimerRef.current = setTimeout(async () => {
-        const pending = pendingSaveRef.current;
-        if (!pending) return;
-        
         try {
-          await saveNote(pending.path, pending.content);
-          lastSavedContentRef.current = pending.content;
-          setSaveStatus("saved");
+          await saveNote(path, content);
+          lastSavedContentRef.current = content;
+          
+          // Only set to "saved" if no newer changes were made while saving
+          if (latestContentRef.current === content) {
+            setSaveStatus("saved");
+            
+            // Clear existing badge timer
+            if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
+            
+            // Schedule fading out the badge
+            badgeTimerRef.current = setTimeout(() => {
+              setSaveStatus("idle");
+            }, SAVED_BADGE_TIMEOUT);
+          }
         } catch {
           // Keep unsaved status on error
         }
-        pendingSaveRef.current = null;
       }, AUTOSAVE_DELAY);
     },
     [saveNote]
   );
 
   const saveNow = useCallback(async () => {
-    if (!activeNote || saveStatus === "saved") return;
+    if (!activeNote || saveStatus !== "unsaved") return;
     
-    // Clear pending debounced save
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
     
-    const pending = pendingSaveRef.current;
-    if (!pending) return;
+    const content = latestContentRef.current;
     
     try {
-      await saveNote(pending.path, pending.content);
-      lastSavedContentRef.current = pending.content;
+      await saveNote(activeNote.path, content);
+      lastSavedContentRef.current = content;
       setSaveStatus("saved");
+      
+      if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
+      badgeTimerRef.current = setTimeout(() => {
+        setSaveStatus("idle");
+      }, SAVED_BADGE_TIMEOUT);
     } catch {
       // Keep unsaved status on error
     }
-    pendingSaveRef.current = null;
   }, [activeNote, saveNote, saveStatus]);
 
   // Keyboard shortcut for Ctrl+S / Cmd+S
@@ -152,6 +159,9 @@ export function Editor() {
     return () => {
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
+      }
+      if (badgeTimerRef.current) {
+        clearTimeout(badgeTimerRef.current);
       }
     };
   }, []);
