@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { SidebarSearch } from "@/components/sidebar/SidebarSearch";

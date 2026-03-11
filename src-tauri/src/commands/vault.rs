@@ -224,7 +224,14 @@ pub async fn delete_vault(vault_id: String) -> Result<(), AppError> {
     config.vaults.remove(vault_idx);
     
     if config.active_vault_id.as_ref() == Some(&vault_id) {
-        config.active_vault_id = config.vaults.first().map(|v| v.id.clone());
+        // Fallback to the most recently opened vault (if any exist)
+        if !config.vaults.is_empty() {
+            let mut sorted_vaults = config.vaults.clone();
+            sorted_vaults.sort_by(|a, b| b.last_opened.cmp(&a.last_opened));
+            config.active_vault_id = Some(sorted_vaults[0].id.clone());
+        } else {
+            config.active_vault_id = None;
+        }
     }
     
     config::save_config(&config)?;
@@ -240,6 +247,20 @@ pub async fn update_vault_last_opened(vault_id: String) -> Result<(), AppError> 
         .ok_or_else(|| AppError::NotFound("Vault not found".into()))?;
     
     vault.last_opened = Utc::now().to_rfc3339();
+    
+    config::save_config(&config)?;
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn update_vault_git_remote(vault_id: String, git_remote: Option<String>) -> Result<(), AppError> {
+    let mut config = config::load_config()?;
+    
+    let vault = config.vaults.iter_mut().find(|v| v.id == vault_id)
+        .ok_or_else(|| AppError::NotFound("Vault not found".into()))?;
+    
+    vault.git_remote = git_remote;
     
     config::save_config(&config)?;
     

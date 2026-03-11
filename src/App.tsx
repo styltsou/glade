@@ -58,7 +58,7 @@ function SharedDialogs() {
         open={deleteOpen}
         onOpenChange={(open) => { if (!open) closeDelete(); }}
         name={deleteName}
-        isFolder={deleteIsFolder}
+        type={deleteIsFolder ? "folder" : "note"}
         onConfirm={() => {
           if (deletePath) deleteEntry(deletePath);
           closeDelete();

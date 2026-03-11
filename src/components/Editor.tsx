@@ -16,59 +16,70 @@ export function Editor() {
   const saveNote = useStore((state) => state.saveNote);
   const createNote = useStore((state) => state.createNote);
   const onNoteOpened = useStore((state) => state.onNoteOpened);
+  const selectNote = useStore((state) => state.selectNote);
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved">("saved");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Track last saved content to avoid saving unchanged content
   const lastSavedContentRef = useRef<string>("");
-  // Track if we're programmatically loading content (not user typing)
   const isLoadingRef = useRef(false);
-  // Track the path that was used when setting the timer (for race condition fix)
   const pendingSaveRef = useRef<{ path: string; content: string } | null>(null);
+  const cursorPositionRef = useRef<number | null>(null);
+  const currentPathRef = useRef<string | null>(null);
 
   const editor = useEditor({
     extensions,
     content: "",
     editorProps: {
       attributes: { class: "tiptap-editor" },
+      handleClickOn: (_view, _pos, node, _nodePos) => {
+        if (node.type.name === 'mention' && node.attrs.id) {
+          selectNote(node.attrs.id);
+          return true;
+        }
+        return false;
+      },
+    },
+    onSelectionUpdate: ({ editor }) => {
+      if (!isLoadingRef.current) {
+        cursorPositionRef.current = editor.state.selection.from;
+      }
     },
     onUpdate: ({ editor }) => {
       if (!activeNote || isLoadingRef.current) return;
       const markdown = (editor.storage as any).markdown.getMarkdown();
+      cursorPositionRef.current = editor.state.selection.from;
+      
+      if (saveStatus !== "unsaved") {
+        setSaveStatus("unsaved");
+      }
       debouncedSave(activeNote.path, markdown);
     },
   });
 
-  // Debounced autosave with content comparison and path capture
   const debouncedSave = useCallback(
     (path: string, content: string) => {
-      // Skip if content hasn't changed from last save
       if (content === lastSavedContentRef.current) {
         return;
       }
 
-      // Clear existing timer
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
       }
 
-      // Capture the path at the time of setting the timer (fixes race condition)
       pendingSaveRef.current = { path, content };
 
       saveTimerRef.current = setTimeout(async () => {
         const pending = pendingSaveRef.current;
         if (!pending) return;
         
-        setSaveStatus("saving");
         try {
           await saveNote(pending.path, pending.content);
           lastSavedContentRef.current = pending.content;
           setSaveStatus("saved");
-          setTimeout(() => setSaveStatus("idle"), 2000);
         } catch {
-          setSaveStatus("idle");
+          // Keep unsaved status on error
         }
         pendingSaveRef.current = null;
       }, AUTOSAVE_DELAY);
@@ -76,37 +87,67 @@ export function Editor() {
     [saveNote]
   );
 
-  // Track current path to detect switching
-  const currentPathRef = useRef<string | null>(null);
+  const saveNow = useCallback(async () => {
+    if (!activeNote || saveStatus === "saved") return;
+    
+    // Clear pending debounced save
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    
+    const pending = pendingSaveRef.current;
+    if (!pending) return;
+    
+    try {
+      await saveNote(pending.path, pending.content);
+      lastSavedContentRef.current = pending.content;
+      setSaveStatus("saved");
+    } catch {
+      // Keep unsaved status on error
+    }
+    pendingSaveRef.current = null;
+  }, [activeNote, saveNote, saveStatus]);
 
-  // Update editor content when switching notes OR when body arrives from bg fetch
+  // Keyboard shortcut for Ctrl+S / Cmd+S
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveNow();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [saveNow]);
+
+  // Load content when switching notes
   useEffect(() => {
     if (editor && activeNote) {
       const pathChanged = currentPathRef.current !== activeNote.path;
       isLoadingRef.current = true;
       
-      // Get current editor content
       const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
       
-      // Update if path changed OR if content is different (e.g. background load)
+      // Only update content if it actually changed
       if (pathChanged || currentMarkdown !== activeNote.body) {
         editor.commands.setContent(activeNote.body || "");
         setRawContent(activeNote.body || "");
-        // Update last saved to current content so we don't re-save immediately
         lastSavedContentRef.current = activeNote.body || "";
+        
+        // Reset cursor position tracking for new note
+        cursorPositionRef.current = null;
       }
       
       if (pathChanged) {
         currentPathRef.current = activeNote.path;
-        // Reset scroll or other state if needed
       }
       
       isLoadingRef.current = false;
-      setSaveStatus("idle");
+      setSaveStatus("saved");
     }
   }, [activeNote?.path, activeNote?.body, editor]);
 
-  // Clear timer on note switch to prevent race conditions
   useEffect(() => {
     return () => {
       if (saveTimerRef.current) {
@@ -151,9 +192,14 @@ export function Editor() {
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
-      if (activeNote) debouncedSave(activeNote.path, value);
+      if (activeNote) {
+        if (saveStatus !== "unsaved") {
+          setSaveStatus("unsaved");
+        }
+        debouncedSave(activeNote.path, value);
+      }
     },
-    [activeNote, debouncedSave]
+    [activeNote, debouncedSave, saveStatus]
   );
 
   if (!activeNote) {

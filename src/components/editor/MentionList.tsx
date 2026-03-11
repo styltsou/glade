@@ -1,47 +1,37 @@
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { cn } from '@/lib/utils';
+import { forwardRef, useImperativeHandle, useState } from 'react';
+import { Command, CommandList, CommandItem } from '@/components/ui/command';
 
 interface MentionListProps {
   items: { id: string; label: string }[];
   command: (item: { id: string; label: string }) => void;
+  position?: {
+    top: number;
+    left: number;
+  };
 }
 
-export const MentionList = forwardRef((props: MentionListProps, ref) => {
+export interface MentionListHandle {
+  onKeyDown: (props: { event: KeyboardEvent }) => boolean;
+}
+
+export const MentionList = forwardRef<MentionListHandle, MentionListProps>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
-
-  const selectItem = (index: number) => {
-    const item = props.items[index];
-    if (item) {
-      props.command(item);
-    }
-  };
-
-  const upHandler = () => {
-    setSelectedIndex((selectedIndex + props.items.length - 1) % props.items.length);
-  };
-
-  const downHandler = () => {
-    setSelectedIndex((selectedIndex + 1) % props.items.length);
-  };
-
-  const enterHandler = () => {
-    selectItem(selectedIndex);
-  };
-
-  useEffect(() => setSelectedIndex(0), [props.items]);
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
       if (event.key === 'ArrowUp') {
-        upHandler();
+        setSelectedIndex((prev) => (prev + props.items.length - 1) % props.items.length);
         return true;
       }
       if (event.key === 'ArrowDown') {
-        downHandler();
+        setSelectedIndex((prev) => (prev + 1) % props.items.length);
         return true;
       }
       if (event.key === 'Enter') {
-        enterHandler();
+        const item = props.items[selectedIndex];
+        if (item) {
+          props.command(item);
+        }
         return true;
       }
       return false;
@@ -49,25 +39,33 @@ export const MentionList = forwardRef((props: MentionListProps, ref) => {
   }));
 
   return (
-    <div className="bg-popover text-popover-foreground border border-border rounded-md shadow-lg overflow-hidden min-w-[180px] p-1 z-[1000] bg-white dark:bg-zinc-950">
-      <div className="flex flex-col max-h-[300px] overflow-y-auto">
-        {props.items.length ? (
-          props.items.map((item, index) => (
-            <button
-              key={item.id}
-              onClick={() => selectItem(index)}
-              className={cn(
-                "w-full text-left px-2 py-1.5 text-xs rounded transition-colors flex items-center gap-2",
-                index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-              )}
-            >
-              <span className="truncate">{item.label}</span>
-            </button>
-          ))
-        ) : (
-          <div className="px-3 py-2 text-xs text-muted-foreground italic">No matches</div>
-        )}
-      </div>
+    <div
+      className="fixed z-[1000]"
+      style={props.position ? {
+        top: props.position.top,
+        left: props.position.left,
+      } : undefined}
+    >
+      <Command className="max-h-[300px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg">
+        <CommandList className="max-h-[300px] overflow-y-auto p-1">
+          {props.items.length ? (
+            props.items.map((item, index) => (
+              <CommandItem
+                key={item.id}
+                value={item.label}
+                onSelect={() => props.command(item)}
+                className={`text-sm cursor-pointer ${
+                  index === selectedIndex ? 'bg-accent text-accent-foreground' : ''
+                }`}
+              >
+                <span className="truncate">{item.label}</span>
+              </CommandItem>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-muted-foreground italic">No matches</div>
+          )}
+        </CommandList>
+      </Command>
     </div>
   );
 });

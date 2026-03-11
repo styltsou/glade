@@ -23,8 +23,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
+import { cn } from "@/lib/utils";
 
 // ─── Static version of Node for DragOverlay ──────────────────────────────────
 
@@ -142,9 +143,10 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
         ref={setNodeRef} 
         style={style} 
         {...attributes}
-        className={`relative transition-all duration-200 rounded-md ${
-          isIntoFolder ? "bg-primary/10 ring-1 ring-primary/30" : ""
-        }`}
+        className={cn(
+          "relative transition-all duration-200 rounded-md",
+          isIntoFolder && "bg-primary/10 ring-1 ring-primary/30"
+        )}
       >
         <ContextMenu>
           <ContextMenuTrigger>
@@ -156,9 +158,10 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
               <button
                 {...listeners}
                 onClick={() => toggleFolderExpanded(entry.path)}
-                className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground ${
+                className={cn(
+                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground",
                   isIntoFolder ? "bg-primary/5" : "hover:bg-sidebar-accent"
-                }`}
+                )}
               >
                 {expanded ? (
                   <FolderOpen className="h-3.5 w-3.5 shrink-0" />
@@ -216,7 +219,10 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
             >
               <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5">
                 {/* Indent guide line — absolutely positioned to not take space, drawn down the left edge */}
-                <div className={`absolute top-0 bottom-1 left-0 w-[1px] transition-colors ${isIntoFolder ? "bg-primary/40" : "bg-border/80"}`} />
+                <div className={cn(
+                  "absolute top-0 bottom-1 left-0 w-[1px] transition-colors",
+                  isIntoFolder ? "bg-primary/40" : "bg-border/80"
+                )} />
                 
                 <div className="flex flex-col gap-0.5">
                   <SortableContext items={children.map(c => c.path)} strategy={verticalListSortingStrategy}>
@@ -253,11 +259,12 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
               }); 
             }}
             onMouseEnter={() => prefetchNote(entry.path)}
-            className={`flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium ${
+            className={cn(
+              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
               isActive
                 ? "bg-sidebar-accent text-foreground font-medium"
                 : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
-            }`}
+            )}
           >
             <span className="truncate pr-1">{entry.name}</span>
           </button>

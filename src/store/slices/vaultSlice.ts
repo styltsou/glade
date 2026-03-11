@@ -114,6 +114,7 @@ export interface VaultSlice {
   searchResults: NoteData[];
   sidebarQuery: string;
   noteCache: Record<string, NoteData>;
+  noteScrollPositions: Record<string, number>;
 
   loadVault: () => Promise<void>;
   selectNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
@@ -136,6 +137,7 @@ export interface VaultSlice {
   prefetchNote: (path: string) => Promise<void>;
   moveEntry: (fromPath: string, toPath: string) => Promise<void>;
   clearCache: () => void;
+  updateNoteScrollPosition: (path: string, position: number) => void;
 }
 import type { StoreState } from "../index";
 
@@ -149,6 +151,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   searchResults: [],
   sidebarQuery: "",
   noteCache: {},
+  noteScrollPositions: {},
 
   loadVault: async () => {
     set({ isVaultLoading: true, vaultError: null });
@@ -484,5 +487,14 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
 
   clearCache: () => {
     set({ noteCache: {} });
+  },
+
+  updateNoteScrollPosition: (path: string, position: number) => {
+    set((state) => ({
+      noteScrollPositions: {
+        ...state.noteScrollPositions,
+        [path]: position,
+      },
+    }));
   },
 });

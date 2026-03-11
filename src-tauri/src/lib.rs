@@ -10,7 +10,7 @@ use commands::{
     get_sidebar_state, initialize_app, list_tags, list_vault, list_vaults, pin_note, read_note,
     read_note_raw, record_note_opened, rename_folder, rename_note, rename_vault, save_sidebar_state,
     search_notes, set_active_vault, unpin_note, update_tags, update_vault_last_opened, write_note,
-    move_entry, get_notes_in_folder,
+    move_entry, get_notes_in_folder, update_vault_git_remote,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,6 +28,7 @@ pub fn run() {
             rename_vault,
             delete_vault,
             update_vault_last_opened,
+            update_vault_git_remote,
             list_vault,
             read_note,
             write_note,

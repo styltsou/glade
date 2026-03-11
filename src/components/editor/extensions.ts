@@ -3,11 +3,13 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
+import Mention from "@tiptap/extension-mention";
 import { CustomTaskItem } from "./CustomTaskItem";
 import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
 import { all, createLowlight } from "lowlight";
 import { CustomCodeBlock } from "./CustomCodeBlock";
+import suggestion from "./suggestion";
 
 const lowlight = createLowlight(all);
 
@@ -35,5 +37,11 @@ export const extensions = [
     html: true,
     transformCopiedText: true,
     transformPastedText: true,
+  }),
+  Mention.configure({
+    HTMLAttributes: {
+      class: "mention",
+    },
+    suggestion,
   }),
 ];

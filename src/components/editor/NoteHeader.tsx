@@ -1,11 +1,12 @@
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BookOpen as ReaderIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NoteHeaderProps {
   notePath: string;
   noteTitle: string;
   dateLabel: string | null;
-  saveStatus: "idle" | "saving" | "saved";
+  saveStatus: "unsaved" | "saved";
 }
 
 export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteHeaderProps) {
@@ -19,12 +20,8 @@ export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteH
       </div>
 
       <div className="flex items-center gap-4 shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
-        <span className={saveStatus === "saved" ? "text-primary font-medium" : saveStatus === "saving" ? "opacity-70" : "w-14"}>
-          {saveStatus === "saving"
-            ? "Saving…"
-            : saveStatus === "saved"
-              ? "Saved"
-              : ""}
+        <span className={cn("text-muted-foreground", saveStatus === "saved" && "text-primary font-medium")}>
+          {saveStatus === "saved" ? "Saved" : "Unsaved"}
         </span>
         {dateLabel && (
           <div className="flex items-center gap-1.5 opacity-70">

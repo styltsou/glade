@@ -1,4 +1,4 @@
-import { Home } from "lucide-react";
+import { Vault } from "lucide-react";
 import { useStore } from "@/store";
 import {
   Breadcrumb,
@@ -20,6 +20,7 @@ interface BreadcrumbsProps {
 export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
   const currentFolder = useStore((state) => state.currentFolder);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
+  const activeVault = useStore((state) => state.activeVault);
 
   const targetPath = path !== undefined ? path : currentFolder;
   
@@ -30,28 +31,44 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
       <Breadcrumb>
         <BreadcrumbList className="text-[14px]">
           <BreadcrumbItem>
-            <BreadcrumbLink 
-              onClick={() => navigateToFolder(null)} 
-              className="cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
-              title="Go Home"
-            >
-              <Home className="h-4 w-4" />
-              Home
-            </BreadcrumbLink>
+            {segments.length === 0 && !activeItem ? (
+              <BreadcrumbPage className="flex items-center gap-1.5 font-semibold text-foreground">
+                <Vault className="h-4 w-4" />
+                {activeVault?.name || "Vault"}
+              </BreadcrumbPage>
+            ) : (
+              <BreadcrumbLink 
+                onClick={() => navigateToFolder(null)} 
+                className="cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                title={`Go to ${activeVault?.name || "Vault"}`}
+              >
+                <Vault className="h-4 w-4" />
+                {activeVault?.name || "Vault"}
+              </BreadcrumbLink>
+            )}
           </BreadcrumbItem>
           
           {segments.map((folder, i) => {
             const folderPath = segments.slice(0, i + 1).join("/");
+            const isLast = i === segments.length - 1;
+            const isActive = isLast && !activeItem;
+
             return (
               <React.Fragment key={folderPath}>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbLink
-                    onClick={() => navigateToFolder(folderPath)}
-                    className="cursor-pointer truncate max-w-[150px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {folder}
-                  </BreadcrumbLink>
+                  {isActive ? (
+                    <BreadcrumbPage className="font-semibold text-foreground truncate max-w-[150px]">
+                      {folder}
+                    </BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink
+                      onClick={() => navigateToFolder(folderPath)}
+                      className="cursor-pointer truncate max-w-[150px] text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {folder}
+                    </BreadcrumbLink>
+                  )}
                 </BreadcrumbItem>
               </React.Fragment>
             );

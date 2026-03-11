@@ -4,6 +4,7 @@ import { AppearanceSection } from "./SettingsPage/AppearanceSection";
 import { AboutSection } from "./SettingsPage/AboutSection";
 import { Settings, FolderCog, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const sections = [
   { id: "vaults" as const, label: "Vaults", icon: FolderCog },
@@ -35,15 +36,12 @@ export function SettingsPage() {
             <button
               key={section.id}
               onClick={() => setSettingsSection(section.id)}
-              className={`
-                w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm
-                transition-colors cursor-pointer
-                ${
-                  settingsSection === section.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                }
-              `}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors cursor-pointer",
+                settingsSection === section.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              )}
             >
               <section.icon className="h-4 w-4" />
               {section.label}

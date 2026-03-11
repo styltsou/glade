@@ -6,6 +6,7 @@ import { FileText, Code, Copy, Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconSwitch } from "@/components/ui/icon-switch";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
+import { cn } from "@/lib/utils";
 
 interface NoteActionButtonsProps {
   isRawMode: boolean;
@@ -79,7 +80,10 @@ export function NoteActionButtons({
           size="sm"
           onClick={handleCopyMarkdown}
           disabled={!notePath}
-          className={`h-full px-3 rounded-l-[calc(var(--radius-md)-1px)] rounded-r-none gap-1.5 ${copied ? "bg-primary/10 text-primary" : ""}`}
+          className={cn(
+            "h-full px-3 rounded-l-[calc(var(--radius-md)-1px)] rounded-r-none gap-1.5",
+            copied && "bg-primary/10 text-primary"
+          )}
         >
           {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           <span className="text-sm font-medium">{copied ? "Copied" : "Copy"}</span>
@@ -94,7 +98,10 @@ export function NoteActionButtons({
             title="Export"
             disabled={!notePath}
             onClick={() => setExportMenuOpen((v) => !v)}
-            className={`h-full w-8 p-0 rounded-l-none rounded-r-[calc(var(--radius-md)-1px)] ${exportMenuOpen ? "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary" : ""}`}
+            className={cn(
+              "h-full w-8 p-0 rounded-l-none rounded-r-[calc(var(--radius-md)-1px)]",
+              exportMenuOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+            )}
           >
             <Download className="h-4 w-4" />
           </Button>

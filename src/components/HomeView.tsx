@@ -27,6 +27,7 @@ function NoteCardSkeleton() {
 
 export function HomeView() {
   const entries = useStore((state) => state.entries);
+  const activeVault = useStore((state) => state.activeVault);
   const folderNotes = useStore((state) => state.folderNotes);
   const isHomeLoading = useStore((state) => state.isHomeLoading);
   const currentFolder = useStore((state) => state.currentFolder);
@@ -78,7 +79,7 @@ export function HomeView() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
-              {currentEntry ? currentEntry.name : "Home"}
+              {currentEntry ? currentEntry.name : (activeVault?.name || "Home")}
             </h1>
             {currentEntry && (
                <p className="text-sm text-muted-foreground mt-1">
