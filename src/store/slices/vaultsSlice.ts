@@ -52,9 +52,10 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       await invoke("update_vault_last_opened", { vaultId });
       const activeVault = get().vaults.find((v: Vault) => v.id === vaultId) || null;
       
-      // Clear caches for the new vault
+      // Clear caches and reset state for the new vault
       get().clearCache();
       get().clearTags();
+      get().goHome();
       
       // Reload tags for the new vault
       get().loadTags();

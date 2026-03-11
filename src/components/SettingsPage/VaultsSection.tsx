@@ -14,7 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Folder, Pencil, Trash2, Check, X, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 
 interface VaultItemProps {
   vault: Vault;
@@ -41,14 +41,6 @@ function VaultItem({ vault, isActive, onSetActive, onRename, onDelete }: VaultIt
     setEditName(vault.name);
     setEditSlug(vault.slug);
     setIsEditing(false);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
   };
 
   if (isEditing) {
@@ -96,7 +88,9 @@ function VaultItem({ vault, isActive, onSetActive, onRename, onDelete }: VaultIt
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">{vault.name}</div>
-          <div className="text-xs text-muted-foreground truncate">~/.glade/vaults/{vault.slug}</div>
+          <div className="text-xs text-muted-foreground truncate uppercase tracking-wider opacity-70">
+            Vault • {vault.slug}
+          </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             Created {formatDate(vault.created_at)} • Last opened {formatDate(vault.last_opened)}
           </div>

@@ -2,8 +2,8 @@ import { StateCreator } from "zustand";
 
 export interface DialogSlice {
   // Current view
-  currentView: "home" | "editor" | "settings";
-  setCurrentView: (view: "home" | "editor" | "settings") => void;
+  currentView: "home" | "settings";
+  setCurrentView: (view: "home" | "settings") => void;
 
   // Settings page
   settingsSection: "vaults" | "appearance" | "about";
