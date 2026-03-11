@@ -1,108 +1,12 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
 import type { VaultEntry, NoteData, TagCount } from "@/types";
-
-// Helper: Add entry to tree at specific folder path
-function addEntryToTree(entries: VaultEntry[], folder: string | undefined, newEntry: VaultEntry): VaultEntry[] {
-  if (!folder) {
-    // Add to root level
-    return [newEntry, ...entries];
-  }
-  
-  // Recursively find the folder and add to its children
-  return entries.map(entry => {
-    if (entry.path === folder && entry.is_dir) {
-      return { ...entry, children: [newEntry, ...(entry.children || [])] };
-    }
-    if (entry.children && entry.children.length > 0) {
-      return { ...entry, children: addEntryToTree(entry.children, folder, newEntry) };
-    }
-    return entry;
-  });
-}
-
-// Helper: Remove entry from tree by path
-function removeEntryFromTree(entries: VaultEntry[], path: string): VaultEntry[] {
-  return entries
-    .filter(entry => entry.path !== path)
-    .map(entry => ({
-      ...entry,
-      children: entry.children.length > 0 ? removeEntryFromTree(entry.children, path) : [],
-    }));
-}
-
-// Helper: Update paths of an entry and all its children recursively
-function updatePathsRecursive(entry: VaultEntry, oldPath: string, newPath: string): VaultEntry {
-  const relativePath = entry.path.substring(oldPath.length);
-  const updatedPath = newPath + relativePath;
-  
-  return {
-    ...entry,
-    path: updatedPath,
-    children: entry.children.map(child => updatePathsRecursive(child, oldPath, newPath))
-  };
-}
-
-// Helper: Move entry in tree from one path to another
-function moveEntryInTree(entries: VaultEntry[], fromPath: string, toPath: string): VaultEntry[] {
-  let movingEntry: VaultEntry | null = null;
-  
-  // 1. Remove the entry from its old position and find it
-  function findAndRemove(list: VaultEntry[]): VaultEntry[] {
-    return list.filter(e => {
-      if (e.path === fromPath) {
-        movingEntry = e;
-        return false;
-      }
-      return true;
-    }).map(e => ({
-      ...e,
-      children: e.children.length > 0 ? findAndRemove(e.children) : [],
-    }));
-  }
-  
-  const treeWithoutEntry = findAndRemove(entries);
-  if (!movingEntry) return entries;
-
-  // Update entry paths (relevant if it's a folder)
-  const updatedEntry = updatePathsRecursive(movingEntry, fromPath, toPath);
-  updatedEntry.name = toPath.split("/").pop() || updatedEntry.name;
-
-  // 2. Insert into the new position
-  const targetParentPath = toPath.substring(0, toPath.lastIndexOf('/'));
-  
-  if (!targetParentPath) {
-    // Drop at root
-    return [updatedEntry, ...treeWithoutEntry];
-  }
-
-  function insertIntoParent(list: VaultEntry[]): VaultEntry[] {
-    return list.map(e => {
-      if (e.path === targetParentPath && e.is_dir) {
-        return { ...e, children: [updatedEntry, ...(e.children || [])] };
-      }
-      return {
-        ...e,
-        children: e.children.length > 0 ? insertIntoParent(e.children) : [],
-      };
-    });
-  }
-
-  return insertIntoParent(treeWithoutEntry);
-}
-
-// Helper: Update entry in tree by path
-function updateEntryInTree(entries: VaultEntry[], path: string, changes: Partial<VaultEntry>): VaultEntry[] {
-  return entries.map(entry => {
-    if (entry.path === path) {
-      return { ...entry, ...changes };
-    }
-    if (entry.children.length > 0) {
-      return { ...entry, children: updateEntryInTree(entry.children, path, changes) };
-    }
-    return entry;
-  });
-}
+import { 
+  addEntryToTree, 
+  removeEntryFromTree, 
+  moveEntryInTree, 
+  updateEntryInTree 
+} from "@/lib/tree";
 
 export interface VaultSlice {
   entries: VaultEntry[];

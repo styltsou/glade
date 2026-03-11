@@ -23,7 +23,7 @@ The codebase is well-structured overall with good separation of concerns using Z
 ## Medium Effort (Moderate Risk)
 
 - [ ] 4. Split `vaultSlice.ts` into focused slices
-- [ ] 5. Extract tree helpers from vaultSlice to `src/lib/tree.ts`
+- [x] 5. Extract tree helpers from vaultSlice to `src/lib/tree.ts`
 - [x] 6. Extract VaultCard from VaultsSection.tsx to separate file
 
 ---
