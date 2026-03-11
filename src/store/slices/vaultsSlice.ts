@@ -68,15 +68,33 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
   },
 
   createVault: async (name: string, slug: string) => {
-    set({ isVaultsLoading: true, vaultsError: null });
+    set({ vaultsError: null });
+    
+    // Optimistic update
+    const prevVaults = get().vaults;
+    const prevActive = get().activeVault;
+    
+    const optimisticVault: Vault = {
+      id: slug,
+      name,
+      slug,
+      git_remote: null,
+      created_at: new Date().toISOString(),
+      last_opened: new Date().toISOString(),
+    };
+    
+    set({ 
+      vaults: [...prevVaults, optimisticVault], 
+      activeVault: optimisticVault 
+    });
+
     try {
       const vault = await invoke<Vault>("create_vault", { name, slug });
       const vaults = await invoke<Vault[]>("list_vaults");
-      const activeVault = await invoke<Vault | null>("get_active_vault");
-      set({ vaults, activeVault, isVaultsLoading: false });
+      set({ vaults, activeVault: vault });
       return vault;
     } catch (e) {
-      set({ vaultsError: String(e), isVaultsLoading: false });
+      set({ vaults: prevVaults, activeVault: prevActive, vaultsError: String(e) });
       throw e;
     }
   },

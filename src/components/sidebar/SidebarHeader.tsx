@@ -54,8 +54,7 @@ export function SidebarHeader() {
     
     setIsCreating(true);
     try {
-      const createdVault = await createVault(newVaultName.trim(), slug);
-      await setActiveVault(createdVault.id);
+      await createVault(newVaultName.trim(), slug);
       goHome();
       setNewVaultName("");
       setError("");
