@@ -24,7 +24,7 @@ export function HighlightedText({ text, query }: HighlightedTextProps) {
     <>
       {parts.map((part, i) =>
         regex.test(part) ? (
-          <span key={i} className="bg-primary/20 text-primary px-[1px] rounded-[2px] font-medium">
+          <span key={i} className="bg-primary/20 text-primary px-[1px] rounded-xs font-medium">
             {part}
           </span>
         ) : (
