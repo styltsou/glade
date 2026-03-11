@@ -82,6 +82,11 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       last_opened: new Date().toISOString(),
     };
     
+    // Clear caches and reset state for the new vault
+    get().clearCache();
+    get().clearTags();
+    get().goHome();
+    
     set({ 
       vaults: [...prevVaults, optimisticVault], 
       activeVault: optimisticVault 
@@ -92,6 +97,7 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       const vaults = await invoke<Vault[]>("list_vaults");
       const newVault = vaults.find(v => v.slug === slug);
       set({ vaults, activeVault: newVault || vault });
+      get().loadTags();
       return newVault || vault;
     } catch (e) {
       set({ vaults: prevVaults, activeVault: prevActive, vaultsError: String(e) });
