@@ -50,7 +50,12 @@ export function Editor() {
     },
     onUpdate: ({ editor }) => {
       if (!activeNote || isLoadingRef.current) return;
+      
       const markdown = (editor.storage as any).markdown.getMarkdown();
+      
+      // Skip if content hasn't actually changed
+      if (markdown === latestContentRef.current) return;
+      
       cursorPositionRef.current = editor.state.selection.from;
       latestContentRef.current = markdown;
       
@@ -134,6 +139,16 @@ export function Editor() {
       const pathChanged = currentPathRef.current !== activeNote.path;
       isLoadingRef.current = true;
       
+      // Cancel any pending autosave from previous note
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      if (badgeTimerRef.current) {
+        clearTimeout(badgeTimerRef.current);
+        badgeTimerRef.current = null;
+      }
+      
       const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
       
       // Only update content if it actually changed
@@ -141,6 +156,7 @@ export function Editor() {
         editor.commands.setContent(activeNote.body || "");
         setRawContent(activeNote.body || "");
         lastSavedContentRef.current = activeNote.body || "";
+        latestContentRef.current = activeNote.body || "";
         
         // Reset cursor position tracking for new note
         cursorPositionRef.current = null;
@@ -150,8 +166,8 @@ export function Editor() {
         currentPathRef.current = activeNote.path;
       }
       
+      setSaveStatus("idle");
       isLoadingRef.current = false;
-      setSaveStatus("saved");
     }
   }, [activeNote?.path, activeNote?.body, editor]);
 
