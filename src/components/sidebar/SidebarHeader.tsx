@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/store";
-import { PanelLeft, Plus } from "lucide-react";
+import { PanelLeft, Plus, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -29,6 +30,7 @@ export function SidebarHeader() {
   const [error, setError] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     if (isCreateDialogOpen) {
@@ -47,6 +49,14 @@ export function SidebarHeader() {
     }
   }, [isCreateDialogOpen]);
 
+  // Reset isCreating state when dialog opens
+  useEffect(() => {
+    if (isCreateDialogOpen) {
+      setIsCreating(false);
+      setError(""); // Also clear error when dialog opens
+    }
+  }, [isCreateDialogOpen]);
+
   const handleSelectVault = async (vaultId: string) => {
     if (vaultId !== activeVault?.id) {
       await setActiveVault(vaultId);
@@ -57,6 +67,9 @@ export function SidebarHeader() {
   const handleCreateVault = async () => {
     if (!newVaultName.trim()) return;
     
+    setIsCreating(true); // Start loading
+    setError(""); // Clear previous errors
+
     const slug = newVaultName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -64,6 +77,7 @@ export function SidebarHeader() {
     
     if (vaults.some((v: Vault) => v.slug === slug)) {
       setError("A vault with this name already exists");
+      setIsCreating(false); // Stop loading if validation fails
       return;
     }
     
@@ -75,6 +89,7 @@ export function SidebarHeader() {
       setIsCreateDialogOpen(false);
     } catch (e) {
       setError(String(e));
+      setIsCreating(false);
     }
   };
 
@@ -91,16 +106,16 @@ export function SidebarHeader() {
                 <span>{vault.name}</span>
               </SelectItem>
             ))}
-            <div className="h-px my-1 bg-border" />
+            <SelectSeparator />
             <div 
-              className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent cursor-pointer rounded-sm mx-1"
+              className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-sm"
               onClick={() => {
                 setIsSelectOpen(false);
                 setIsCreateDialogOpen(true);
               }}
             >
               <Plus className="size-4" />
-              Create New Vault
+              <span>Create New Vault</span>
             </div>
           </SelectContent>
         </Select>
@@ -134,7 +149,8 @@ export function SidebarHeader() {
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateVault} disabled={!newVaultName.trim()}>
+              <Button onClick={handleCreateVault} disabled={!newVaultName.trim() || isCreating}>
+                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create
               </Button>
             </div>

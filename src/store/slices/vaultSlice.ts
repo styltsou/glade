@@ -115,9 +115,6 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     set({ searchResults: [] });
   },
 
-  goHome: () => {
-    set({ activeNote: null, currentFolder: null });
-  },
 
   setSidebarQuery: (query: string) => {
     set({ sidebarQuery: query });
@@ -138,7 +135,11 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   },
 
   clearCache: () => {
-    set({ noteCache: {} });
+    set({ noteCache: {}, entries: [] });
+  },
+
+  goHome: () => {
+    set({ activeNote: null, currentFolder: null, pinnedNotes: [], folderNotes: [] });
   },
 
   updateNoteScrollPosition: (path: string, position: number) => {

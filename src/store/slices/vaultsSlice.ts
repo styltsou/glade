@@ -69,38 +69,13 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
 
   createVault: async (name: string, slug: string) => {
     set({ vaultsError: null });
-    
-    const prevVaults = get().vaults;
-    const prevActive = get().activeVault;
-    
-    const optimisticVault: Vault = {
-      id: slug,
-      name,
-      slug,
-      git_remote: null,
-      created_at: new Date().toISOString(),
-      last_opened: new Date().toISOString(),
-    };
-    
-    // Clear caches and reset state for the new vault
-    get().clearCache();
-    get().clearTags();
-    get().goHome();
-    
-    set({ 
-      vaults: [...prevVaults, optimisticVault], 
-      activeVault: optimisticVault 
-    });
-
     try {
       const vault = await invoke<Vault>("create_vault", { name, slug });
-      const vaults = await invoke<Vault[]>("list_vaults");
-      const newVault = vaults.find(v => v.slug === slug);
-      set({ vaults, activeVault: newVault || vault });
-      get().loadTags();
-      return newVault || vault;
+      await get().loadVaults();
+      await get().setActiveVault(vault.id);
+      return vault;
     } catch (e) {
-      set({ vaults: prevVaults, activeVault: prevActive, vaultsError: String(e) });
+      set({ vaultsError: String(e) });
       throw e;
     }
   },
