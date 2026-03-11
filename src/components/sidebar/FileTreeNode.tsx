@@ -144,7 +144,7 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
         style={style} 
         {...attributes}
         className={cn(
-          "relative transition-all duration-150 rounded-md",
+          "relative transition-all duration-100 rounded-md",
           isIntoFolder && "bg-primary/10 ring-1 ring-primary/30"
         )}
       >
@@ -214,7 +214,7 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
               <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5">

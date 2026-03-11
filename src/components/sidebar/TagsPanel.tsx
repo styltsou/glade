@@ -92,7 +92,7 @@ export function TagsPanel() {
       
       <div 
         className={cn(
-          "grid transition-all duration-150 ease-in-out",
+          "grid transition-all duration-100 ease-in-out",
           !tagsCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >

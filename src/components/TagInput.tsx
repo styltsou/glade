@@ -114,7 +114,7 @@ export function TagInput() {
           {tag}
           <button
             onClick={() => removeTag(tag)}
-            className="w-0 opacity-0 group-hover:w-4 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-150 overflow-hidden flex items-center justify-center hover:text-foreground"
+            className="w-0 opacity-0 group-hover:w-4 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-100 overflow-hidden flex items-center justify-center hover:text-foreground"
           >
             <Cross2Icon className="w-3.5 h-3.5" />
           </button>
