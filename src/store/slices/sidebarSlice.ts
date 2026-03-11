@@ -11,10 +11,12 @@ export interface SidebarSlice {
   sidebarWidth: number;
   tagsHeight: number;
   isSidebarLoaded: boolean;
+  expandedFolders: Set<string>;
 
   loadSidebarState: () => Promise<void>;
   toggleSidebarCollapsed: () => Promise<void>;
   toggleTagsCollapsed: () => Promise<void>;
+  toggleFolderExpanded: (path: string) => void;
   cycleSidebarSort: () => Promise<void>;
   setSidebarSort: (sort: SortMode) => Promise<void>;
   setSidebarWidth: (width: number) => void;
@@ -23,6 +25,8 @@ export interface SidebarSlice {
 }
 import type { StoreState } from "../index";
 
+let _folderSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
 export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> = (set, get) => ({
   sidebarCollapsed: false,
   tagsCollapsed: true,
@@ -30,6 +34,7 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
   tagsHeight: 200,
   sidebarSort: "name-asc",
   isSidebarLoaded: false,
+  expandedFolders: new Set<string>(),
 
   loadSidebarState: async () => {
     try {
@@ -39,6 +44,7 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
         width: number;
         tags_height: number;
         sort: SortMode;
+        expanded_folders: string[];
       }>("get_sidebar_state");
       set({
         sidebarCollapsed: state.collapsed,
@@ -46,6 +52,7 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
         sidebarWidth: state.width || 260,
         tagsHeight: state.tags_height || 200,
         sidebarSort: state.sort,
+        expandedFolders: new Set(state.expanded_folders || []),
         isSidebarLoaded: true,
       });
     } catch {
@@ -63,6 +70,21 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
     const next = !get().tagsCollapsed;
     set({ tagsCollapsed: next });
     await get().saveSidebarState();
+  },
+
+  toggleFolderExpanded: (path: string) => {
+    const next = new Set(get().expandedFolders);
+    if (next.has(path)) {
+      next.delete(path);
+    } else {
+      next.add(path);
+    }
+    set({ expandedFolders: next });
+    // Debounce the save to avoid spamming the backend
+    if (_folderSaveTimer) clearTimeout(_folderSaveTimer);
+    _folderSaveTimer = setTimeout(() => {
+      get().saveSidebarState();
+    }, 500);
   },
 
   cycleSidebarSort: async () => {
@@ -94,6 +116,7 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
           width: get().sidebarWidth,
           tags_height: get().tagsHeight,
           sort: get().sidebarSort,
+          expanded_folders: Array.from(get().expandedFolders),
         },
       });
     } catch (e) {

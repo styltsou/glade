@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { SidebarSearch } from "@/components/sidebar/SidebarSearch";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
-import { FileTree, SearchResultsList } from "@/components/sidebar/FileTree";
+import { FileTree } from "@/components/sidebar/FileTree";
+import { SearchResultsList } from "@/components/sidebar/SearchResultsList";
 import { TagsPanel } from "@/components/sidebar/TagsPanel";
 import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 

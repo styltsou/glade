@@ -88,6 +88,9 @@ pub struct SidebarState {
     pub tags_height: u32,
     /// One of: "name-asc", "name-desc", "modified"
     pub sort: String,
+    /// Folder paths that are currently expanded in the sidebar
+    #[serde(default)]
+    pub expanded_folders: Vec<String>,
 }
 
 impl Default for SidebarState {
@@ -98,6 +101,7 @@ impl Default for SidebarState {
             width: 260,
             tags_height: 200,
             sort: "name-asc".to_string(),
+            expanded_folders: Vec::new(),
         }
     }
 }
