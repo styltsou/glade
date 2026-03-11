@@ -43,7 +43,13 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   noteScrollPositions: {},
 
   loadVault: async () => {
-    set({ isVaultLoading: true, vaultError: null });
+    const { entries: currentEntries } = get();
+    if (currentEntries.length === 0) {
+      set({ isVaultLoading: true, vaultError: null });
+    } else {
+      set({ vaultError: null });
+    }
+    
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");
       set({ entries, isVaultLoading: false });
@@ -55,7 +61,21 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   loadTags: async () => {
     try {
       const tags = await invoke<TagCount[]>("list_tags");
-      set({ tags });
+      const { activeTagFilters } = get();
+      
+      // Prune active filters: remove any filter that no longer exists in the global tags list
+      if (activeTagFilters.length > 0) {
+        const existingTagNames = new Set(tags.map(t => t.name));
+        const prunedFilters = activeTagFilters.filter(tag => existingTagNames.has(tag));
+        
+        if (prunedFilters.length !== activeTagFilters.length) {
+          set({ tags, activeTagFilters: prunedFilters });
+        } else {
+          set({ tags });
+        }
+      } else {
+        set({ tags });
+      }
     } catch (e) {
       set({ vaultError: String(e) });
     }

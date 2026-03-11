@@ -225,20 +225,33 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
   },
 
   updateNoteTags: async (tags: string[]) => {
-    const { activeNote } = get();
+    const { activeNote, entries, noteCache } = get();
     if (!activeNote) return;
+
+    // 1. Optimistic update of activeNote and cache
+    const updatedNote = { ...activeNote, tags };
+    set({
+      activeNote: updatedNote,
+      noteCache: { ...noteCache, [activeNote.path]: updatedNote },
+    });
+
+    // 2. Optimistic update of the entries tree
+    const newEntries = updateEntryInTree(entries, activeNote.path, { tags });
+    set({ entries: newEntries });
+
     try {
+      // 3. Persist to backend
       await invoke("update_tags", { path: activeNote.path, tags });
-      const note = await invoke<NoteData>("read_note", { path: activeNote.path });
       
-      set((state: StoreState) => ({
-        activeNote: note,
-        noteCache: { ...state.noteCache, [activeNote.path]: note },
-      }));
+      // 4. Refresh global tags list (this is usually fast and non-disruptive)
       await get().loadTags();
-      await get().loadVault();
+      
+      // We no longer call loadVault() here because we've updated entries optimistically,
+      // and loadVault() is what causes the flash by toggling isVaultLoading.
     } catch (e) {
       set({ vaultError: String(e) });
+      // On error, a full reload might be safest to ensure consistency
+      await get().loadVault();
     }
   },
 
