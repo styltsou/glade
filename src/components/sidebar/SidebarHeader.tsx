@@ -30,7 +30,6 @@ export function SidebarHeader() {
   const [error, setError] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
 
   const handleSelectVault = async (vaultId: string) => {
     if (vaultId !== activeVault?.id) {
@@ -52,7 +51,6 @@ export function SidebarHeader() {
       return;
     }
     
-    setIsCreating(true);
     try {
       await createVault(newVaultName.trim(), slug);
       goHome();
@@ -61,8 +59,6 @@ export function SidebarHeader() {
       setIsCreateDialogOpen(false);
     } catch (e) {
       setError(String(e));
-    } finally {
-      setIsCreating(false);
     }
   };
 
@@ -113,11 +109,11 @@ export function SidebarHeader() {
                   {error && <p className="text-sm text-destructive">{error}</p>}
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={isCreating}>
+                  <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateVault} disabled={!newVaultName.trim() || isCreating}>
-                    {isCreating ? "Creating..." : "Create"}
+                  <Button onClick={handleCreateVault} disabled={!newVaultName.trim()}>
+                    Create
                   </Button>
                 </div>
               </div>

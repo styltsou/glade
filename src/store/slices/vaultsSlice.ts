@@ -70,7 +70,6 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
   createVault: async (name: string, slug: string) => {
     set({ vaultsError: null });
     
-    // Optimistic update
     const prevVaults = get().vaults;
     const prevActive = get().activeVault;
     
@@ -91,8 +90,9 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
     try {
       const vault = await invoke<Vault>("create_vault", { name, slug });
       const vaults = await invoke<Vault[]>("list_vaults");
-      set({ vaults, activeVault: vault });
-      return vault;
+      const newVault = vaults.find(v => v.slug === slug);
+      set({ vaults, activeVault: newVault || vault });
+      return newVault || vault;
     } catch (e) {
       set({ vaults: prevVaults, activeVault: prevActive, vaultsError: String(e) });
       throw e;
