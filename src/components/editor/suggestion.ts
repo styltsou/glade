@@ -1,3 +1,5 @@
+import type { SuggestionProps as TipTapSuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
+import type { VaultEntry } from '@/types';
 import { useStore } from '@/store';
 
 export interface SuggestionItem {
@@ -5,14 +7,7 @@ export interface SuggestionItem {
   label: string;
 }
 
-export interface SuggestionProps {
-  clientRect: () => DOMRect | null;
-  editor: any;
-  range: any;
-  command: (item: SuggestionItem) => void;
-}
-
-type SuggestionCallback = (props: SuggestionProps & { items: SuggestionItem[] }) => void;
+type SuggestionCallback = (props: TipTapSuggestionProps<SuggestionItem>) => void;
 type ExitCallback = () => void;
 
 let onStartCallback: SuggestionCallback | null = null;
@@ -40,7 +35,7 @@ export default {
     const { entries } = useStore.getState();
     
     const allNotes: { id: string; label: string }[] = [];
-    const flatten = (items: any[]) => {
+    const flatten = (items: VaultEntry[]) => {
       if (!items) return;
       items.forEach(item => {
         if (!item.is_dir) {
@@ -66,33 +61,27 @@ export default {
 
   render: () => {
     return {
-      onStart: (props: any) => {
+      onStart: (props: TipTapSuggestionProps<SuggestionItem>) => {
         if (!props.clientRect) {
           return;
         }
 
         if (onStartCallback) {
-          onStartCallback({
-            ...props,
-            items: props.items || [],
-          });
+          onStartCallback(props);
         }
       },
 
-      onUpdate: (props: any) => {
+      onUpdate: (props: TipTapSuggestionProps<SuggestionItem>) => {
         if (!props.clientRect) {
           return;
         }
 
         if (onUpdateCallback) {
-          onUpdateCallback({
-            ...props,
-            items: props.items || [],
-          });
+          onUpdateCallback(props);
         }
       },
 
-      onKeyDown: (props: any) => {
+      onKeyDown: (props: SuggestionKeyDownProps) => {
         if (props.event.key === 'Escape') {
           if (onExitCallback) {
             onExitCallback();

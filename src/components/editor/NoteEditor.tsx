@@ -57,6 +57,7 @@ export function NoteEditor({
 
     registerSuggestionCallbacks(
       (props) => {
+        if (!props.clientRect) return;
         const clientRect = props.clientRect();
         if (!clientRect) return;
 
@@ -69,6 +70,7 @@ export function NoteEditor({
         setSuggestionVisible(true);
       },
       (props) => {
+        if (!props.clientRect) return;
         const clientRect = props.clientRect();
         if (!clientRect) return;
 

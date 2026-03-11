@@ -18,6 +18,10 @@ import {
 import { useStore } from "@/store";
 import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
 import { HighlightedText } from "./command-palette/HighlightedText";
+import { flattenNotes } from "@/lib/notes";
+import type { NoteSearchResult, NoteData } from "@/types";
+
+type CommandPaletteNote = NoteSearchResult | NoteData;
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -162,7 +166,7 @@ export function CommandPalette() {
             heading={searchResults.length > 0 ? "Search Results" : "Notes"}
           >
             {(searchResults.length > 0 ? searchResults : allNotes).map(
-            (note: any) => {
+            (note: CommandPaletteNote) => {
               const matchedTags =
                 searchResults.length > 0 && searchValue.trim()
                   ? note.tags.filter((t: string) =>
@@ -218,22 +222,4 @@ export function CommandPalette() {
       </CommandList>
     </CommandDialog>
   );
-}
-
-function flattenNotes(
-  entries: { name: string; path: string; is_dir: boolean; children?: any[] }[],
-): { title: string; path: string; preview?: string; tags: string[] }[] {
-  if (!entries) return [];
-  const notes: any[] = [];
-  for (const entry of entries) {
-    if (!entry) continue;
-    if (entry.is_dir) {
-      if (entry.children) {
-        notes.push(...flattenNotes(entry.children));
-      }
-    } else {
-      notes.push({ title: entry.name, path: entry.path, tags: (entry as any).tags ?? [] });
-    }
-  }
-  return notes;
 }

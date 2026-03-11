@@ -58,6 +58,14 @@ export interface NoteCard {
   pinned: boolean;
 }
 
+/** Note result for command palette search. */
+export interface NoteSearchResult {
+  title: string;
+  path: string;
+  preview?: string;
+  tags: string[];
+}
+
 export type SortMode = "name-asc" | "name-desc" | "modified";
 
 /** Persistent sidebar UI state. */
