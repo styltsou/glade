@@ -86,7 +86,7 @@ export function Sidebar() {
         initial={false}
         animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
         transition={{ 
-          width: isResizing ? { duration: 0 } : { duration: 0.2, ease: [0.4, 0, 0.2, 1] }
+          width: isResizing ? { duration: 0 } : { duration: 0.15, ease: [0.4, 0, 0.2, 1] }
         }}
         className="sidebar flex flex-col h-full bg-sidebar select-none overflow-hidden border-r border-border"
         aria-hidden={sidebarCollapsed}
