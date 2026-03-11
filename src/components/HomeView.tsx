@@ -87,23 +87,27 @@ export function HomeView() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => openCreateFolder(currentFolder || undefined)}
-              className="shadow-sm active:scale-95 font-semibold"
-            >
-              <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
-              New folder
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => createNote(currentFolder || undefined)}
-              className="shadow-md active:scale-95 font-semibold"
-            >
-              <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-              New note
-            </Button>
+            {hasData && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openCreateFolder(currentFolder || undefined)}
+                  className="shadow-sm active:scale-95 font-semibold"
+                >
+                  <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
+                  New folder
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => createNote(currentFolder || undefined)}
+                  className="shadow-md active:scale-95 font-semibold"
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
+                  New note
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -152,20 +156,19 @@ export function HomeView() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => createNote(currentFolder || undefined)}
-                  className="shadow-md active:scale-95 font-semibold"
-                >
-                  <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-                  Create note
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
                   onClick={() => openCreateFolder(currentFolder || undefined)}
                   className="shadow-sm active:scale-95 font-semibold"
                 >
                   <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
                   New folder
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => createNote(currentFolder || undefined)}
+                  className="shadow-md active:scale-95 font-semibold"
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
+                  Create note
                 </Button>
               </div>
               
