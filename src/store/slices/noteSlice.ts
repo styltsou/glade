@@ -236,6 +236,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         noteCache: { ...state.noteCache, [activeNote.path]: note },
       }));
       await get().loadTags();
+      await get().loadVault();
     } catch (e) {
       set({ vaultError: String(e) });
     }
