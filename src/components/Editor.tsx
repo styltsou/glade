@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
@@ -18,11 +18,16 @@ export function Editor() {
   const createNote = useStore((state) => state.createNote);
   const onNoteOpened = useStore((state) => state.onNoteOpened);
   const selectNote = useStore((state) => state.selectNote);
+  const noteScrollPositions = useStore((state) => state.noteScrollPositions);
+  const updateNoteScrollPosition = useStore((state) => state.updateNoteScrollPosition);
+  
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">("idle");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   
   const lastSavedContentRef = useRef<string>("");
   const latestContentRef = useRef<string>("");
@@ -133,11 +138,29 @@ export function Editor() {
     return () => window.removeEventListener("keydown", handler);
   }, [saveNow]);
 
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current || !activeNote?.path) return;
+
+    if (scrollSaveTimerRef.current) {
+      clearTimeout(scrollSaveTimerRef.current);
+    }
+
+    scrollSaveTimerRef.current = setTimeout(() => {
+      const position = scrollRef.current?.scrollTop ?? 0;
+      updateNoteScrollPosition(activeNote.path, position);
+    }, 150);
+  }, [activeNote?.path, updateNoteScrollPosition]);
+
   // Load content when switching notes
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (editor && activeNote) {
       const pathChanged = currentPathRef.current !== activeNote.path;
       isLoadingRef.current = true;
+      
+      // Save scroll position for the *previous* note before switching
+      if (pathChanged && currentPathRef.current && scrollRef.current) {
+        updateNoteScrollPosition(currentPathRef.current, scrollRef.current.scrollTop);
+      }
       
       // Cancel any pending autosave from previous note
       if (saveTimerRef.current) {
@@ -161,6 +184,14 @@ export function Editor() {
         // Reset cursor position tracking for new note
         cursorPositionRef.current = null;
       }
+
+      // Restore scroll position for the *new* note immediately after content is set
+      if (pathChanged || currentMarkdown !== activeNote.body) {
+        const savedPosition = noteScrollPositions[activeNote.path];
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = savedPosition || 0;
+        }
+      }
       
       if (pathChanged) {
         currentPathRef.current = activeNote.path;
@@ -169,7 +200,7 @@ export function Editor() {
       setSaveStatus("idle");
       isLoadingRef.current = false;
     }
-  }, [activeNote?.path, activeNote?.body, editor]);
+  }, [activeNote?.path, activeNote?.body, editor, updateNoteScrollPosition, noteScrollPositions]);
 
   useEffect(() => {
     return () => {
@@ -178,6 +209,9 @@ export function Editor() {
       }
       if (badgeTimerRef.current) {
         clearTimeout(badgeTimerRef.current);
+      }
+      if (scrollSaveTimerRef.current) {
+        clearTimeout(scrollSaveTimerRef.current);
       }
     };
   }, []);
@@ -271,6 +305,8 @@ export function Editor() {
         isRawMode={isRawMode}
         rawContent={rawContent}
         onRawChange={onRawChange}
+        scrollRef={scrollRef}
+        onScroll={handleScroll}
       />
     </div>
   );

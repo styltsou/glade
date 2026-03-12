@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useLayoutEffect } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Bold, Italic, Strikethrough, Link2 } from "lucide-react";
@@ -24,6 +24,8 @@ interface NoteEditorProps {
   isRawMode: boolean;
   rawContent: string;
   onRawChange: (value: string) => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onScroll: () => void;
 }
 
 export function NoteEditor({
@@ -32,13 +34,9 @@ export function NoteEditor({
   isRawMode,
   rawContent,
   onRawChange,
+  scrollRef,
+  onScroll,
 }: NoteEditorProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const noteScrollPositions = useStore((state) => state.noteScrollPositions);
-  const updateNoteScrollPosition = useStore((state) => state.updateNoteScrollPosition);
-  const previousPathRef = useRef<string | null>(null);
-  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const [suggestionItems, setSuggestionItems] = useState<SuggestionItem[]>([]);
   const [suggestionPosition, setSuggestionPosition] = useState<{ top: number; left: number } | null>(null);
   const [suggestionVisible, setSuggestionVisible] = useState(false);
@@ -107,62 +105,8 @@ export function NoteEditor({
     return () => document.removeEventListener('keydown', handleKeyDown, true);
   }, [suggestionVisible]);
 
-  const saveScrollPosition = useCallback((path: string, position: number) => {
-    updateNoteScrollPosition(path, position);
-  }, [updateNoteScrollPosition]);
-
-  const handleScroll = useCallback(() => {
-    if (!scrollRef.current || !activeNote.path) return;
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      const position = scrollRef.current?.scrollTop ?? 0;
-      saveScrollPosition(activeNote.path, position);
-    }, 150);
-  }, [activeNote.path, saveScrollPosition]);
-
-  useEffect(() => {
-    const currentPath = previousPathRef.current;
-    const newPath = activeNote.path;
-
-    // Save current note's scroll position before switching
-    if (currentPath && currentPath !== newPath && scrollRef.current) {
-      const currentPosition = scrollRef.current.scrollTop;
-      if (currentPosition > 0) {
-        updateNoteScrollPosition(currentPath, currentPosition);
-      }
-    }
-
-    // Check if we have a saved position for the new note
-    const savedPosition = noteScrollPositions[newPath];
-
-    if (savedPosition !== undefined && savedPosition > 0) {
-      // Restore scroll position for previously visited note
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ top: savedPosition, behavior: 'auto' });
-      }, 0);
-    } else {
-      // First visit to this note - scroll to top
-      scrollRef.current?.scrollTo({ top: 0 });
-    }
-
-    previousPathRef.current = newPath;
-  }, [activeNote.path, noteScrollPositions, updateNoteScrollPosition]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
-
   return (
-    <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-auto px-10 py-8">
+    <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-auto px-10 py-8">
       <div className="max-w-[680px] mx-auto">
         {editor && (
           <BubbleMenu editor={editor}>
