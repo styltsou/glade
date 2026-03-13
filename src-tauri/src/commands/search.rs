@@ -135,6 +135,7 @@ pub fn collect_notes_recursive(
                     .to_string();
 
                 results.push((score, NoteData {
+                    id: meta.id.unwrap_or_else(|| relative.clone()),
                     path: relative,
                     title,
                     tags: meta.tags,

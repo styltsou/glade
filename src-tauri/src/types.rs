@@ -17,6 +17,8 @@ pub struct Vault {
 /// A single entry in the vault (file or directory).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultEntry {
+    /// Stable UUID for the entry
+    pub id: String,
     /// Display name (filename without extension for notes)
     pub name: String,
     /// Relative path from vault root (e.g. "work/meetings.md")
@@ -34,6 +36,8 @@ pub struct VaultEntry {
 /// Full note data including parsed frontmatter and body.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteData {
+    /// Stable UUID
+    pub id: String,
     /// Relative path from vault root
     pub path: String,
     /// Title from frontmatter (falls back to filename)
@@ -53,6 +57,7 @@ pub struct NoteData {
 /// Frontmatter metadata parsed from a note.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NoteMeta {
+    pub id: Option<String>,
     pub title: Option<String>,
     #[serde(default)]
     pub tags: Vec<String>,
@@ -65,6 +70,8 @@ pub struct NoteMeta {
 /// A lightweight card representation used in the home view.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NoteCard {
+    /// Stable UUID
+    pub id: String,
     /// Relative path from vault root
     pub path: String,
     /// Title from frontmatter (falls back to filename)

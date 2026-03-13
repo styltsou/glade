@@ -119,6 +119,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
         if metadata.is_dir() {
             let sub_children = build_vault_tree_inner(vault_root, &path)?;
             entries.push(VaultEntry {
+                id: relative.clone(),
                 name,
                 path: relative,
                 is_dir: true,
@@ -136,6 +137,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
             let display_name = meta.title.filter(|t| !t.is_empty()).unwrap_or(stem);
 
             entries.push(VaultEntry {
+                id: meta.id.unwrap_or_else(|| relative.clone()),
                 name: display_name,
                 path: relative,
                 is_dir: false,
@@ -174,6 +176,10 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
 /// Build a YAML frontmatter string from metadata.
 pub fn build_frontmatter(meta: &NoteMeta) -> String {
     let mut lines = vec!["---".to_string()];
+
+    if let Some(ref id) = meta.id {
+        lines.push(format!("id: {}", id));
+    }
 
     if let Some(ref title) = meta.title {
         let escaped = title.replace('"', "\\\"");
@@ -366,6 +372,7 @@ pub fn get_pinned_notes_cached(vault_root: &Path) -> Result<Vec<NoteCard>, AppEr
         });
 
         Some(NoteCard {
+            id: meta.id.clone().unwrap_or_else(|| relative.to_string()),
             path: relative.to_string(),
             title,
             tags: meta.tags.clone(),

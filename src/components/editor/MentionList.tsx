@@ -1,11 +1,12 @@
-import { forwardRef, useImperativeHandle, useState } from 'react';
-import { Command, CommandList, CommandItem } from '@/components/ui/command';
+import { forwardRef, useImperativeHandle, useState, useEffect, useRef } from 'react';
+import { cn } from '@/lib/utils';
 
 interface MentionListProps {
-  items: { id: string; label: string }[];
-  command: (item: { id: string; label: string }) => void;
+  items: { id: string; label: string; folder?: string; modified?: string | null }[];
+  command: (item: { id: string; label: string; folder?: string; modified?: string | null }) => void;
   position?: {
-    top: number;
+    top?: number;
+    bottom?: number;
     left: number;
   };
 }
@@ -16,6 +17,20 @@ export interface MentionListHandle {
 
 export const MentionList = forwardRef<MentionListHandle, MentionListProps>((props, ref) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const commandListRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [props.items]);
+
+  useEffect(() => {
+    if (commandListRef.current) {
+      const selectedItem = commandListRef.current.querySelector('[data-selected="true"]');
+      if (selectedItem) {
+        selectedItem.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [selectedIndex]);
 
   useImperativeHandle(ref, () => ({
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -25,6 +40,14 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>((prop
       }
       if (event.key === 'ArrowDown') {
         setSelectedIndex((prev) => (prev + 1) % props.items.length);
+        return true;
+      }
+      if (event.key === 'Tab') {
+        if (event.shiftKey) {
+          setSelectedIndex((prev) => (prev + props.items.length - 1) % props.items.length);
+        } else {
+          setSelectedIndex((prev) => (prev + 1) % props.items.length);
+        }
         return true;
       }
       if (event.key === 'Enter') {
@@ -40,32 +63,47 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>((prop
 
   return (
     <div
-      className="fixed z-[1000]"
+      className="fixed z-[1000] min-w-[200px]"
       style={props.position ? {
         top: props.position.top,
+        bottom: props.position.bottom,
         left: props.position.left,
       } : undefined}
     >
-      <Command className="max-h-[300px] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg">
-        <CommandList className="max-h-[300px] overflow-y-auto p-1">
+      <div className="flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg">
+        <div 
+          ref={commandListRef} 
+          className="max-h-[300px] overflow-y-auto p-1 scroll-py-1"
+        >
           {props.items.length ? (
             props.items.map((item, index) => (
-              <CommandItem
+              <div
                 key={item.id}
-                value={item.label}
-                onSelect={() => props.command(item)}
-                className={`text-sm cursor-pointer ${
-                  index === selectedIndex ? 'bg-accent text-accent-foreground' : ''
-                }`}
+                onClick={() => props.command(item)}
+                data-selected={index === selectedIndex}
+                className={cn(
+                  "relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground",
+                  index === selectedIndex && "bg-accent text-accent-foreground"
+                )}
               >
-                <span className="truncate">{item.label}</span>
-              </CommandItem>
+                <div className="flex flex-col min-w-0 flex-1">
+                  {item.folder && (
+                    <span className={cn(
+                      "truncate text-[10px] leading-tight pb-0.5",
+                      index === selectedIndex ? "text-accent-foreground/70" : "text-muted-foreground"
+                    )}>
+                      {item.folder}
+                    </span>
+                  )}
+                  <span className="truncate font-medium">{item.label}</span>
+                </div>
+              </div>
             ))
           ) : (
-            <div className="px-3 py-2 text-sm text-muted-foreground italic">No matches</div>
+            <div className="px-3 py-2 text-sm text-muted-foreground italic text-center">No matches</div>
           )}
-        </CommandList>
-      </Command>
+        </div>
+      </div>
     </div>
   );
 });

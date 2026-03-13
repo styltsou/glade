@@ -10,6 +10,8 @@ export interface Vault {
 
 /** A single entry in the vault (file or directory). */
 export interface VaultEntry {
+  /** Stable UUID for the entry */
+  id: string;
   /** Display name (filename without extension for notes) */
   name: string;
   /** Relative path from vault root (e.g. "work/meetings.md") */
@@ -26,6 +28,8 @@ export interface VaultEntry {
 
 /** Full note data including parsed frontmatter and body. */
 export interface NoteData {
+  /** Stable UUID */
+  id: string;
   /** Relative path from vault root */
   path: string;
   /** Title from frontmatter (falls back to filename) */
@@ -50,6 +54,7 @@ export interface TagCount {
 
 /** Lightweight note representation for the home view grid. */
 export interface NoteCard {
+  id: string;
   path: string;
   title: string;
   tags: string[];
@@ -60,6 +65,7 @@ export interface NoteCard {
 
 /** Note result for command palette search. */
 export interface NoteSearchResult {
+  id: string;
   title: string;
   path: string;
   preview?: string;

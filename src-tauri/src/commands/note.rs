@@ -16,7 +16,22 @@ pub async fn read_note(path: String) -> Result<NoteData, AppError> {
     }
 
     let content = fs::read_to_string(&full_path)?;
-    let (meta, body) = vault::parse_frontmatter(&content);
+    let (mut meta, body) = vault::parse_frontmatter(&content);
+
+    // Ensure note has a stable ID
+    let mut id_assigned = false;
+    if meta.id.is_none() {
+        meta.id = Some(uuid::Uuid::new_v4().to_string());
+        id_assigned = true;
+    }
+    
+    let note_id = meta.id.clone().unwrap();
+
+    if id_assigned {
+        let frontmatter = vault::build_frontmatter(&meta);
+        let full_content = format!("{}\n\n{}", frontmatter, body);
+        fs::write(&full_path, full_content)?;
+    }
 
     let filename = full_path
         .file_stem()
@@ -27,6 +42,7 @@ pub async fn read_note(path: String) -> Result<NoteData, AppError> {
     let preview = vault::make_preview(&body);
 
     Ok(NoteData {
+        id: note_id,
         path,
         title,
         tags: meta.tags,
@@ -51,6 +67,12 @@ pub async fn write_note(path: String, content: String) -> Result<(), AppError> {
     };
 
     let (mut meta, _) = vault::parse_frontmatter(&existing);
+    
+    // Preserve or generate ID
+    if meta.id.is_none() {
+        meta.id = Some(uuid::Uuid::new_v4().to_string());
+    }
+    
     meta.updated = Some(Utc::now().to_rfc3339());
 
     let frontmatter = vault::build_frontmatter(&meta);
@@ -89,6 +111,7 @@ pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
 
     let now = Utc::now().to_rfc3339();
     let meta = NoteMeta {
+        id: Some(uuid::Uuid::new_v4().to_string()),
         title: Some("Untitled".into()),
         tags: vec![],
         created: Some(now.clone()),
@@ -112,6 +135,7 @@ pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
         .to_string();
 
     Ok(NoteData {
+        id: meta.id.unwrap(),
         path: relative_path,
         title: meta.title.unwrap_or_else(|| "Untitled".into()),
         tags: meta.tags,
@@ -201,6 +225,7 @@ pub async fn duplicate_note(path: String) -> Result<NoteData, AppError> {
     let relative_path = new_full_path.strip_prefix(&vault_path).unwrap_or(&new_full_path).to_string_lossy().to_string();
     
     Ok(NoteData {
+        id: meta.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string()),
         path: relative_path,
         title: meta.title.unwrap(),
         tags: meta.tags,
@@ -249,6 +274,7 @@ pub async fn get_recent_notes() -> Result<Vec<NoteCard>, AppError> {
         });
 
         cards.push(NoteCard {
+            id: meta.id.clone().unwrap_or_else(|| path.clone()),
             path: path.clone(),
             title,
             tags: meta.tags,
@@ -284,6 +310,7 @@ pub async fn pin_note(path: String) -> Result<(), AppError> {
         Some(dt.to_rfc3339())
     });
     let note_card = NoteCard {
+        id: meta.id.unwrap_or_else(|| path.clone()),
         path: path.clone(),
         title,
         tags: meta.tags,
@@ -361,6 +388,7 @@ pub async fn get_notes_in_folder(folder: Option<String>) -> Result<Vec<NoteCard>
                 .to_string();
 
             cards.push(NoteCard {
+                id: meta.id.clone().unwrap_or_else(|| relative_path.clone()),
                 path: relative_path,
                 title,
                 tags: meta.tags,

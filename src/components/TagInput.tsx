@@ -1,12 +1,7 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { X as Cross2Icon } from "lucide-react";
 import { useStore } from "@/store";
-import {
-  Command,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import type { TagCount } from "@/types";
 
 export function TagInput() {
@@ -18,8 +13,18 @@ export function TagInput() {
   const [inputValue, setInputValue] = useState("");
   const [typedValue, setTypedValue] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [positionAbove, setPositionAbove] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (showSuggestions && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setPositionAbove(spaceBelow < 200); // threshold for tag suggestions
+    }
+  }, [showSuggestions]);
 
   // Filter and sort suggestions based on relevance and popularity
   const query = typedValue.trim().toLowerCase();
@@ -58,7 +63,7 @@ export function TagInput() {
       setInputValue("");
       setTypedValue("");
       setShowSuggestions(false);
-      setSelectedIndex(-1);
+      setSelectedIndex(0);
     },
     [tags, updateNoteTags],
   );
@@ -75,18 +80,14 @@ export function TagInput() {
       if (e.key === "Tab" && suggestions.length > 0) {
         e.preventDefault();
         const nextIndex = e.shiftKey
-          ? selectedIndex <= -1
-            ? suggestions.length - 1
-            : selectedIndex - 1
-          : selectedIndex >= suggestions.length - 1
-            ? -1
-            : selectedIndex + 1;
+          ? (selectedIndex + suggestions.length - 1) % suggestions.length
+          : (selectedIndex + 1) % suggestions.length;
 
         setSelectedIndex(nextIndex);
-        setInputValue(nextIndex === -1 ? typedValue : suggestions[nextIndex].name);
+        setInputValue(suggestions[nextIndex].name);
       } else if (e.key === "Enter" || e.key === ",") {
         e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        if (showSuggestions && suggestions.length > 0 && selectedIndex >= 0) {
           addTag(suggestions[selectedIndex].name);
         } else if (inputValue.trim()) {
           addTag(inputValue);
@@ -95,13 +96,19 @@ export function TagInput() {
         removeTag(tags[tags.length - 1]);
       } else if (e.key === "Escape") {
         setShowSuggestions(false);
-        setSelectedIndex(-1);
+        setSelectedIndex(0);
         setInputValue("");
         setTypedValue("");
         inputRef.current?.blur();
+      } else if (e.key === "ArrowDown" && suggestions.length > 0) {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % suggestions.length);
+      } else if (e.key === "ArrowUp" && suggestions.length > 0) {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + suggestions.length - 1) % suggestions.length);
       }
     },
-    [inputValue, typedValue, tags, addTag, removeTag, suggestions, selectedIndex],
+    [inputValue, typedValue, tags, addTag, removeTag, suggestions, selectedIndex, showSuggestions],
   );
 
   return (
@@ -121,7 +128,7 @@ export function TagInput() {
         </span>
       ))}
 
-      <div className="relative">
+      <div className="relative" ref={containerRef}>
         <input
           ref={inputRef}
           className="bg-muted px-2.5 rounded-sm border border-border/10 hover:border-border outline-none text-[13px] h-7 text-muted-foreground font-medium placeholder:text-muted-foreground/50 min-w-[90px] focus:ring-0 focus:text-foreground transition-all"
@@ -134,14 +141,14 @@ export function TagInput() {
             setInputValue(val);
             setTypedValue(val);
             setShowSuggestions(true);
-            setSelectedIndex(-1);
+            setSelectedIndex(0);
           }}
           onKeyDown={handleKeyDown}
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => {
             setTimeout(() => {
               setShowSuggestions(false);
-              setSelectedIndex(-1);
+              setSelectedIndex(0);
               setInputValue("");
               setTypedValue("");
             }, 150);
@@ -150,25 +157,26 @@ export function TagInput() {
         />
 
         {showSuggestions && suggestions.length > 0 && (
-          <Command
-            className="absolute top-full left-0 mt-1 bg-popover border border-border rounded-md shadow-xl min-w-[160px] z-50 overflow-hidden h-auto"
-            value={selectedIndex >= 0 ? suggestions[selectedIndex].name : ""}
-          >
-            <CommandList>
-              <CommandGroup>
-                {suggestions.map((s: TagCount) => (
-                  <CommandItem
-                    key={s.name}
-                    value={s.name}
-                    onSelect={() => addTag(s.name)}
-                    className="flex items-center justify-between gap-4 cursor-pointer py-1"
-                  >
-                    <span className="font-medium text-[12px]">{s.name}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
+          <div className={cn(
+            "absolute left-0 bg-popover border border-border rounded-md shadow-xl min-w-[160px] z-50 overflow-hidden h-auto p-1 flex flex-col gap-0.5",
+            positionAbove ? "bottom-full mb-1" : "top-full mt-1"
+          )}>
+            {suggestions.map((s: TagCount, index: number) => (
+              <div
+                key={s.name}
+                onClick={() => addTag(s.name)}
+                className={cn(
+                  "flex items-center justify-between gap-4 cursor-pointer py-1 px-2 rounded-sm relative select-none outline-none transition-colors",
+                  index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                )}
+              >
+                <span className="font-medium text-[12px]">{s.name}</span>
+                {s.count > 1 && (
+                  <span className="text-[10px] text-muted-foreground">{s.count}</span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

@@ -31,6 +31,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       const cached = noteCache[path];
       set({ 
         activeNote: {
+          id: partial?.id || cached?.id || "",
           path,
           title: partial?.title || cached?.title || path.split("/").pop()?.replace(".md", "") || "Untitled",
           body: cached?.body || "",
@@ -84,6 +85,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       const note = await invoke<NoteData>("create_note", { folder: folder ?? null });
       
       const newEntry: VaultEntry = {
+        id: note.id,
         name: note.title,
         path: note.path,
         is_dir: false,
@@ -154,6 +156,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       const note = await invoke<NoteData>("duplicate_note", { path });
       
       const newEntry: VaultEntry = {
+        id: note.id,
         name: note.title,
         path: note.path,
         is_dir: false,
@@ -205,6 +208,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         : undefined;
 
       const newEntry: VaultEntry = {
+        id: path, // Folders use their path as a stable ID for now
         name: folderName,
         path: path,
         is_dir: true,

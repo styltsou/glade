@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState, useLayoutEffect } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { Bold, Italic, Strikethrough, Link2 } from "lucide-react";
@@ -7,7 +7,6 @@ import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
 import { MentionList, MentionListHandle } from "./MentionList";
-import { useStore } from "@/store";
 import {
   registerSuggestionCallbacks,
   unregisterSuggestionCallbacks,
@@ -38,7 +37,7 @@ export function NoteEditor({
   onScroll,
 }: NoteEditorProps) {
   const [suggestionItems, setSuggestionItems] = useState<SuggestionItem[]>([]);
-  const [suggestionPosition, setSuggestionPosition] = useState<{ top: number; left: number } | null>(null);
+  const [suggestionPosition, setSuggestionPosition] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const [suggestionVisible, setSuggestionVisible] = useState(false);
   const mentionListRef = useRef<MentionListHandle>(null);
   const suggestionCommandRef = useRef<((item: SuggestionItem) => void) | null>(null);
@@ -59,10 +58,14 @@ export function NoteEditor({
         const clientRect = props.clientRect();
         if (!clientRect) return;
 
+        const spaceBelow = window.innerHeight - clientRect.bottom;
+        const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
+
         suggestionCommandRef.current = props.command;
         setSuggestionItems(props.items);
         setSuggestionPosition({
-          top: clientRect.bottom + 4,
+          top: showAbove ? undefined : clientRect.bottom + 4,
+          bottom: showAbove ? window.innerHeight - clientRect.top + 4 : undefined,
           left: clientRect.left,
         });
         setSuggestionVisible(true);
@@ -72,9 +75,14 @@ export function NoteEditor({
         const clientRect = props.clientRect();
         if (!clientRect) return;
 
+        const spaceBelow = window.innerHeight - clientRect.bottom;
+        const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
+
+        suggestionCommandRef.current = props.command;
         setSuggestionItems(props.items);
         setSuggestionPosition({
-          top: clientRect.bottom + 4,
+          top: showAbove ? undefined : clientRect.bottom + 4,
+          bottom: showAbove ? window.innerHeight - clientRect.top + 4 : undefined,
           left: clientRect.left,
         });
       },
@@ -106,7 +114,7 @@ export function NoteEditor({
   }, [suggestionVisible]);
 
   return (
-    <div ref={scrollRef} onScroll={onScroll} className="flex-1 overflow-auto px-10 py-8">
+    <div ref={scrollRef as React.RefObject<HTMLDivElement>} onScroll={onScroll} className="flex-1 overflow-auto px-10 py-8">
       <div className="max-w-[680px] mx-auto">
         {editor && (
           <BubbleMenu editor={editor}>

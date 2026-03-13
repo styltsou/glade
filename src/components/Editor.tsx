@@ -42,7 +42,15 @@ export function Editor() {
       attributes: { class: "tiptap-editor" },
       handleClickOn: (_view, _pos, node, _nodePos) => {
         if (node.type.name === 'mention' && node.attrs.id) {
-          selectNote(node.attrs.id);
+          const { idToPath } = useStore.getState();
+          const targetPath = idToPath[node.attrs.id];
+          
+          if (targetPath) {
+            selectNote(targetPath);
+          } else {
+            // Handle deleted or missing note
+            alert("Note not found. It may have been deleted.");
+          }
           return true;
         }
         return false;
@@ -220,6 +228,7 @@ export function Editor() {
   useEffect(() => {
     if (activeNote) {
       onNoteOpened({
+        id: activeNote.id,
         path: activeNote.path,
         title: activeNote.title,
         tags: activeNote.tags,

@@ -11,6 +11,7 @@ export interface VaultSlice {
   activeTagFilters: string[];
   searchResults: NoteData[];
   sidebarQuery: string;
+  idToPath: Record<string, string>;
   noteCache: Record<string, NoteData>;
   noteScrollPositions: Record<string, number>;
 
@@ -30,6 +31,16 @@ export interface VaultSlice {
 
 import type { StoreState } from "../index";
 
+const buildIdMapping = (items: VaultEntry[], mapping: Record<string, string> = {}) => {
+  items.forEach(item => {
+    mapping[item.id] = item.path;
+    if (item.children) {
+      buildIdMapping(item.children, mapping);
+    }
+  });
+  return mapping;
+};
+
 export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (set, get) => ({
   entries: [],
   activeNote: null,
@@ -39,6 +50,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   activeTagFilters: [],
   searchResults: [],
   sidebarQuery: "",
+  idToPath: {},
   noteCache: {},
   noteScrollPositions: {},
 
@@ -52,7 +64,8 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");
-      set({ entries, isVaultLoading: false });
+      const idToPath = buildIdMapping(entries);
+      set({ entries, idToPath, isVaultLoading: false });
     } catch (e) {
       set({ vaultError: String(e), isVaultLoading: false });
     }
