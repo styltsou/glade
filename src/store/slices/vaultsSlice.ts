@@ -53,19 +53,36 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       await invoke("update_vault_last_opened", { vaultId });
       const activeVault = get().vaults.find((v: Vault) => v.id === vaultId) || null;
       
-      // Clear caches and reset state for the new vault
-      get().clearCache();
-      get().clearTags();
-      get().goHome();
-      
-      // Reload tags for the new vault
-      get().loadTags();
-      
+      // Single atomic state reset — all slice clearing in one set() call so
+      // there is NEVER an intermediate render where entries=[] + isVaultLoading=false,
+      // which would cause the empty-state to flash before skeletons appear.
+      set({
+        // vaultSlice (clearCache)
+        noteCache: {},
+        entries: [],
+        isVaultLoaded: false,
+        // vaultSlice (mark loading immediately)
+        isVaultLoading: true,
+        // vaultSlice (clearTags)
+        tags: [],
+        // homeSlice (goHome)
+        activeNote: null,
+        currentFolder: null,
+        pinnedNotes: [],
+        folderNotes: [],
+        isFolderNotesLoading: false,
+        isHomeLoading: false,
+      });
+
       set({ activeVault, isVaultsLoading: false });
+
+      // Reload tags for the new vault (non-blocking)
+      get().loadTags();
     } catch (e) {
       set({ vaultsError: String(e), isVaultsLoading: false });
     }
   },
+
 
   createVault: async (name: string, slug: string) => {
     set({ vaultsError: null });

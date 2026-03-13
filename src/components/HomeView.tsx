@@ -25,11 +25,28 @@ function NoteCardSkeleton() {
   );
 }
 
+function FolderCardSkeleton() {
+  return (
+    <div className="flex flex-col gap-1.5 text-left w-full rounded-lg p-3 bg-card border border-border">
+      <div className="flex items-center gap-2 mb-0.5">
+        <Skeleton className="h-4 w-4 shrink-0 rounded-[3px]" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+      <div className="flex items-center justify-between mt-1">
+        <Skeleton className="h-2 w-16" />
+        <Skeleton className="h-2 w-12" />
+      </div>
+    </div>
+  );
+}
+
 export function HomeView() {
   const entries = useStore((state) => state.entries);
   const activeVault = useStore((state) => state.activeVault);
   const folderNotes = useStore((state) => state.folderNotes);
   const isHomeLoading = useStore((state) => state.isHomeLoading);
+  const isFolderNotesLoading = useStore((state) => state.isFolderNotesLoading);
+  const isVaultLoading = useStore((state) => state.isVaultLoading);
   const currentFolder = useStore((state) => state.currentFolder);
   const loadAll = useStore((state) => state.loadAll);
   const openCreateFolder = useStore((state) => state.openCreateFolder);
@@ -51,22 +68,15 @@ export function HomeView() {
     ? (currentEntry?.children.filter(e => e.is_dir) || [])
     : entries.filter(e => e.is_dir);
 
-  const hasData = hasNotes || hasFolders;
+  const expectedNoteCount = currentFolder 
+    ? (currentEntry?.children.filter(e => !e.is_dir).length || 0)
+    : entries.filter(e => !e.is_dir).length; // Depending on how home notes are fetched, this might just be 0 if home only shows pinned, but we'll assume folder notes if any exist. Just for skeletons.
 
-  if (isHomeLoading && !hasData) {
-    return (
-      <div className="flex-1 overflow-auto px-4 py-10 max-w-6xl mx-auto w-full">
-        <section className="mb-10">
-          <Skeleton className="h-3 w-16 mb-4" />
-          <div className="grid grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <NoteCardSkeleton key={i} />
-            ))}
-          </div>
-        </section>
-      </div>
-    );
-  }
+  const hasData = hasNotes || hasFolders || expectedNoteCount > 0;
+  
+  // Show skeletons only while data is actively loading, never when vault is confirmed empty.
+  const shouldShowFolderSkeletons = isVaultLoading && subFolders.length === 0;
+  const shouldShowNoteSkeletons = (isVaultLoading && !hasNotes) || (isFolderNotesLoading && expectedNoteCount > 0 && !hasNotes) || (isHomeLoading && !currentFolder && !hasNotes);
 
   return (
     <div 
@@ -114,33 +124,49 @@ export function HomeView() {
 
         <div className="space-y-12">
           {/* Folders section */}
-          {subFolders.length > 0 && (
+          {(subFolders.length > 0 || shouldShowFolderSkeletons) && (
             <section>
               <SectionHeader label="Folders" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {subFolders.map((folder) => (
-                  <FolderCard key={folder.path} folder={folder} />
-                ))}
-              </div>
+              {shouldShowFolderSkeletons ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(4)].map((_, i) => (
+                    <FolderCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {subFolders.map((folder) => (
+                    <FolderCard key={folder.path} folder={folder} />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
           {/* Notes section */}
-          {hasNotes && (
+          {(hasNotes || shouldShowNoteSkeletons) && (
             <section>
               <SectionHeader label="Notes" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...folderNotes]
-                  .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
-                  .map((card) => (
-                    <NoteCard key={card.path} card={card} />
-                ))}
-              </div>
+              {shouldShowNoteSkeletons ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...Array(Math.min(6, !isVaultLoading ? expectedNoteCount : 6))].map((_, i) => (
+                    <NoteCardSkeleton key={i} />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[...folderNotes]
+                    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+                    .map((card) => (
+                      <NoteCard key={card.path} card={card} />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
           {/* Empty state */}
-          {!hasData && (
+          {(!hasData && !isVaultLoading && !isHomeLoading && !isFolderNotesLoading) && (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center max-w-md mx-auto py-12">
               <div className="space-y-2">
                 <h1 className="text-2xl font-bold tracking-tight">

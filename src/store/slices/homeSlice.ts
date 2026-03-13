@@ -6,6 +6,7 @@ export interface HomeSlice {
   pinnedNotes: NoteCard[];
   folderNotes: NoteCard[];
   isHomeLoading: boolean;
+  isFolderNotesLoading: boolean;
   currentFolder: string | null;
 
   loadPinned: () => Promise<void>;
@@ -24,6 +25,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   pinnedNotes: [],
   folderNotes: [],
   isHomeLoading: false,
+  isFolderNotesLoading: false,
   currentFolder: null,
 
   loadPinned: async () => {
@@ -38,12 +40,14 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   loadFolderNotes: async (path) => {
     try {
       const folderPath = path === undefined ? get().currentFolder : path;
+      set({ isFolderNotesLoading: true });
       const folderNotes = await invoke<NoteCard[]>("get_notes_in_folder", { 
         folder: folderPath || null 
       });
-      set({ folderNotes });
+      set({ folderNotes, isFolderNotesLoading: false });
     } catch (e) {
       console.error("Failed to load folder notes:", e);
+      set({ isFolderNotesLoading: false });
     }
   },
 
@@ -115,12 +119,12 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   },
 
   setCurrentFolder: (path: string | null) => {
-    set({ currentFolder: path });
+    set({ currentFolder: path, folderNotes: [] });
     get().loadFolderNotes(path);
   },
 
   navigateToFolder: (path: string | null) => {
-    set({ activeNote: null, currentFolder: path });
+    set({ activeNote: null, currentFolder: path, folderNotes: [] });
     get().loadFolderNotes(path);
   },
 });

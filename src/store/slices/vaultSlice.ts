@@ -6,6 +6,7 @@ export interface VaultSlice {
   entries: VaultEntry[];
   activeNote: NoteData | null;
   isVaultLoading: boolean;
+  isVaultLoaded: boolean;
   vaultError: string | null;
   tags: TagCount[];
   activeTagFilters: string[];
@@ -45,6 +46,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   entries: [],
   activeNote: null,
   isVaultLoading: false,
+  isVaultLoaded: false,
   vaultError: null,
   tags: [],
   activeTagFilters: [],
@@ -65,9 +67,9 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");
       const idToPath = buildIdMapping(entries);
-      set({ entries, idToPath, isVaultLoading: false });
+      set({ entries, idToPath, isVaultLoading: false, isVaultLoaded: true });
     } catch (e) {
-      set({ vaultError: String(e), isVaultLoading: false });
+      set({ vaultError: String(e), isVaultLoading: false, isVaultLoaded: false });
     }
   },
 
@@ -148,7 +150,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (s
   },
 
   clearCache: () => {
-    set({ noteCache: {}, entries: [] });
+    set({ noteCache: {}, entries: [], isVaultLoaded: false });
   },
 
   goHome: () => {
