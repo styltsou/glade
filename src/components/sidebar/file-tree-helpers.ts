@@ -4,18 +4,26 @@ export function sortEntries(
   entries: VaultEntry[],
   sort: SortMode
 ): VaultEntry[] {
-  const copy = [...entries];
-  if (sort === "name-asc") {
-    return copy.sort((a, b) => a.name.localeCompare(b.name));
-  }
-  if (sort === "name-desc") {
-    return copy.sort((a, b) => b.name.localeCompare(a.name));
-  }
-  return copy.sort((a, b) => {
+  return [...entries].sort((a, b) => {
+    // 1. Folders always come before files
     if (a.is_dir && !b.is_dir) return -1;
     if (!a.is_dir && b.is_dir) return 1;
-    if (!a.modified || !b.modified) return 0;
-    return new Date(b.modified).getTime() - new Date(a.modified).getTime();
+
+    // 2. Both are same type, apply specific sort logic
+    if (sort === "name-asc") {
+      return a.name.localeCompare(b.name);
+    }
+    if (sort === "name-desc") {
+      return b.name.localeCompare(a.name);
+    }
+    if (sort === "modified") {
+      if (!a.modified && !b.modified) return 0;
+      if (!a.modified) return 1;
+      if (!b.modified) return -1;
+      return new Date(b.modified).getTime() - new Date(a.modified).getTime();
+    }
+    
+    return 0;
   });
 }
 
