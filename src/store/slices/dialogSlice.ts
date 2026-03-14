@@ -37,6 +37,18 @@ export interface DialogSlice {
   settingsOpen: boolean;
   openSettings: () => void;
   closeSettings: () => void;
+
+  // Import dialog
+  importOpen: boolean;
+  importPath: string | null;
+  openImport: (path?: string) => void;
+  closeImport: () => void;
+
+  // Open with Glade dialog
+  openWithOpen: boolean;
+  openWithPath: string | null;
+  openOpenWith: (path: string) => void;
+  closeOpenWith: () => void;
 }
 
 import type { StoreState } from "../index";
@@ -70,6 +82,16 @@ export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = 
   settingsOpen: false,
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
+
+  importOpen: false,
+  importPath: null,
+  openImport: (path) => set({ importOpen: true, importPath: path || null }),
+  closeImport: () => set({ importOpen: false, importPath: null }),
+
+  openWithOpen: false,
+  openWithPath: null,
+  openOpenWith: (path) => set({ openWithOpen: true, openWithPath: path }),
+  closeOpenWith: () => set({ openWithOpen: false, openWithPath: null }),
 
   currentView: "home",
   setCurrentView: (view) => set({ currentView: view }),

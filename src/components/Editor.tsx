@@ -1,13 +1,19 @@
-import { useState, useCallback, useEffect, useRef, useLayoutEffect } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { useStore } from "@/store";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
-import { NoteHeader } from "@/components/editor/NoteHeader";
 import { NoteEditor } from "@/components/editor/NoteEditor";
-import { extensions } from "./editor/extensions";
+import { NoteHeader } from "@/components/editor/NoteHeader";
 import { formatNoteDate } from "@/lib/dates";
+import { useStore } from "@/store";
+import { extensions } from "./editor/extensions";
 
 const AUTOSAVE_DELAY = 800;
 const SAVED_BADGE_TIMEOUT = 2000;
@@ -19,16 +25,20 @@ export function Editor() {
   const onNoteOpened = useStore((state) => state.onNoteOpened);
   const selectNote = useStore((state) => state.selectNote);
   const noteScrollPositions = useStore((state) => state.noteScrollPositions);
-  const updateNoteScrollPosition = useStore((state) => state.updateNoteScrollPosition);
-  
+  const updateNoteScrollPosition = useStore(
+    (state) => state.updateNoteScrollPosition,
+  );
+
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">("idle");
+  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
+    "idle",
+  );
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   const lastSavedContentRef = useRef<string>("");
   const latestContentRef = useRef<string>("");
   const isLoadingRef = useRef(false);
@@ -41,10 +51,10 @@ export function Editor() {
     editorProps: {
       attributes: { class: "tiptap-editor" },
       handleClickOn: (_view, _pos, node, _nodePos) => {
-        if (node.type.name === 'mention' && node.attrs.id) {
+        if (node.type.name === "mention" && node.attrs.id) {
           const { idToPath } = useStore.getState();
           const targetPath = idToPath[node.attrs.id];
-          
+
           if (targetPath) {
             selectNote(targetPath);
           } else {
@@ -63,15 +73,15 @@ export function Editor() {
     },
     onUpdate: ({ editor }) => {
       if (!activeNote || isLoadingRef.current) return;
-      
+
       const markdown = (editor.storage as any).markdown.getMarkdown();
-      
+
       // Skip if content hasn't actually changed
       if (markdown === latestContentRef.current) return;
-      
+
       cursorPositionRef.current = editor.state.selection.from;
       latestContentRef.current = markdown;
-      
+
       if (markdown !== lastSavedContentRef.current) {
         setSaveStatus("unsaved");
         debouncedSave(activeNote.path, markdown);
@@ -89,14 +99,14 @@ export function Editor() {
         try {
           await saveNote(path, content);
           lastSavedContentRef.current = content;
-          
+
           // Only set to "saved" if no newer changes were made while saving
           if (latestContentRef.current === content) {
             setSaveStatus("saved");
-            
+
             // Clear existing badge timer
             if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
-            
+
             // Schedule fading out the badge
             badgeTimerRef.current = setTimeout(() => {
               setSaveStatus("idle");
@@ -107,24 +117,24 @@ export function Editor() {
         }
       }, AUTOSAVE_DELAY);
     },
-    [saveNote]
+    [saveNote],
   );
 
   const saveNow = useCallback(async () => {
     if (!activeNote || saveStatus !== "unsaved") return;
-    
+
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
       saveTimerRef.current = null;
     }
-    
+
     const content = latestContentRef.current;
-    
+
     try {
       await saveNote(activeNote.path, content);
       lastSavedContentRef.current = content;
       setSaveStatus("saved");
-      
+
       if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
       badgeTimerRef.current = setTimeout(() => {
         setSaveStatus("idle");
@@ -164,12 +174,15 @@ export function Editor() {
     if (editor && activeNote) {
       const pathChanged = currentPathRef.current !== activeNote.path;
       isLoadingRef.current = true;
-      
+
       // Save scroll position for the *previous* note before switching
       if (pathChanged && currentPathRef.current && scrollRef.current) {
-        updateNoteScrollPosition(currentPathRef.current, scrollRef.current.scrollTop);
+        updateNoteScrollPosition(
+          currentPathRef.current,
+          scrollRef.current.scrollTop,
+        );
       }
-      
+
       // Cancel any pending autosave from previous note
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
@@ -179,16 +192,16 @@ export function Editor() {
         clearTimeout(badgeTimerRef.current);
         badgeTimerRef.current = null;
       }
-      
+
       const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
-      
+
       // Only update content if it actually changed
       if (pathChanged || currentMarkdown !== activeNote.body) {
         editor.commands.setContent(activeNote.body || "");
         setRawContent(activeNote.body || "");
         lastSavedContentRef.current = activeNote.body || "";
         latestContentRef.current = activeNote.body || "";
-        
+
         // Reset cursor position tracking for new note
         cursorPositionRef.current = null;
       }
@@ -200,15 +213,21 @@ export function Editor() {
           scrollRef.current.scrollTop = savedPosition || 0;
         }
       }
-      
+
       if (pathChanged) {
         currentPathRef.current = activeNote.path;
       }
-      
+
       setSaveStatus("idle");
       isLoadingRef.current = false;
     }
-  }, [activeNote?.path, activeNote?.body, editor, updateNoteScrollPosition, noteScrollPositions]);
+  }, [
+    activeNote?.path,
+    activeNote?.body,
+    editor,
+    updateNoteScrollPosition,
+    noteScrollPositions,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -234,7 +253,7 @@ export function Editor() {
         tags: activeNote.tags,
         preview: activeNote.preview,
         modified: new Date().toISOString(),
-        pinned: false
+        pinned: false,
       });
     }
   }, [activeNote?.path, onNoteOpened]);
@@ -247,7 +266,9 @@ export function Editor() {
       setIsRawMode(false);
     } else {
       try {
-        const raw = await invoke<string>("read_note_raw", { path: activeNote.path });
+        const raw = await invoke<string>("read_note_raw", {
+          path: activeNote.path,
+        });
         const stripped = raw.replace(/^---[\s\S]*?---\s*\n?/, "");
         setRawContent(stripped);
       } catch {
@@ -268,14 +289,16 @@ export function Editor() {
         debouncedSave(activeNote.path, value);
       }
     },
-    [activeNote, debouncedSave, saveStatus]
+    [activeNote, debouncedSave, saveStatus],
   );
 
   if (!activeNote) {
     return (
       <div className="flex flex-col flex-1 h-full bg-background items-center justify-center select-none">
         <FileTextIcon className="w-10 h-10 text-muted-foreground mb-4" />
-        <p className="text-[14px] text-muted-foreground mb-1">No note selected</p>
+        <p className="text-[14px] text-muted-foreground mb-1">
+          No note selected
+        </p>
         <button
           onClick={() => createNote()}
           className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
@@ -294,11 +317,11 @@ export function Editor() {
 
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
-      <NoteHeader 
+      <NoteHeader
         notePath={activeNote.path}
         noteTitle={activeNote.title}
-        dateLabel={dateLabel} 
-        saveStatus={saveStatus} 
+        dateLabel={dateLabel}
+        saveStatus={saveStatus}
       />
       <EditorToolbar
         editor={editor}

@@ -14,6 +14,7 @@ export function flattenNotes(
       }
     } else {
       notes.push({ 
+        id: entry.id,
         title: entry.name, 
         path: entry.path, 
         tags: entry.tags 

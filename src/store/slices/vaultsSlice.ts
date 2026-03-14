@@ -1,6 +1,7 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { Vault } from "@/types";
+import type { Vault, VaultEntry } from "@/types";
+import { buildIdMapping } from "./vaultSlice";
 
 export interface VaultsSlice {
   vaults: Vault[];
@@ -53,31 +54,44 @@ export const createVaultsSlice: StateCreator<StoreState, [], [], VaultsSlice> = 
       await invoke("update_vault_last_opened", { vaultId });
       const activeVault = get().vaults.find((v: Vault) => v.id === vaultId) || null;
       
-      // Single atomic state reset — all slice clearing in one set() call so
-      // there is NEVER an intermediate render where entries=[] + isVaultLoading=false,
-      // which would cause the empty-state to flash before skeletons appear.
+      // Pre-fetch the new vault's entries BEFORE clearing old state.
+      // The old vault's UI stays visible during this fetch, so the user
+      // never sees an intermediate empty/skeleton state.
+      const entries = await invoke<VaultEntry[]>("list_vault");
+      const idToPath = buildIdMapping(entries);
+
+      // We know from pre-fetched entries whether the vault has notes at root level.
+      const hasRootNotes = entries.some(e => !e.is_dir);
+
+      // Single atomic swap: old state → new state in one render.
+      // No intermediate frame with empty entries + loading flags.
+      // If the vault has notes, set isFolderNotesLoading so note skeletons
+      // appear immediately. If empty, skip skeletons entirely.
       set({
-        // vaultSlice (clearCache)
+        // New vault data (already fetched)
+        entries,
+        idToPath,
+        isVaultLoaded: true,
+        isVaultLoading: false,
+        // Clear caches
         noteCache: {},
-        entries: [],
-        isVaultLoaded: false,
-        // vaultSlice (mark loading immediately)
-        isVaultLoading: true,
-        // vaultSlice (clearTags)
         tags: [],
-        // homeSlice (goHome)
+        // Reset navigation
         activeNote: null,
         currentFolder: null,
         pinnedNotes: [],
         folderNotes: [],
-        isFolderNotesLoading: false,
+        isFolderNotesLoading: hasRootNotes,
         isHomeLoading: false,
+        // Set new vault
+        activeVault,
+        isVaultsLoading: false,
+        vaultsError: null,
       });
 
-      set({ activeVault, isVaultsLoading: false });
-
-      // Reload tags for the new vault (non-blocking)
+      // Reload tags and folder notes for the new vault (non-blocking)
       get().loadTags();
+      get().loadFolderNotes();
     } catch (e) {
       set({ vaultsError: String(e), isVaultsLoading: false });
     }
