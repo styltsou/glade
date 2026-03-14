@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/store";
-import { PanelLeft, Plus, Loader2, Upload } from "lucide-react";
+import { PanelLeft, Plus, Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -25,7 +25,6 @@ export function SidebarHeader() {
   const activeVault = useStore((state) => state.activeVault);
   const setActiveVault = useStore((state) => state.setActiveVault);
   const createVault = useStore((state) => state.createVault);
-  const openImport = useStore((state) => state.openImport);
   
   const [newVaultName, setNewVaultName] = useState("");
   const [error, setError] = useState("");
@@ -101,7 +100,7 @@ export function SidebarHeader() {
           <SelectTrigger size="sm" className="flex-1 font-medium border-0 focus:ring-0 focus:ring-offset-0">
             <SelectValue placeholder="Select Vault" />
           </SelectTrigger>
-          <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
+          <SelectContent position="popper" className="max-h-[70vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
             {vaults.map((vault: Vault) => (
               <SelectItem key={vault.id} value={vault.id}>
                 <span>{vault.name}</span>
@@ -117,16 +116,6 @@ export function SidebarHeader() {
             >
               <Plus className="size-4" />
               <span>Create New Vault</span>
-            </div>
-            <div 
-              className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-sm"
-              onClick={() => {
-                setIsSelectOpen(false);
-                openImport();
-              }}
-            >
-              <Upload className="size-4" />
-              <span>Import Files</span>
             </div>
           </SelectContent>
         </Select>

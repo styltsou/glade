@@ -1,6 +1,18 @@
-import { Folder } from "lucide-react";
+import { useEffect } from "react";
+import { Folder, Files } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Vault } from "@/types";
 import type { FolderNode, VaultTarget } from "../types";
 import { FolderTree } from "./FolderTree";
@@ -32,6 +44,13 @@ export function ImportPreview({
   onSelectedVaultIdChange,
   onNewVaultNameChange,
 }: ImportPreviewProps) {
+  const defaultVaultName = sourcePath.split(/[/\\]/).pop() || "";
+
+  useEffect(() => {
+    if (!newVaultName && defaultVaultName) {
+      onNewVaultNameChange(defaultVaultName);
+    }
+  }, []);
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
@@ -44,62 +63,62 @@ export function ImportPreview({
         </div>
       </div>
 
-      <div className="max-h-48 overflow-y-auto border rounded-lg p-2">
-        <FolderTree nodes={folderTree} />
-      </div>
+      {totalCount === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground border rounded-lg">
+          <Files className="h-10 w-10 opacity-50" />
+          <p className="text-sm">No markdown files found in this folder</p>
+          <p className="text-xs">Select a folder containing .md files to import</p>
+        </div>
+      ) : (
+        <div className="min-w-0 min-h-[100px] max-h-80 overflow-y-auto border rounded-lg p-2">
+          <FolderTree nodes={folderTree} />
+        </div>
+      )}
 
       <div className="space-y-3">
         <Label>Import into:</Label>
 
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="vaultTarget"
-              checked={targetVault === "existing"}
-              onChange={() => onTargetVaultChange("existing")}
-              className="accent-primary"
-            />
-            <span className="text-sm">Existing vault</span>
-            <select
+        <RadioGroup
+          value={targetVault}
+          onValueChange={(value) => onTargetVaultChange(value as VaultTarget)}
+          className="space-y-1"
+        >
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="existing" id="existing" />
+            <Label htmlFor="existing" className="text-sm cursor-pointer">Existing vault</Label>
+            <Select
               value={selectedVaultId}
-              onChange={(e) => onSelectedVaultIdChange(e.target.value)}
+              onValueChange={onSelectedVaultIdChange}
               disabled={targetVault !== "existing"}
-              className="ml-auto px-2 py-1 text-sm border rounded bg-background"
             >
-              {vaults.map((vault) => (
-                <option key={vault.id} value={vault.id}>
-                  {vault.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <SelectTrigger className="ml-auto w-[180px] h-8">
+                <SelectValue placeholder="Select vault" />
+              </SelectTrigger>
+              <SelectContent>
+                {vaults.map((vault) => (
+                  <SelectItem key={vault.id} value={vault.id}>
+                    {vault.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="vaultTarget"
-              checked={targetVault === "new"}
-              onChange={() => onTargetVaultChange("new")}
-              className="accent-primary"
+          <div className="flex items-center gap-2">
+            <RadioGroupItem value="new" id="new" />
+            <Label htmlFor="new" className="text-sm cursor-pointer">New vault</Label>
+            <Input
+              placeholder="Vault name"
+              value={newVaultName}
+              onChange={(e) => onNewVaultNameChange(e.target.value)}
+              disabled={targetVault !== "new"}
+              className="ml-auto w-[180px] h-8"
             />
-            <span className="text-sm">New vault</span>
-          </label>
-
-          {targetVault === "new" && (
-            <div className="ml-6">
-              <Input
-                placeholder="Vault name"
-                value={newVaultName}
-                onChange={(e) => onNewVaultNameChange(e.target.value)}
-                className="w-full"
-              />
-              {newVaultError && (
-                <p className="text-sm text-destructive mt-1">{newVaultError}</p>
-              )}
-            </div>
+          </div>
+          {targetVault === "new" && newVaultError && (
+            <p className="text-sm text-destructive ml-6">{newVaultError}</p>
           )}
-        </div>
+        </RadioGroup>
       </div>
     </div>
   );

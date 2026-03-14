@@ -60,7 +60,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
             }
           }}
           className="
-            group relative flex flex-col gap-2 text-left w-full
+            group relative flex flex-col gap-2 text-left w-full min-h-36
             rounded-lg p-4 cursor-pointer
             bg-card border border-border
             hover:border-foreground/20 hover:bg-muted/50

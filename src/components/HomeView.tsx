@@ -86,7 +86,7 @@ export function HomeView() {
   return (
     <div ref={containerRef} className="flex-1 overflow-auto w-full">
       <div className="px-4 py-10 max-w-6xl mx-auto w-full h-full flex flex-col">
-        {currentFolder && <Breadcrumbs className="mb-6" />}
+        {currentFolder && <Breadcrumbs className="mb-3" />}
 
         <div className="flex items-center justify-between mb-8">
           <div>

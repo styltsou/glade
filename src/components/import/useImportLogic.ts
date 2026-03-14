@@ -24,9 +24,8 @@ export function useImportLogic() {
   const closeImport = useStore((state) => state.closeImport);
   const vaults = useStore((state) => state.vaults);
   const activeVault = useStore((state) => state.activeVault);
-  const createVault = useStore((state) => state.createVault);
+  const loadVaults = useStore((state) => state.loadVaults);
   const setActiveVault = useStore((state) => state.setActiveVault);
-  const goHome = useStore((state) => state.goHome);
 
   const [step, setStep] = useState<ImportStep>("pick");
   const [isDragging, setIsDragging] = useState(false);
@@ -67,6 +66,8 @@ export function useImportLogic() {
   const scanPath = useCallback(async (path: string) => {
     setScanError(null);
     setIsLoading(true);
+    setTargetVault("existing");
+    setSelectedVaultId(activeVault?.id || "");
     try {
       const source = await invoke<ImportSource>("scan_import_source", { path });
       setImportSource(source);
@@ -78,7 +79,7 @@ export function useImportLogic() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [activeVault]);
 
   useEffect(() => {
     if (importOpen && importPath && step === "pick") {
@@ -141,9 +142,7 @@ export function useImportLogic() {
     try {
       let targetVaultId = vaultId;
       if (targetVault === "new") {
-        const slug = generateSlug(newVaultName);
-        const newVault = await createVault(newVaultName.trim(), slug);
-        targetVaultId = newVault.id;
+        targetVaultId = "";
       }
       const result = await invoke<ImportSourceWithConflicts>("check_import_conflicts", {
         sourcePath: importSource.root_path,
@@ -166,33 +165,70 @@ export function useImportLogic() {
       setNewVaultError(String(error));
       return null;
     }
-  }, [importSource, targetVault, newVaultName, createVault]);
+  }, [importSource, targetVault]);
 
-  const performImport = useCallback(async (vaultId: string) => {
-    if (!importSource) return;
+  const performImport = useCallback(async (vaultId: string, isNewVault: boolean) => {
+    if (!importSource) {
+      console.error("performImport: No importSource");
+      return;
+    }
+    if (!vaultId) {
+      console.error("performImport: No vaultId");
+      setNewVaultError("No vault selected");
+      return;
+    }
     setIsImporting(true);
     setNewVaultError("");
     try {
-      if (vaultId !== activeVault?.id) {
-        await setActiveVault(vaultId);
+      let finalVaultId = vaultId;
+      
+      if (isNewVault) {
+        if (!newVaultName.trim()) {
+          setNewVaultError("Vault name is required");
+          setIsImporting(false);
+          return;
+        }
+        const slug = generateSlug(newVaultName);
+        const newVault = await invoke<{ id: string; name: string; slug: string }>("create_vault", {
+          name: newVaultName.trim(),
+          slug,
+        });
+        await loadVaults();
+        finalVaultId = newVault.id;
+      }
+
+      if (!finalVaultId) {
+        setNewVaultError("No destination vault resolved");
+        setIsImporting(false);
+        return;
       }
       const resolutions = Object.entries(conflictResolutions).map(([relative_path, action]) => ({
         relative_path,
         action,
       }));
+      console.log("performImport: Starting import to vault:", finalVaultId, "isNewVault:", isNewVault, "source:", importSource.root_path);
       await invoke("import_files", {
         sourcePath: importSource.root_path,
-        vaultId,
+        vaultId: finalVaultId,
         resolutions,
       });
-      goHome();
+      console.log("performImport: Import completed, reloading vault");
+
+      // setActiveVault does an atomic reset of all nav state (activeNote,
+      // currentFolder, pinnedNotes, folderNotes) in a single set() call,
+      // so we don't need a separate goHome() — that would just cause an
+      // extra re-render and the visible white flash.
+      await setActiveVault(finalVaultId);
+
+      console.log("performImport: Vault reloaded, closing dialog");
       handleClose();
     } catch (error) {
+      console.error("performImport error:", error);
       setNewVaultError(String(error));
     } finally {
       setIsImporting(false);
     }
-  }, [importSource, activeVault, setActiveVault, conflictResolutions, goHome, handleClose]);
+  }, [importSource, setActiveVault, conflictResolutions, handleClose, newVaultName, loadVaults]);
 
   const handleImport = useCallback(async () => {
     if (!importSource) return;
@@ -212,40 +248,32 @@ export function useImportLogic() {
           setIsImporting(false);
           return;
         }
-        const newVault = await createVault(newVaultName.trim(), slug);
-        vaultId = newVault.id;
-      }
-      if (vaultId !== activeVault?.id) {
-        await setActiveVault(vaultId);
+      } else {
+        // Guard: if no vault was explicitly selected, bail out clearly
+        if (!vaultId) {
+          setNewVaultError("Please select a vault");
+          setIsImporting(false);
+          return;
+        }
       }
       const resolvedVaultId = await checkConflicts(vaultId);
       if (resolvedVaultId) {
-        await performImport(resolvedVaultId);
+        try {
+          await performImport(resolvedVaultId, targetVault === "new");
+        } catch (importError) {
+          setNewVaultError(String(importError));
+        }
       }
     } catch (error) {
       setNewVaultError(String(error));
     } finally {
       setIsImporting(false);
     }
-  }, [importSource, targetVault, selectedVaultId, newVaultName, vaults, activeVault, createVault, setActiveVault, checkConflicts, performImport]);
+  }, [importSource, targetVault, selectedVaultId, newVaultName, vaults, checkConflicts, performImport]);
 
   const handleConflictsImport = useCallback(async () => {
-    let vaultId = selectedVaultId;
-    if (targetVault === "new") {
-      if (!newVaultName.trim()) {
-        setNewVaultError("Vault name is required");
-        return;
-      }
-      const slug = generateSlug(newVaultName);
-      if (vaults.some((v: Vault) => v.slug === slug)) {
-        setNewVaultError("A vault with this name already exists");
-        return;
-      }
-      const newVault = await createVault(newVaultName.trim(), slug);
-      vaultId = newVault.id;
-    }
-    await performImport(vaultId);
-  }, [selectedVaultId, targetVault, newVaultName, vaults, createVault, performImport]);
+    await performImport(selectedVaultId, targetVault === "new");
+  }, [selectedVaultId, targetVault, performImport]);
 
   const handleBack = useCallback(() => {
     if (step === "conflicts") {
@@ -253,8 +281,12 @@ export function useImportLogic() {
       setConflicts([]);
       setBrokenLinks([]);
       setConflictResolutions({});
-    } else {
+    } else if (step === "preview") {
       setStep("pick");
+      setTargetVault("existing");
+      setSelectedVaultId("");
+      setNewVaultName("");
+      setNewVaultError("");
     }
   }, [step]);
 

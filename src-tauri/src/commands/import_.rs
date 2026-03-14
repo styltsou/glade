@@ -217,17 +217,18 @@ pub fn check_import_conflicts(
     vault_id: String,
 ) -> Result<ImportSourceWithConflicts, AppError> {
     let source = scan_import_source(source_path.clone())?;
-    let vault_dir = get_vault_dir_by_id(&vault_id)?;
-
+    
     let mut conflicts = Vec::new();
-
-    for file in &source.files {
-        let dest_file = vault_dir.join(&file.relative_path);
-        if dest_file.exists() {
-            conflicts.push(ImportConflict {
-                relative_path: file.relative_path.clone(),
-                name: file.name.clone(),
-            });
+    if !vault_id.is_empty() {
+        let vault_dir = get_vault_dir_by_id(&vault_id)?;
+        for file in &source.files {
+            let dest_file = vault_dir.join(&file.relative_path);
+            if dest_file.exists() {
+                conflicts.push(ImportConflict {
+                    relative_path: file.relative_path.clone(),
+                    name: file.name.clone(),
+                });
+            }
         }
     }
 
@@ -323,8 +324,14 @@ pub fn import_files(
     resolutions: Vec<ConflictResolution>,
     app_handle: tauri::AppHandle,
 ) -> Result<(), AppError> {
-    let source = scan_import_source(source_path)?;
+    eprintln!(
+        "import_files called: source_path={}, vault_id={}",
+        source_path, vault_id
+    );
+    let source = scan_import_source(source_path.clone())?;
+    eprintln!("Scanned source: {} files found", source.files.len());
     let vault_dir = get_vault_dir_by_id(&vault_id)?;
+    eprintln!("Vault dir: {:?}", vault_dir);
 
     let resolutions_map: HashMap<String, &str> = resolutions
         .iter()
@@ -389,11 +396,13 @@ pub fn import_files(
                 } else {
                     let content = fs::read_to_string(&source_file)?;
                     let processed = process_import_content(&content, &file.name);
+                    eprintln!("Writing file to: {:?}", dest_file);
                     fs::write(&dest_file, processed)?;
                 }
             }
         }
 
+        eprintln!("Emitting progress: {}/{}", idx + 1, total);
         let _ = app_handle.emit(
             "import-progress",
             ImportProgress {
@@ -406,5 +415,6 @@ pub fn import_files(
 
     vault::invalidate_vault_cache();
 
+    eprintln!("Import completed successfully");
     Ok(())
 }

@@ -63,40 +63,56 @@ export function ImportDialog() {
         if (!open) handleClose();
       }}
     >
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl w-full max-h-[85vh]">
+        <form
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (step === "preview" && importSource && importSource.total_count > 0 && !isImporting) {
+                handleImport();
+              } else if (step === "conflicts" && !isImporting) {
+                handleConflictsImport();
+              }
+            }
+          }}
+        >
+        <div className="overflow-y-auto overflow-x-hidden max-h-[calc(85vh-3rem)] pr-2">
         <DialogHeader>
           <DialogTitle>
             {step === "pick"
               ? "Import Files"
               : `Import ${importSource?.total_count || 0} notes`}
           </DialogTitle>
-          <DialogDescription>
-            {step === "pick"
-              ? "Select markdown files or a folder to import into your vault."
-              : `From: ${importSource?.root_path}`}
-          </DialogDescription>
+          {step === "pick" && (
+            <DialogDescription>
+              Select markdown files or a folder to import into your vault.
+            </DialogDescription>
+          )}
         </DialogHeader>
 
         {scanError && (
-          <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
             <p className="text-sm text-red-800 dark:text-red-200">{scanError}</p>
           </div>
         )}
 
         {step === "pick" && (
-          <DropZone
-            isDragging={isDragging}
-            isLoading={isLoading}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={handlePickSource}
-          />
+          <div className="mt-4">
+            <DropZone
+              isDragging={isDragging}
+              isLoading={isLoading}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={handlePickSource}
+            />
+          </div>
         )}
 
         {step === "preview" && importSource && (
-          <div className="space-y-4">
+          <div className="mt-4 space-y-4">
             <ImportPreview
+              key={importSource.root_path}
               folderTree={folderTree}
               totalCount={importSource.total_count}
               sourcePath={importSource.root_path}
@@ -117,6 +133,7 @@ export function ImportDialog() {
             )}
             <DialogFooter>
               <Button
+                type="button"
                 variant="outline"
                 onClick={handleBack}
                 disabled={isImporting}
@@ -125,13 +142,14 @@ export function ImportDialog() {
               </Button>
               {isImporting ? (
                 <Button 
+                  type="button"
                   variant="destructive" 
                   onClick={handleClose}
                 >
                   Cancel Import
                 </Button>
               ) : (
-                <Button onClick={handleImport}>
+                <Button type="button" onClick={handleImport} disabled={!importSource || importSource.total_count === 0}>
                   Import
                 </Button>
               )}
@@ -140,7 +158,7 @@ export function ImportDialog() {
         )}
 
         {step === "conflicts" && (
-          <div className="space-y-4">
+          <div className="mt-4 space-y-4">
             <ConflictList
               conflicts={conflicts}
               brokenLinks={brokenLinks}
@@ -170,6 +188,7 @@ export function ImportDialog() {
             )}
             <DialogFooter>
               <Button
+                type="button"
                 variant="outline"
                 onClick={handleBack}
                 disabled={isImporting}
@@ -178,19 +197,22 @@ export function ImportDialog() {
               </Button>
               {isImporting ? (
                 <Button
+                  type="button"
                   variant="destructive"
                   onClick={handleClose}
                 >
                   Cancel Import
                 </Button>
               ) : (
-                <Button onClick={handleConflictsImport}>
+                <Button type="button" onClick={handleConflictsImport}>
                   Import
                 </Button>
               )}
             </DialogFooter>
           </div>
         )}
+        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -1,4 +1,6 @@
-import { FileText } from "lucide-react";
+import { useState } from "react";
+import { FileText, ChevronDown } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import type { ImportedFile, BrokenLink, ConflictAction } from "../types";
 
 interface ConflictListProps {
@@ -14,6 +16,8 @@ export function ConflictList({
   conflictResolutions,
   onResolutionChange,
 }: ConflictListProps) {
+  const [linksOpen, setLinksOpen] = useState(false);
+
   return (
     <div className="space-y-4">
       {brokenLinks.length > 0 && (
@@ -26,18 +30,40 @@ export function ConflictList({
             These links will be broken after import. The linked titles will still
             be visible but won&apos;t be clickable.
           </p>
-          <details className="mt-2">
-            <summary className="text-xs cursor-pointer text-amber-700 dark:text-amber-300">
-              Show broken links
-            </summary>
-            <ul className="mt-1 text-xs text-amber-700 dark:text-amber-300 space-y-0.5 max-h-20 overflow-y-auto">
-              {brokenLinks.map((link, idx) => (
-                <li key={idx}>
-                  {link.file_relative_path}: → {link.link_target}
-                </li>
-              ))}
-            </ul>
-          </details>
+          <button
+            type="button"
+            onClick={() => setLinksOpen((o) => !o)}
+            className="mt-2 flex items-center gap-1 text-sm text-amber-700 dark:text-amber-300 cursor-pointer select-none"
+          >
+            <motion.span
+              animate={{ rotate: linksOpen ? 180 : 0 }}
+              transition={{ duration: 0.1 }}
+              style={{ display: "flex" }}
+            >
+              <ChevronDown className="h-3.5 w-3.5" />
+            </motion.span>
+            Show broken links
+          </button>
+          <AnimatePresence initial={false}>
+            {linksOpen && (
+              <motion.div
+                key="broken-links"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.1, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <ul className="mt-2 text-sm text-amber-700 dark:text-amber-300 space-y-1 max-h-36 overflow-y-auto">
+                  {brokenLinks.map((link, idx) => (
+                    <li key={idx}>
+                      {link.file_relative_path}: → {link.link_target}
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -50,7 +76,7 @@ export function ConflictList({
             </p>
           </div>
 
-          <div className="max-h-48 overflow-y-auto border rounded-lg">
+          <div className="min-w-0 max-h-48 overflow-y-auto border rounded-lg">
             <div className="p-2 space-y-2">
               {conflicts.map((conflict) => (
                 <div
