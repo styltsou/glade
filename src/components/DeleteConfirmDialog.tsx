@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +33,8 @@ export function DeleteConfirmDialog({
   requireConfirmationText,
 }: DeleteConfirmDialogProps) {
   const [confirmText, setConfirmText] = useState("");
-  const isConfirmValid = !requireConfirmationText || confirmText === requireConfirmationText;
+  const isConfirmValid =
+    !requireConfirmationText || confirmText === requireConfirmationText;
 
   // Reset input when dialog opens/closes
   useEffect(() => {
@@ -50,7 +51,7 @@ export function DeleteConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent 
+      <AlertDialogContent
         onKeyDown={(e) => {
           if (e.key === "Enter" && isConfirmValid) {
             e.preventDefault();
@@ -59,23 +60,23 @@ export function DeleteConfirmDialog({
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>
-            Delete {type}?
-          </AlertDialogTitle>
+          <AlertDialogTitle>Delete {type}?</AlertDialogTitle>
           <AlertDialogDescription>
             {description || (
               <>
-                <span className="font-medium text-foreground">{name}</span> will be
-                permanently deleted. This cannot be undone.
+                <span className="font-medium text-foreground">{name}</span> will
+                be permanently deleted. This cannot be undone.
               </>
             )}
           </AlertDialogDescription>
           {requireConfirmationText && (
             <div className="mt-4 space-y-2">
               <p className="text-sm">
-                Please type <span className="font-mono font-medium text-foreground px-1 bg-muted rounded-sm">
+                Please type{" "}
+                <span className="font-mono font-medium text-foreground px-1 bg-muted rounded-sm">
                   {requireConfirmationText}
-                </span> to confirm.
+                </span>{" "}
+                to confirm.
               </p>
               <Input
                 value={confirmText}
@@ -89,8 +90,8 @@ export function DeleteConfirmDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction 
-            variant="destructive" 
+          <AlertDialogAction
+            variant="destructive"
             onClick={handleConfirm}
             disabled={!isConfirmValid}
           >

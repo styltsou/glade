@@ -1,25 +1,26 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
 import {
+  FolderCog as FolderCogIcon,
+  Palette as PaletteIcon,
   Plus as PlusIcon,
   Trash2 as TrashIcon,
-  Palette as PaletteIcon,
-  FolderCog as FolderCogIcon,
+  Upload as UploadIcon,
 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CommandDialog,
-  CommandInput,
-  CommandList,
   CommandEmpty,
   CommandGroup,
+  CommandInput,
   CommandItem,
-  CommandShortcut,
+  CommandList,
   CommandSeparator,
+  CommandShortcut,
 } from "@/components/ui/command";
-import { useStore } from "@/store";
 import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
-import { HighlightedText } from "./command-palette/HighlightedText";
 import { flattenNotes } from "@/lib/notes";
-import type { NoteSearchResult, NoteData } from "@/types";
+import { useStore } from "@/store";
+import type { NoteData, NoteSearchResult } from "@/types";
+import { HighlightedText } from "./command-palette/HighlightedText";
 
 type CommandPaletteNote = NoteSearchResult | NoteData;
 
@@ -36,6 +37,7 @@ export function CommandPalette() {
 
   const openDelete = useStore((state) => state.openDelete);
   const openSettingsPage = useStore((state) => state.openSettingsPage);
+  const openImport = useStore((state) => state.openImport);
 
   // Register global shortcuts
   useCommandShortcuts(setOpen);
@@ -60,6 +62,9 @@ export function CommandPalette() {
         case "appearance":
           openSettingsPage("appearance");
           break;
+        case "import-files":
+          openImport();
+          break;
         default:
           if (action.startsWith("note:")) {
             selectNote(action.slice(5));
@@ -67,7 +72,15 @@ export function CommandPalette() {
           break;
       }
     },
-    [activeNote, createNote, openDelete, openSettingsPage, selectNote, clearSearch],
+    [
+      activeNote,
+      createNote,
+      openDelete,
+      openSettingsPage,
+      openImport,
+      selectNote,
+      clearSearch,
+    ],
   );
 
   // Debounced search
@@ -110,7 +123,7 @@ export function CommandPalette() {
           if (v.startsWith(s)) return 1.5;
           if (v.includes(s)) return 1;
           return 0;
-        }
+        },
       }}
     >
       <CommandInput
@@ -157,6 +170,14 @@ export function CommandPalette() {
             <span>Appearance</span>
             <CommandShortcut>⌘,</CommandShortcut>
           </CommandItem>
+
+          <CommandItem
+            value="import files"
+            onSelect={() => handleSelect("import-files")}
+          >
+            <UploadIcon />
+            <span>Import Files</span>
+          </CommandItem>
         </CommandGroup>
 
         {allNotes.length > 0 && <CommandSeparator />}
@@ -166,58 +187,68 @@ export function CommandPalette() {
             heading={searchResults.length > 0 ? "Search Results" : "Notes"}
           >
             {(searchResults.length > 0 ? searchResults : allNotes).map(
-            (note: CommandPaletteNote) => {
-              const matchedTags =
-                searchResults.length > 0 && searchValue.trim()
-                  ? note.tags.filter((t: string) =>
-                      t.toLowerCase().includes(searchValue.toLowerCase()),
-                    )
-                  : [];
+              (note: CommandPaletteNote) => {
+                const matchedTags =
+                  searchResults.length > 0 && searchValue.trim()
+                    ? note.tags.filter((t: string) =>
+                        t.toLowerCase().includes(searchValue.toLowerCase()),
+                      )
+                    : [];
 
-              return (
-                <CommandItem
-                  key={note.path}
-                  value={
-                    searchResults.length > 0
-                      ? `${note.title} ${note.preview} ${note.tags.join(" ")} ${searchValue}`
-                      : note.title
-                  }
-                  onSelect={() => handleSelect(`note:${note.path}`)}
-                >
-                  <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <span className="truncate flex-shrink-0">
-                        <HighlightedText text={note.title} query={searchValue} />
-                      </span>
-                      {matchedTags.length > 0 && (
-                        <div className="flex gap-1 overflow-hidden">
-                          {matchedTags.map((tag: string) => (
-                            <span
-                              key={tag}
-                              className="px-1 py-0.5 rounded-sm bg-primary/10 text-primary text-[10px] font-medium leading-none whitespace-nowrap"
-                            >
-                              #<HighlightedText text={tag} query={searchValue} />
-                            </span>
-                          ))}
-                        </div>
+                return (
+                  <CommandItem
+                    key={note.path}
+                    value={
+                      searchResults.length > 0
+                        ? `${note.title} ${note.preview} ${note.tags.join(" ")} ${searchValue}`
+                        : note.title
+                    }
+                    onSelect={() => handleSelect(`note:${note.path}`)}
+                  >
+                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="truncate shrink-0">
+                          <HighlightedText
+                            text={note.title}
+                            query={searchValue}
+                          />
+                        </span>
+                        {matchedTags.length > 0 && (
+                          <div className="flex gap-1 overflow-hidden">
+                            {matchedTags.map((tag: string) => (
+                              <span
+                                key={tag}
+                                className="px-1 py-0.5 rounded-sm bg-primary/10 text-primary text-[10px] font-medium leading-none whitespace-nowrap"
+                              >
+                                #
+                                <HighlightedText
+                                  text={tag}
+                                  query={searchValue}
+                                />
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {note.preview && (
+                        <span className="text-muted-foreground text-xs truncate">
+                          <HighlightedText
+                            text={note.preview}
+                            query={searchValue}
+                          />
+                        </span>
                       )}
                     </div>
-                    {note.preview && (
-                      <span className="text-muted-foreground text-xs truncate">
-                        <HighlightedText text={note.preview} query={searchValue} />
+                    {note.path.includes("/") && (
+                      <span className="text-muted-foreground text-xs ml-auto shrink-0">
+                        {note.path.split("/").slice(0, -1).join("/")}
                       </span>
                     )}
-                  </div>
-                  {note.path.includes("/") && (
-                    <span className="text-muted-foreground text-xs ml-auto shrink-0">
-                      {note.path.split("/").slice(0, -1).join("/")}
-                    </span>
-                  )}
-                </CommandItem>
-              );
-            },
-          )}
-        </CommandGroup>
+                  </CommandItem>
+                );
+              },
+            )}
+          </CommandGroup>
         )}
       </CommandList>
     </CommandDialog>

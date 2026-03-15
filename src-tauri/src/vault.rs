@@ -162,10 +162,39 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
     // Find the closing ---
     let after_open = &trimmed[3..];
     if let Some(close_pos) = after_open.find("\n---") {
-        let yaml_str = &after_open[..close_pos].trim();
+        let yaml_str = after_open[..close_pos].trim();
         let body = after_open[close_pos + 4..].trim_start().to_string();
 
-        let meta: NoteMeta = serde_json::from_str(&yaml_to_json(yaml_str)).unwrap_or_default();
+        let mut meta: NoteMeta = serde_yaml::from_str(yaml_str).unwrap_or_default();
+
+        // Remap common alias keys for creating dates
+        if meta.created.is_none() {
+            if let Some(date) = meta.extra.remove("date").or_else(|| meta.extra.remove("created_at")) {
+                if let Some(d) = date.as_str() {
+                    meta.created = Some(d.to_string());
+                }
+            }
+        }
+        
+        // Remap common alias keys for updating dates
+        if meta.updated.is_none() {
+            if let Some(date) = meta.extra.remove("lastmod").or_else(|| meta.extra.remove("updated_at")) {
+                if let Some(d) = date.as_str() {
+                    meta.updated = Some(d.to_string());
+                }
+            }
+        }
+
+        // Remap alternative tag arrays or comma-delimited strings
+        if meta.tags.is_empty() {
+            if let Some(t) = meta.extra.remove("tags").or_else(|| meta.extra.remove("tag")) {
+                if let Some(arr) = t.as_array() {
+                    meta.tags = arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                } else if let Some(s) = t.as_str() {
+                    meta.tags = s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
+                }
+            }
+        }
 
         (meta, body)
     } else {
@@ -175,81 +204,13 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
 
 /// Build a YAML frontmatter string from metadata.
 pub fn build_frontmatter(meta: &NoteMeta) -> String {
-    let mut lines = vec!["---".to_string()];
-
-    if let Some(ref id) = meta.id {
-        lines.push(format!("id: {}", id));
+    let yaml = serde_yaml::to_string(meta).unwrap_or_default();
+    let yaml_trimmed = yaml.trim_start_matches("---\n").trim_end();
+    
+    if yaml_trimmed.is_empty() || yaml_trimmed == "{}" {
+        return "---\n---".to_string();
     }
-
-    if let Some(ref title) = meta.title {
-        let escaped = title.replace('"', "\\\"");
-        lines.push(format!("title: \"{}\"", escaped));
-    }
-
-    if !meta.tags.is_empty() {
-        let tags_str = meta
-            .tags
-            .iter()
-            .map(|t| t.as_str())
-            .collect::<Vec<_>>()
-            .join(", ");
-        lines.push(format!("tags: [{}]", tags_str));
-    }
-
-    if let Some(ref created) = meta.created {
-        lines.push(format!("created: {}", created));
-    }
-
-    if let Some(ref updated) = meta.updated {
-        lines.push(format!("updated: {}", updated));
-    }
-
-    if meta.pinned {
-        lines.push("pinned: true".to_string());
-    }
-
-    lines.push("---".to_string());
-    lines.join("\n")
-}
-
-/// Very simple YAML-to-JSON converter for our limited frontmatter format.
-/// Handles: key: "value", key: value, key: [a, b, c], key: true/false
-fn yaml_to_json(yaml: &str) -> String {
-    let mut pairs = Vec::new();
-
-    for line in yaml.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-
-        if let Some(colon_pos) = line.find(':') {
-            let key = line[..colon_pos].trim();
-            let mut value = line[colon_pos + 1..].trim();
-
-            if value.starts_with('[') && value.ends_with(']') {
-                // Array value
-                let inner = &value[1..value.len() - 1];
-                let items: Vec<String> = inner
-                    .split(',')
-                    .map(|s| format!("\"{}\"", s.trim().trim_matches('"').replace('"', "\\\"")))
-                    .collect();
-                pairs.push(format!("\"{}\":[{}]", key, items.join(",")));
-            } else if value == "true" || value == "false" {
-                // Boolean value
-                pairs.push(format!("\"{}\":{}", key, value));
-            } else {
-                // String value — handle potential quotes
-                if value.starts_with('"') && value.ends_with('"') && value.len() >= 2 {
-                    value = &value[1..value.len() - 1];
-                }
-                let escaped = value.replace('\\', "\\\\").replace('"', "\\\"");
-                pairs.push(format!("\"{}\":\"{}\"", key, escaped));
-            }
-        }
-    }
-
-    format!("{{{}}}", pairs.join(","))
+    format!("---\n{}\n---", yaml_trimmed)
 }
 
 /// Generate a preview string from the body (first ~120 chars, single line).

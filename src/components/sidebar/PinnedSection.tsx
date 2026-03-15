@@ -12,6 +12,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { NoteCard } from "@/types";
 
 export function PinnedSection() {
@@ -19,8 +20,9 @@ export function PinnedSection() {
   const selectNote = useStore((state) => state.selectNote);
   const pinnedNotes = useStore((state) => state.pinnedNotes);
   const unpinNote = useStore((state) => state.unpinNote);
+  const isVaultsLoading = useStore((state) => state.isVaultsLoading);
 
-  if (pinnedNotes.length === 0) return null;
+  if (pinnedNotes.length === 0 && !isVaultsLoading) return null;
 
   return (
     <div className="px-2 pt-2 pb-1 shrink-0">
@@ -30,16 +32,27 @@ export function PinnedSection() {
         </span>
       </div>
       <div className="space-y-0.5">
-        {pinnedNotes.map((note: NoteCard) => (
-          <PinnedItem
-            key={note.path}
-            path={note.path}
-            name={note.title}
-            active={activeNote?.path === note.path}
-            onClick={() => selectNote(note.path)}
-            onUnpin={() => unpinNote(note.path)}
-          />
-        ))}
+        {isVaultsLoading ? (
+          <div className="space-y-4 px-0">
+            <div className="flex items-center w-full px-2">
+              <Skeleton className="h-4 w-full rounded-md bg-foreground/10" />
+            </div>
+            <div className="flex items-center w-full px-2">
+              <Skeleton className="h-4 w-full rounded-md bg-foreground/10" />
+            </div>
+          </div>
+        ) : (
+          pinnedNotes.map((note: NoteCard) => (
+            <PinnedItem
+              key={note.path}
+              path={note.path}
+              name={note.title}
+              active={activeNote?.path === note.path}
+              onClick={() => selectNote(note.path)}
+              onUnpin={() => unpinNote(note.path)}
+            />
+          ))
+        )}
       </div>
       <div className="mt-3 mb-2 border-t border-border/50" />
     </div>

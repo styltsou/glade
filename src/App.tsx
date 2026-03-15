@@ -7,9 +7,13 @@ import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ImportDialog } from "@/components/ImportDialog";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { OpenWithDialog } from "@/components/OpenWithDialog";
 import { SettingsPage } from "@/components/SettingsPage";
 import { useStore } from "@/store";
 import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 
 function SharedDialogs() {
   const renameOpen = useStore((state) => state.renameOpen);
@@ -75,6 +79,10 @@ function SharedDialogs() {
         }}
       />
       <SettingsDialog open={settingsOpen} onOpenChange={(open) => { if (!open) closeSettings(); }} />
+      <ErrorBoundary>
+        <ImportDialog />
+      </ErrorBoundary>
+      <OpenWithDialog />
     </>
   );
 }
@@ -87,6 +95,7 @@ function App() {
   const activeVault = useStore((state) => state.activeVault);
   const currentView = useStore((state) => state.currentView);
   const openSettingsPage = useStore((state) => state.openSettingsPage);
+  const openOpenWith = useStore((state) => state.openOpenWith);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -96,6 +105,18 @@ function App() {
     };
     init();
   }, [initializeApp]);
+
+  useEffect(() => {
+    const unlisten = listen<string>("open-file", (event) => {
+      if (event.payload) {
+        openOpenWith(event.payload);
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [openOpenWith]);
 
   useEffect(() => {
     if (isReady && activeVault) {

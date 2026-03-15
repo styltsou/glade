@@ -100,7 +100,7 @@ export function SidebarHeader() {
           <SelectTrigger size="sm" className="flex-1 font-medium border-0 focus:ring-0 focus:ring-offset-0">
             <SelectValue placeholder="Select Vault" />
           </SelectTrigger>
-          <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
+          <SelectContent position="popper" className="max-h-[70vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
             {vaults.map((vault: Vault) => (
               <SelectItem key={vault.id} value={vault.id}>
                 <span>{vault.name}</span>

@@ -38,20 +38,23 @@ A modal shows a summary before committing:
 │                                         │
 │  ┌─────────────────────────────────┐    │
 │  │ 📁 posts        (11 notes)      │    │
-│  │ 📁 drafts        (3 notes)      │    │
+│  │ 📁 drafts        (3 notes)     │    │
 │  └─────────────────────────────────┘    │
 │                                         │
 │  Import into:                           │
 │  ○ Existing vault   [ Personal    ▾ ]   │
 │  ○ New vault        [ my-blog       ]   │
 │                                         │
-│  [Cancel]              [Import]         │
+│  [Back]           [Cancel Import]       │
+│                   or                     │
+│                   [Import]               │
 └─────────────────────────────────────────┘
 ```
 
 - The folder tree preview is scrollable if large
 - "Import into" lets the user choose an existing vault or type a name for a new one
 - If "New vault" is selected, the name is slugified and validated for uniqueness before proceeding
+- Cancel button available during import to abort the operation
 
 ### Step 3 — Import
 
@@ -98,13 +101,41 @@ Imported files may or may not have YAML frontmatter. Glade should:
 
 ---
 
+## Error Handling
+
+The import dialog is wrapped in a React Error Boundary to gracefully handle unexpected errors during the import process. If an error occurs, users see a user-friendly message rather than a crash.
+
+- Cancel buttons are available in both preview and conflicts steps
+- Errors during scanning are displayed in a red error box within the dialog
+- Import progress can be cancelled at any time during the import operation
+
+
+---
+
 ## OS Integration — "Open with Glade"
 
-Users can trigger the import flow directly from the OS file manager by right-clicking a directory or `.md` file and selecting "Open with Glade". This skips the in-app file picker and pre-fills the import modal with the selected path.
+When the user triggers "Open with Glade" from the OS file manager, Glade first shows a modal asking what they want to do with the file or directory. This spec only covers the import path — the other options are handled by separate features.
 
-### How It Works
+```
+┌─────────────────────────────────────────┐
+│  Open with Glade                        │
+│                                         │
+│  ~/projects/my-app/docs                 │
+│                                         │
+│  What would you like to do?             │
+│                                         │
+│  ○ Import into vault  — copy into Glade │
+│  ○ View only          — open as reader  │
+│                                         │
+│  [Cancel]              [Continue]       │
+└─────────────────────────────────────────┘
+```
 
-Glade registers itself as a handler for directories and `.md` files at the OS level via Tauri. When the user triggers "Open with Glade", the path is passed to the app as a launch argument. If Glade is already running, the argument is forwarded to the existing instance via Tauri's `single-instance` plugin — no second window is opened.
+Selecting "Import into vault" continues into the standard import flow with the path pre-filled.
+
+### OS Registration
+
+Glade registers itself as a handler for directories and `.md` files at the OS level via Tauri. When triggered, the path is passed to the app as a launch argument. If Glade is already running, the argument is forwarded to the existing instance via Tauri's `single-instance` plugin — no second window is opened.
 
 ### macOS
 
@@ -116,13 +147,11 @@ Declared in the `.desktop` file with `MimeType=text/markdown;inode/directory;`. 
 
 ### Windows
 
-`.md` file associations are declared via `tauri.conf.json` under `fileAssociations` and written to the registry by the installer (NSIS or WiX). Directory context menu entries (`Right-click → Open with Glade`) require a separate registry key (`HKEY_CLASSES_ROOT\Directory\shell\Glade`) added via the NSIS installer script.
+`.md` file associations are declared via `tauri.conf.json` under `fileAssociations` and written to the registry by the installer (NSIS or WiX). Directory context menu entries require a separate registry key (`HKEY_CLASSES_ROOT\Directory\shell\Glade`) added via the NSIS installer script.
 
 ### Single Instance Behaviour
 
-On all platforms, if Glade is already running when "Open with Glade" is triggered, the path is forwarded to the existing instance via Tauri's `single-instance` plugin. The import modal opens inside the running app rather than spawning a new window.
-
----
+On all platforms, if Glade is already running when "Open with Glade" is triggered, the path is forwarded to the existing instance via Tauri's `single-instance` plugin. The modal opens inside the running app rather than spawning a new window.
 
 ## Note Title Generation
 
@@ -145,3 +174,59 @@ Examples:
 ### Frontmatter Injection
 
 If a note has no frontmatter at all, Glade creates it on import. If it has frontmatter but no `title` field, Glade adds the `title` field to the existing block. All other frontmatter fields are left untouched.
+
+---
+
+## Inter-Note Link Preservation
+
+Imported notes may contain links referencing other notes within the same source directory. These links should continue to work correctly after import into the vault.
+
+This spec is intentionally agnostic about the implementation since note linking is already implemented in Glade and the approach here must be consistent with however linking currently works in the codebase.
+
+Before implementing this section, the agent should:
+1. Review how note linking is currently implemented in the codebase (link format, resolution strategy, storage)
+2. Assess whether imported links need to be rewritten, resolved, or can be preserved as-is
+3. Propose the best approach based on the current implementation before writing any code
+
+### Cases to Consider
+
+- All linked notes are present in the import source — links should resolve correctly after import
+- A link points to a note outside the import source — the link will be broken after import since the target was not copied. Glade should detect these during import and handle them gracefully
+- Links use relative paths vs note titles vs some other format — handling depends on the current linking implementation
+
+### Broken Link Fallback
+
+When a link cannot be resolved after import, rather than dropping it silently or showing a raw path, Glade should render the link target's title in bold to indicate it was a link that no longer resolves. The note stays readable, the user can see something was linked there, and it's clear it needs attention without being disruptive.
+
+The agent should determine the best way to represent this in the internal linking format based on the current implementation.
+
+### Preview Step Addition
+
+The import preview modal should surface a warning if broken links are detected:
+
+```
+⚠ 3 notes contain links to files outside
+  this directory. These links will be
+  broken after import.
+```
+
+The user should be able to proceed anyway or cancel.
+
+---
+
+## Note on Internal vs Serialized Link Format
+
+Glade uses a two-layer approach for note linking:
+
+- **Internal representation** — rich editor format (pills, IDs, or whatever the editor uses internally) for the in-app experience
+- **Serialized to disk** — standard markdown relative path links (`[note title](./path/to/note.md)`) written to the `.md` file on save
+
+This means `.md` files on disk always contain clean standard markdown that renders correctly on GitHub and in exports. The editor loads the file, transforms path links into the internal rich format, and converts back on save.
+
+### Implications for Import
+
+Imported notes that already contain standard markdown relative path links should be parsed and converted to the internal format automatically on load, using the same parsing logic already in place for vault notes.
+
+### Rename and Move Reference Updates
+
+Since links on disk are path-based, renaming or moving a note must trigger an update of all relative path links pointing to it across the vault. The agent should verify whether this is already handled and ensure it works correctly for notes that arrive via import.
