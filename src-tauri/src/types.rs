@@ -54,17 +54,25 @@ pub struct NoteData {
     pub preview: String,
 }
 
+fn is_false(v: &bool) -> bool { !*v }
+
 /// Frontmatter metadata parsed from a note.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NoteMeta {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub updated: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub pinned: bool,
+    #[serde(flatten)]
+    pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// A lightweight card representation used in the home view.

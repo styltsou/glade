@@ -117,6 +117,7 @@ pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
         created: Some(now.clone()),
         updated: Some(now),
         pinned: false,
+        extra: std::collections::HashMap::new(),
     };
 
     let frontmatter = vault::build_frontmatter(&meta);
