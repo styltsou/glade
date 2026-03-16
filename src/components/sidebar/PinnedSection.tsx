@@ -35,10 +35,10 @@ export function PinnedSection() {
         {isVaultsLoading ? (
           <div className="space-y-4 px-0">
             <div className="flex items-center w-full px-2">
-              <Skeleton className="h-4 w-full rounded-md bg-foreground/10" />
+              <Skeleton className="h-4 w-full rounded-md" />
             </div>
             <div className="flex items-center w-full px-2">
-              <Skeleton className="h-4 w-full rounded-md bg-foreground/10" />
+              <Skeleton className="h-4 w-full rounded-md" />
             </div>
           </div>
         ) : (

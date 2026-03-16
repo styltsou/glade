@@ -2,13 +2,10 @@ import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface RenameDialogProps {
   isOpen: boolean;
@@ -44,28 +41,29 @@ export function RenameDialog({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isFolder ? "Rename Folder" : "Rename Note"}</DialogTitle>
-          <DialogDescription>
-            Enter a new name.
-          </DialogDescription>
-        </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            autoFocus
-            className="w-full"
-            placeholder={isFolder ? "Folder name..." : "Note title..."}
-          />
-          <DialogFooter>
+          <h2 className="text-lg font-semibold">{isFolder ? "Rename Folder" : "Rename Note"}</h2>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="rename-input">
+              {isFolder ? "Folder name" : "Note name"}
+            </Label>
+            <Input
+              id="rename-input"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              autoFocus
+              className="w-full"
+              placeholder={isFolder ? "Folder name..." : "Note title..."}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={!title.trim() || title === initialTitle}>
               Save
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

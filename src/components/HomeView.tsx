@@ -11,15 +11,15 @@ import type { VaultEntry } from "@/types";
 function NoteCardSkeleton() {
   return (
     <div className="flex flex-col gap-2 p-4 rounded-lg border border-border bg-card/50">
-      <Skeleton className="h-4 w-3/4 mb-1" />
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-5/6" />
+      <Skeleton className="h-4 w-3/4 mb-1 bg-foreground/10" />
+      <Skeleton className="h-3 w-full bg-foreground/10" />
+      <Skeleton className="h-3 w-5/6 bg-foreground/10" />
       <div className="flex justify-between mt-auto pt-3">
         <div className="flex gap-1">
-          <Skeleton className="h-3 w-10" />
-          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-3 w-10 bg-foreground/10" />
+          <Skeleton className="h-3 w-10 bg-foreground/10" />
         </div>
-        <Skeleton className="h-3 w-12" />
+        <Skeleton className="h-3 w-12 bg-foreground/10" />
       </div>
     </div>
   );
@@ -29,12 +29,12 @@ function FolderCardSkeleton() {
   return (
     <div className="flex flex-col gap-1.5 text-left w-full rounded-lg p-3 bg-card border border-border">
       <div className="flex items-center gap-2 mb-0.5">
-        <Skeleton className="h-4 w-4 shrink-0 rounded-[3px]" />
-        <Skeleton className="h-3 w-1/2" />
+        <Skeleton className="h-4 w-4 shrink-0 rounded-[3px] bg-foreground/10" />
+        <Skeleton className="h-3 w-1/2 bg-foreground/10" />
       </div>
       <div className="flex items-center justify-between mt-1">
-        <Skeleton className="h-2 w-16" />
-        <Skeleton className="h-2 w-12" />
+        <Skeleton className="h-2 w-16 bg-foreground/10" />
+        <Skeleton className="h-2 w-12 bg-foreground/10" />
       </div>
     </div>
   );
