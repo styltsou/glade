@@ -107,7 +107,7 @@ export function HomeView() {
                   variant="outline"
                   size="sm"
                   onClick={() => openCreateFolder(currentFolder || undefined)}
-                  className="shadow-sm active:scale-95 font-semibold"
+                  className="shadow-sm font-semibold"
                 >
                   <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
                   New folder
@@ -115,7 +115,7 @@ export function HomeView() {
                 <Button
                   size="sm"
                   onClick={() => createNote(currentFolder || undefined)}
-                  className="shadow-md active:scale-95 font-semibold"
+                  className="shadow-md font-semibold"
                 >
                   <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
                   New note
@@ -196,7 +196,7 @@ export function HomeView() {
                     variant="outline"
                     size="sm"
                     onClick={() => openCreateFolder(currentFolder || undefined)}
-                    className="shadow-sm active:scale-95 font-semibold"
+                    className="shadow-sm font-semibold"
                   >
                     <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
                     New folder
@@ -204,7 +204,7 @@ export function HomeView() {
                   <Button
                     size="sm"
                     onClick={() => createNote(currentFolder || undefined)}
-                    className="shadow-md active:scale-95 font-semibold"
+                    className="shadow-md font-semibold"
                   >
                     <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
                     Create note
