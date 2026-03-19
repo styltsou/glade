@@ -279,6 +279,12 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       await invoke("move_entry", { fromPath, toPath });
       await get().loadVault();
       await get().loadTags();
+      get().loadFolderNotes();
+
+      const { activeNote } = get();
+      if (activeNote?.path === fromPath) {
+        set({ activeNote: { ...activeNote, path: toPath } as NoteData });
+      }
     } catch (e) {
       set({ entries: originalEntries, vaultError: String(e) });
     }
