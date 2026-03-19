@@ -171,6 +171,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       
       const newEntries = addEntryToTree(get().entries, parentPath, newEntry);
       set({ entries: newEntries });
+      get().loadFolderNotes();
     } catch (e) {
       set({ vaultError: String(e) });
     }
