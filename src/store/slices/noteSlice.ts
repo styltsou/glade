@@ -136,6 +136,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     
     try {
       await invoke("rename_note", { path, newTitle });
+      get().loadFolderNotes();
     } catch (e) {
       await get().loadVault();
       set({ vaultError: String(e) });
@@ -144,9 +145,12 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
 
   renameFolder: async (path: string, newName: string) => {
     try {
-      await invoke("rename_folder", { path, new_name: newName });
+      await invoke("rename_folder", { path, newName });
       await get().loadVault();
+      await get().loadTags();
+      get().loadFolderNotes();
     } catch (e) {
+      await get().loadVault();
       set({ vaultError: String(e) });
     }
   },

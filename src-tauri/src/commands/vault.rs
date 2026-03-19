@@ -58,6 +58,18 @@ pub async fn create_folder(path: String) -> Result<(), AppError> {
 /// Rename a folder inside the vault.
 #[tauri::command]
 pub async fn rename_folder(path: String, new_name: String) -> Result<(), AppError> {
+    let new_name = new_name.trim();
+    
+    if new_name.is_empty() {
+        return Err(AppError::InvalidPath("Folder name cannot be empty".into()));
+    }
+    
+    if new_name.contains('/') || new_name.contains('\\') {
+        return Err(AppError::InvalidPath(format!(
+            "Folder name cannot contain path separators: {}", new_name
+        )));
+    }
+
     let vault_path = vault::get_vault_path()?;
     let full_path = vault_path.join(&path);
 
@@ -70,7 +82,7 @@ pub async fn rename_folder(path: String, new_name: String) -> Result<(), AppErro
     }
 
     let parent = full_path.parent().unwrap_or(&vault_path);
-    let new_full_path = parent.join(&new_name);
+    let new_full_path = parent.join(new_name);
 
     if new_full_path.exists() {
         return Err(AppError::InvalidPath(format!("Folder already exists: {}", new_name)));
@@ -78,7 +90,6 @@ pub async fn rename_folder(path: String, new_name: String) -> Result<(), AppErro
 
     fs::rename(&full_path, &new_full_path)?;
     
-    // Invalidate vault tree cache
     vault::invalidate_vault_cache();
     
     Ok(())

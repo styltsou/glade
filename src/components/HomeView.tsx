@@ -66,9 +66,10 @@ export function HomeView() {
   const currentEntry = currentFolder
     ? findEntryByPath(entries, currentFolder)
     : null;
-  const subFolders = currentFolder
+  const subFolders = (currentFolder
     ? currentEntry?.children.filter((e) => e.is_dir) || []
-    : entries.filter((e) => e.is_dir);
+    : entries.filter((e) => e.is_dir)
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   const expectedNoteCount = currentFolder
     ? currentEntry?.children.filter((e) => !e.is_dir).length || 0
@@ -163,7 +164,7 @@ export function HomeView() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {[...folderNotes]
-                    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
+                    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.title.localeCompare(b.title))
                     .map((card) => (
                       <NoteCard key={card.path} card={card} />
                     ))}
