@@ -9,7 +9,6 @@ import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
 import { SearchResultsList } from "@/components/sidebar/SearchResultsList";
 import { TagsPanel } from "@/components/sidebar/TagsPanel";
-import { SidebarFooter } from "@/components/sidebar/SidebarFooter";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -99,7 +98,6 @@ export function Sidebar() {
             {isSearchActive ? <SearchResultsList /> : <FileTree />}
           </div>
           <TagsPanel />
-          <SidebarFooter />
         </div>
       </motion.aside>
 

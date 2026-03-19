@@ -64,11 +64,10 @@ export function FileTree() {
   const createNote = useStore((state) => state.createNote);
   const openCreateFolder = useStore((state) => state.openCreateFolder);
   const activeTagFilters = useStore((state) => state.activeTagFilters);
-  const sidebarSort = useStore((state) => state.sidebarSort);
   const moveEntry = useStore((state) => state.moveEntry);
 
   const filteredByTags = filterByTags(entries, activeTagFilters);
-  const sortedEntries = sortEntries(filteredByTags, sidebarSort);
+  const sortedEntries = sortEntries(filteredByTags);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

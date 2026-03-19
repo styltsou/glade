@@ -54,7 +54,9 @@ pub struct NoteData {
     pub preview: String,
 }
 
-fn is_false(v: &bool) -> bool { !*v }
+fn is_false(v: &bool) -> bool {
+    !*v
+}
 
 /// Frontmatter metadata parsed from a note.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -94,6 +96,13 @@ pub struct NoteCard {
     pub pinned: bool,
 }
 
+/// Persistent sound mixer state for one sound.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SoundState {
+    pub enabled: bool,
+    pub volume: f64,
+}
+
 /// The persistent sidebar UI state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SidebarState {
@@ -101,11 +110,10 @@ pub struct SidebarState {
     pub tags_collapsed: bool,
     pub width: u32,
     pub tags_height: u32,
-    /// One of: "name-asc", "name-desc", "modified"
-    pub sort: String,
-    /// Folder paths that are currently expanded in the sidebar
     #[serde(default)]
     pub expanded_folders: Vec<String>,
+    #[serde(default)]
+    pub sound_states: std::collections::HashMap<String, SoundState>,
 }
 
 impl Default for SidebarState {
@@ -115,8 +123,8 @@ impl Default for SidebarState {
             tags_collapsed: true,
             width: 260,
             tags_height: 200,
-            sort: "name-asc".to_string(),
             expanded_folders: Vec::new(),
+            sound_states: std::collections::HashMap::new(),
         }
     }
 }

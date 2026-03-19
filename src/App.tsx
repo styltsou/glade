@@ -101,6 +101,7 @@ function App() {
   useEffect(() => {
     const init = async () => {
       await initializeApp();
+      // initSounds(); // Disabled to debug
       setIsReady(true);
     };
     init();

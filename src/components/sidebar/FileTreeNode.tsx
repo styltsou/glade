@@ -52,7 +52,6 @@ function useFileTreeStore() {
   const openCreateFolder = useStore((state) => state.openCreateFolder);
   const pinNote = useStore((state) => state.pinNote);
   const prefetchNote = useStore((state) => state.prefetchNote);
-  const sidebarSort = useStore((state) => state.sidebarSort);
   const openRename = useStore((state) => state.openRename);
   const openDelete = useStore((state) => state.openDelete);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
@@ -67,7 +66,6 @@ function useFileTreeStore() {
     openCreateFolder,
     pinNote,
     prefetchNote,
-    sidebarSort,
     openRename,
     openDelete,
     navigateToFolder,
@@ -85,7 +83,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
     openCreateFolder,
     pinNote,
     prefetchNote,
-    sidebarSort,
     openRename,
     openDelete,
     navigateToFolder,
@@ -126,7 +123,7 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
   const isIntoFolder = isDropIntoFolder(dropPosition, entry.is_dir);
 
   if (entry.is_dir) {
-    const children = sortEntries(entry.children, sidebarSort);
+    const children = sortEntries(entry.children);
 
     return (
       <div 

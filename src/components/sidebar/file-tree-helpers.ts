@@ -1,29 +1,10 @@
-import type { SortMode, VaultEntry } from "@/types";
+import type { VaultEntry } from "@/types";
 
-export function sortEntries(
-  entries: VaultEntry[],
-  sort: SortMode
-): VaultEntry[] {
+export function sortEntries(entries: VaultEntry[]): VaultEntry[] {
   return [...entries].sort((a, b) => {
-    // 1. Folders always come before files
     if (a.is_dir && !b.is_dir) return -1;
     if (!a.is_dir && b.is_dir) return 1;
-
-    // 2. Both are same type, apply specific sort logic
-    if (sort === "name-asc") {
-      return a.name.localeCompare(b.name);
-    }
-    if (sort === "name-desc") {
-      return b.name.localeCompare(a.name);
-    }
-    if (sort === "modified") {
-      if (!a.modified && !b.modified) return 0;
-      if (!a.modified) return 1;
-      if (!b.modified) return -1;
-      return new Date(b.modified).getTime() - new Date(a.modified).getTime();
-    }
-    
-    return 0;
+    return a.name.localeCompare(b.name);
   });
 }
 
@@ -43,7 +24,7 @@ export function filterByTags(
     })
     .filter((entry) => {
       if (entry.is_dir) return entry.children.length > 0;
-      // Show note if it has ANY of the selected tags
+      // OR logic: show note if it has ANY of the selected tags
       return entry.tags.some((tag) => tagFilters.includes(tag));
     });
 }

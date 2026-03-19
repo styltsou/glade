@@ -1,8 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useStore } from "@/store";
 import { ChevronDown, ChevronRight, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TagCount } from "@/types";
+
+const TAGS_MIN_HEIGHT = 40;
+const TAGS_MAX_HEIGHT = 600;
 
 export function TagsPanel() {
   const tags = useStore((state) => state.tags);
@@ -16,26 +19,26 @@ export function TagsPanel() {
   const setTagsHeight = useStore((state) => state.setTagsHeight);
 
   const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef<{ mouseY: number; height: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    resizeStartRef.current = { mouseY: e.clientY, height: tagsHeight };
     setIsResizing(true);
   };
 
   useEffect(() => {
-    if (!isResizing) return;
+    if (!isResizing || !resizeStartRef.current) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Tags panel is at the bottom, so dragging UP (smaller Y) increases height
-      // The tags panel container itself is at the bottom of the sidebar.
-      // We need to calculate height based on the difference from the current position.
-      // A simpler way: use the window height minus the mouse position to get distance from bottom.
-      const newHeight = Math.max(40, Math.min(600, window.innerHeight - e.clientY - 60)); // 60 is approx footer + header height
+      const delta = resizeStartRef.current!.mouseY - e.clientY;
+      const newHeight = Math.max(TAGS_MIN_HEIGHT, Math.min(TAGS_MAX_HEIGHT, resizeStartRef.current!.height + delta));
       setTagsHeight(newHeight);
     };
 
     const handleMouseUp = () => {
       setIsResizing(false);
+      resizeStartRef.current = null;
       useStore.getState().saveSidebarState();
     };
 

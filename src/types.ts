@@ -71,11 +71,3 @@ export interface NoteSearchResult {
   preview?: string;
   tags: string[];
 }
-
-export type SortMode = "name-asc" | "name-desc" | "modified";
-
-/** Persistent sidebar UI state. */
-export interface SidebarState {
-  collapsed: boolean;
-  sort: SortMode;
-}

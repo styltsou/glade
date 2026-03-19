@@ -1,29 +1,37 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { SortMode } from "@/types";
+import type { SoundId } from "@/lib/sounds";
 
-const SORT_CYCLE: SortMode[] = ["name-asc", "name-desc", "modified"];
+export interface SoundState {
+  enabled: boolean;
+  volume: number;
+}
 
 export interface SidebarSlice {
   sidebarCollapsed: boolean;
   tagsCollapsed: boolean;
-  sidebarSort: SortMode;
   sidebarWidth: number;
   tagsHeight: number;
   isSidebarLoaded: boolean;
   expandedFolders: Set<string>;
+  soundStates: Record<SoundId, SoundState>;
 
   loadSidebarState: () => Promise<void>;
   toggleSidebarCollapsed: () => Promise<void>;
   toggleTagsCollapsed: () => Promise<void>;
   toggleFolderExpanded: (path: string) => void;
-  cycleSidebarSort: () => Promise<void>;
-  setSidebarSort: (sort: SortMode) => Promise<void>;
   setSidebarWidth: (width: number) => void;
   setTagsHeight: (height: number) => void;
+  setSoundStates: (states: Record<SoundId, SoundState>) => void;
   saveSidebarState: () => Promise<void>;
 }
 import type { StoreState } from "../index";
+
+const DEFAULT_SOUND_STATES: Record<SoundId, SoundState> = {
+  rain: { enabled: false, volume: 0.7 },
+  whiteNoise: { enabled: false, volume: 0.7 },
+  people: { enabled: false, volume: 0.7 },
+};
 
 let _folderSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -32,9 +40,9 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
   tagsCollapsed: true,
   sidebarWidth: 260,
   tagsHeight: 200,
-  sidebarSort: "name-asc",
   isSidebarLoaded: false,
   expandedFolders: new Set<string>(),
+  soundStates: DEFAULT_SOUND_STATES,
 
   loadSidebarState: async () => {
     try {
@@ -43,16 +51,20 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
         tags_collapsed: boolean;
         width: number;
         tags_height: number;
-        sort: SortMode;
         expanded_folders: string[];
+        sound_states?: Record<string, { enabled: boolean; volume: number }>;
       }>("get_sidebar_state");
       set({
         sidebarCollapsed: state.collapsed,
         tagsCollapsed: state.tags_collapsed,
         sidebarWidth: state.width || 260,
         tagsHeight: state.tags_height || 200,
-        sidebarSort: state.sort,
         expandedFolders: new Set(state.expanded_folders || []),
+        soundStates: state.sound_states
+          ? (Object.fromEntries(
+              Object.entries(state.sound_states).map(([k, v]) => [k, { enabled: v.enabled, volume: v.volume }])
+            ) as Record<SoundId, SoundState>)
+          : DEFAULT_SOUND_STATES,
         isSidebarLoaded: true,
       });
     } catch {
@@ -80,23 +92,10 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
       next.add(path);
     }
     set({ expandedFolders: next });
-    // Debounce the save to avoid spamming the backend
     if (_folderSaveTimer) clearTimeout(_folderSaveTimer);
     _folderSaveTimer = setTimeout(() => {
       get().saveSidebarState();
     }, 500);
-  },
-
-  cycleSidebarSort: async () => {
-    const current = get().sidebarSort;
-    const idx = SORT_CYCLE.indexOf(current);
-    const next = SORT_CYCLE[(idx + 1) % SORT_CYCLE.length] as SortMode;
-    await get().setSidebarSort(next);
-  },
-
-  setSidebarSort: async (sort: SortMode) => {
-    set({ sidebarSort: sort });
-    await get().saveSidebarState();
   },
 
   setSidebarWidth: (width: number) => {
@@ -107,6 +106,11 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
     set({ tagsHeight: height });
   },
 
+  setSoundStates: (states: Record<SoundId, SoundState>) => {
+    set({ soundStates: states });
+    get().saveSidebarState();
+  },
+
   saveSidebarState: async () => {
     try {
       await invoke("save_sidebar_state", {
@@ -115,8 +119,10 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
           tags_collapsed: get().tagsCollapsed,
           width: get().sidebarWidth,
           tags_height: get().tagsHeight,
-          sort: get().sidebarSort,
           expanded_folders: Array.from(get().expandedFolders),
+          sound_states: Object.fromEntries(
+            Object.entries(get().soundStates).map(([k, v]) => [k, { enabled: v.enabled, volume: v.volume }])
+          ),
         },
       });
     } catch (e) {

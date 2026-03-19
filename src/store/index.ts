@@ -30,8 +30,10 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "glade-store",
-      // Only persist theme and mode, let other state be non-persistent
-      partialize: (state) => ({ theme: state.theme, mode: state.mode } as StoreState),
+      partialize: (state) => ({ 
+        theme: state.theme, 
+        mode: state.mode,
+      } as StoreState),
     }
   )
 );

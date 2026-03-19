@@ -250,11 +250,11 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       // 4. Refresh global tags list (this is usually fast and non-disruptive)
       await get().loadTags();
       
-      // We no longer call loadVault() here because we've updated entries optimistically,
-      // and loadVault() is what causes the flash by toggling isVaultLoading.
+      // We skip loadVault() on success since entries are updated optimistically above.
+      // This avoids the flash caused by toggling isVaultLoading.
     } catch (e) {
       set({ vaultError: String(e) });
-      // On error, a full reload might be safest to ensure consistency
+      // On error, reload vault to ensure consistency
       await get().loadVault();
     }
   },
