@@ -87,6 +87,66 @@ pub async fn write_note(path: String, content: String) -> Result<(), AppError> {
     Ok(())
 }
 
+fn find_unique_title(dir: &std::path::Path, base_title: &str, is_copy: bool) -> Result<String, AppError> {
+    let mut titles_in_dir = std::collections::HashSet::new();
+    
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|e| e.to_str()).map_or(false, |e| e == "md") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    let (meta, _) = vault::parse_frontmatter(&content);
+                    if let Some(title) = meta.title {
+                        titles_in_dir.insert(title);
+                    }
+                }
+            }
+        }
+    }
+    
+    if !titles_in_dir.contains(base_title) {
+        return Ok(base_title.to_string());
+    }
+    
+    let without_copy = if is_copy {
+        base_title.strip_suffix(" (copy)").map(|s| s.trim()).unwrap_or(base_title).to_string()
+    } else {
+        base_title.to_string()
+    };
+    
+    let mut counter = if is_copy { 2 } else { 2 };
+    loop {
+        let candidate = if is_copy {
+            format!("{} (copy) {}", without_copy, counter)
+        } else {
+            format!("{} {}", without_copy, counter)
+        };
+        
+        if !titles_in_dir.contains(&candidate) {
+            return Ok(candidate);
+        }
+        counter += 1;
+    }
+}
+
+fn slugify(s: &str) -> String {
+    s.chars()
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' {
+                c.to_ascii_lowercase()
+            } else if c.is_whitespace() {
+                '-'
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
 /// Create a new note in the given folder (or vault root).
 #[tauri::command]
 pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
@@ -101,18 +161,20 @@ pub async fn create_note(folder: Option<String>) -> Result<NoteData, AppError> {
         fs::create_dir_all(&target_dir)?;
     }
 
-    // Find a unique filename
-    let mut filename = "Untitled.md".to_string();
+    let unique_title = find_unique_title(&target_dir, "Untitled", false)?;
+    
+    let base_slug = slugify(&unique_title);
+    let mut filename = format!("{}.md", base_slug);
     let mut counter = 1;
     while target_dir.join(&filename).exists() {
-        filename = format!("Untitled {}.md", counter);
+        filename = format!("{} {}.md", base_slug, counter);
         counter += 1;
     }
 
     let now = Utc::now().to_rfc3339();
     let meta = NoteMeta {
         id: Some(uuid::Uuid::new_v4().to_string()),
-        title: Some("Untitled".into()),
+        title: Some(unique_title),
         tags: vec![],
         created: Some(now.clone()),
         updated: Some(now),
@@ -160,7 +222,9 @@ pub async fn rename_note(path: String, new_title: String) -> Result<(), AppError
     let content = fs::read_to_string(&full_path)?;
     let (mut meta, body) = vault::parse_frontmatter(&content);
 
-    meta.title = Some(new_title);
+    let parent = full_path.parent().unwrap_or(&vault_path);
+    let unique_title = find_unique_title(parent, &new_title, false)?;
+    meta.title = Some(unique_title);
     meta.updated = Some(Utc::now().to_rfc3339());
 
     let frontmatter = vault::build_frontmatter(&meta);
@@ -189,9 +253,11 @@ pub async fn duplicate_note(path: String) -> Result<NoteData, AppError> {
     let curr_title = meta.title.clone().unwrap_or_else(|| {
         full_path.file_stem().map(|s| s.to_string_lossy().to_string()).unwrap_or_default()
     });
-    meta.title = Some(format!("{} (copy)", curr_title));
     
     let parent = full_path.parent().unwrap_or(&vault_path);
+    let unique_title = find_unique_title(parent, &curr_title, true)?;
+    meta.title = Some(unique_title);
+    
     let stem = full_path.file_stem().unwrap_or_default().to_string_lossy().to_string();
     let ext = full_path.extension().unwrap_or_default().to_string_lossy().to_string();
     
