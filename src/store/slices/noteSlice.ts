@@ -177,23 +177,50 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
   },
 
   deleteEntry: async (path: string) => {
-    const { activeNote, entries, noteCache, pinnedNotes } = get();
+    const { activeNote, entries, noteCache, pinnedNotes, folderNotes } = get();
     
     const newEntries = removeEntryFromTree(entries, path);
+
     const newCache = { ...noteCache };
     delete newCache[path];
+    if (path.includes('/')) {
+      const folderPrefix = path + '/';
+      for (const cachePath of Object.keys(newCache)) {
+        if (cachePath.startsWith(folderPrefix)) {
+          delete newCache[cachePath];
+        }
+      }
+    }
 
-    const newPinned = pinnedNotes.filter((n: { path: string }) => n.path !== path);
+    const newPinned = pinnedNotes.filter((n: { path: string }) => {
+      if (n.path === path) return false;
+      if (path.includes('/')) {
+        const folderPrefix = path + '/';
+        if (n.path.startsWith(folderPrefix)) return false;
+      }
+      return true;
+    });
+
+    const newFolderNotes = folderNotes.filter((n: { path: string }) => {
+      if (n.path === path) return false;
+      if (path.includes('/')) {
+        const folderPrefix = path + '/';
+        if (n.path.startsWith(folderPrefix)) return false;
+      }
+      return true;
+    });
 
     set({
       entries: newEntries,
       activeNote: activeNote?.path === path ? null : activeNote,
       noteCache: newCache,
       pinnedNotes: newPinned,
+      folderNotes: newFolderNotes,
     });
     
     try {
       await invoke("delete_entry", { path });
+      get().loadFolderNotes();
     } catch (e) {
       await get().loadVault();
       set({ vaultError: String(e) });
@@ -202,26 +229,9 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
 
   createFolder: async (path: string) => {
     try {
-      const folderName = path.split("/").pop() || path;
-      const parentPath = path.includes("/")
-        ? path.substring(0, path.lastIndexOf("/"))
-        : undefined;
-
-      const newEntry: VaultEntry = {
-        id: path, // Folders use their path as a stable ID for now
-        name: folderName,
-        path: path,
-        is_dir: true,
-        children: [],
-        modified: new Date().toISOString(),
-        tags: [],
-      };
-
-      const newEntries = addEntryToTree(get().entries, parentPath, newEntry);
-      set({ entries: newEntries, vaultError: null });
-
       await invoke("create_folder", { path });
       await get().loadVault();
+      get().loadFolderNotes();
     } catch (e) {
       set({ vaultError: String(e) });
       await get().loadVault();
