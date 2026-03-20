@@ -31,6 +31,7 @@ export function Editor() {
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
     "idle",
   );
+  const saveStatusRef = useRef<"unsaved" | "saved" | "idle">("idle");
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -79,19 +80,21 @@ export function Editor() {
       latestContentRef.current = markdown;
 
       if (markdown !== lastSavedContentRef.current) {
+        saveStatusRef.current = "unsaved";
         setSaveStatus("unsaved");
       }
     },
   });
 
   const saveNow = useCallback(async () => {
-    if (!activeNote || saveStatus !== "unsaved") return;
+    if (!activeNote || saveStatusRef.current !== "unsaved") return;
 
     const content = latestContentRef.current;
     pendingSaveRef.current = (async () => {
       try {
         await saveNote(activeNote.path, content);
         lastSavedContentRef.current = content;
+        saveStatusRef.current = "saved";
         setSaveStatus("saved");
       } catch {
         // Keep unsaved status on error
@@ -101,7 +104,7 @@ export function Editor() {
     })();
 
     return pendingSaveRef.current;
-  }, [activeNote, saveNote, saveStatus]);
+  }, [activeNote, saveNote]);
 
   // Keyboard shortcut for Ctrl+S / Cmd+S
   useEffect(() => {
@@ -159,6 +162,7 @@ export function Editor() {
           } catch {
             // Keep unsaved status on error
           } finally {
+            saveStatusRef.current = "idle";
             setSaveStatus("idle");
           }
         })();
@@ -190,6 +194,7 @@ export function Editor() {
       }
 
       setSaveStatus("idle");
+      saveStatusRef.current = "idle";
       isLoadingRef.current = false;
     }
   }, [
@@ -232,6 +237,7 @@ export function Editor() {
       setIsRawMode(false);
       latestContentRef.current = rawContent;
       if (rawContent !== lastSavedContentRef.current) {
+        saveStatusRef.current = "unsaved";
         setSaveStatus("unsaved");
         await saveNow();
       }
@@ -255,12 +261,13 @@ export function Editor() {
     (value: string) => {
       setRawContent(value);
       if (activeNote) {
-        if (saveStatus !== "unsaved") {
+        if (saveStatusRef.current !== "unsaved") {
+          saveStatusRef.current = "unsaved";
           setSaveStatus("unsaved");
         }
       }
     },
-    [activeNote, saveStatus],
+    [activeNote],
   );
 
   if (!activeNote) {
