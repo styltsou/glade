@@ -43,6 +43,7 @@ export function Editor() {
   const lastSavedContentRef = useRef<string>("");
   const latestContentRef = useRef<string>("");
   const pendingSaveRef = useRef<Promise<void> | null>(null);
+  const skipUpdateRef = useRef(false);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
@@ -75,6 +76,12 @@ export function Editor() {
     },
     onUpdate: ({ editor }) => {
       if (!activeNote || isLoadingRef.current) return;
+
+      // Skip the first onUpdate after loading content (fires during setContent)
+      if (skipUpdateRef.current) {
+        skipUpdateRef.current = false;
+        return;
+      }
 
       const markdown = (editor.storage as any).markdown.getMarkdown();
 
@@ -179,6 +186,8 @@ export function Editor() {
         // Set refs BEFORE setContent so onUpdate sees correct values
         lastSavedContentRef.current = activeNote.body || "";
         latestContentRef.current = activeNote.body || "";
+        // Skip the first onUpdate (fires during setContent)
+        skipUpdateRef.current = true;
         editor.commands.setContent(activeNote.body || "");
         setRawContent(activeNote.body || "");
 
