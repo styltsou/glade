@@ -90,14 +90,15 @@ export function Editor() {
     if (!activeNote || saveStatusRef.current !== "unsaved") return;
 
     const content = latestContentRef.current;
+    lastSavedContentRef.current = content;
     pendingSaveRef.current = (async () => {
       try {
         await saveNote(activeNote.path, content);
-        lastSavedContentRef.current = content;
         saveStatusRef.current = "saved";
         setSaveStatus("saved");
       } catch {
-        // Keep unsaved status on error
+        saveStatusRef.current = "unsaved";
+        setSaveStatus("unsaved");
       } finally {
         pendingSaveRef.current = null;
       }
@@ -155,10 +156,11 @@ export function Editor() {
 
       // Save any unsaved changes before switching
       if (latestContentRef.current !== lastSavedContentRef.current) {
+        const contentToSave = latestContentRef.current;
+        lastSavedContentRef.current = contentToSave;
         (async () => {
           try {
-            await saveNote(activeNote.path, latestContentRef.current);
-            lastSavedContentRef.current = latestContentRef.current;
+            await saveNote(activeNote.path, contentToSave);
           } catch {
             // Keep unsaved status on error
           } finally {
