@@ -1,7 +1,5 @@
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { BookOpen as ReaderIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "motion/react";
 
 interface NoteHeaderProps {
   notePath: string;
@@ -21,23 +19,9 @@ export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteH
       </div>
 
       <div className="flex items-center gap-4 shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
-        <AnimatePresence mode="wait">
-          {saveStatus !== "idle" && (
-            <motion.span
-              key={saveStatus}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={cn(
-                "text-muted-foreground",
-                saveStatus === "saved" && "text-primary font-medium"
-              )}
-            >
-              {saveStatus === "saved" ? "Saved" : "Unsaved"}
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <span className="text-muted-foreground">
+          {saveStatus === "saved" ? "Saved" : "Unsaved"}
+        </span>
         {dateLabel && (
           <div className="flex items-center gap-1.5 opacity-70">
             <ReaderIcon className="w-4 h-4" />

@@ -15,9 +15,6 @@ import { formatNoteDate } from "@/lib/dates";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 
-const AUTOSAVE_DELAY = 800;
-const SAVED_BADGE_TIMEOUT = 2000;
-
 export function Editor() {
   const activeNote = useStore((state) => state.activeNote);
   const saveNote = useStore((state) => state.saveNote);
@@ -34,13 +31,12 @@ export function Editor() {
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
     "idle",
   );
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const lastSavedContentRef = useRef<string>("");
   const latestContentRef = useRef<string>("");
+  const pendingSaveRef = useRef<Promise<void> | null>(null);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
@@ -84,64 +80,27 @@ export function Editor() {
 
       if (markdown !== lastSavedContentRef.current) {
         setSaveStatus("unsaved");
-        debouncedSave(activeNote.path, markdown);
       }
     },
   });
 
-  const debouncedSave = useCallback(
-    (path: string, content: string) => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
-
-      saveTimerRef.current = setTimeout(async () => {
-        try {
-          await saveNote(path, content);
-          lastSavedContentRef.current = content;
-
-          // Only set to "saved" if no newer changes were made while saving
-          if (latestContentRef.current === content) {
-            setSaveStatus("saved");
-
-            // Clear existing badge timer
-            if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
-
-            // Schedule fading out the badge
-            badgeTimerRef.current = setTimeout(() => {
-              setSaveStatus("idle");
-            }, SAVED_BADGE_TIMEOUT);
-          }
-        } catch {
-          // Keep unsaved status on error
-        }
-      }, AUTOSAVE_DELAY);
-    },
-    [saveNote],
-  );
-
   const saveNow = useCallback(async () => {
     if (!activeNote || saveStatus !== "unsaved") return;
 
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-
     const content = latestContentRef.current;
+    pendingSaveRef.current = (async () => {
+      try {
+        await saveNote(activeNote.path, content);
+        lastSavedContentRef.current = content;
+        setSaveStatus("saved");
+      } catch {
+        // Keep unsaved status on error
+      } finally {
+        pendingSaveRef.current = null;
+      }
+    })();
 
-    try {
-      await saveNote(activeNote.path, content);
-      lastSavedContentRef.current = content;
-      setSaveStatus("saved");
-
-      if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
-      badgeTimerRef.current = setTimeout(() => {
-        setSaveStatus("idle");
-      }, SAVED_BADGE_TIMEOUT);
-    } catch {
-      // Keep unsaved status on error
-    }
+    return pendingSaveRef.current;
   }, [activeNote, saveNote, saveStatus]);
 
   // Keyboard shortcut for Ctrl+S / Cmd+S
@@ -183,14 +142,26 @@ export function Editor() {
         );
       }
 
-      // Cancel any pending autosave from previous note
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-        saveTimerRef.current = null;
+      // Wait for any in-flight save to complete before proceeding
+      if (pendingSaveRef.current) {
+        (async () => {
+          await pendingSaveRef.current;
+          pendingSaveRef.current = null;
+        })();
       }
-      if (badgeTimerRef.current) {
-        clearTimeout(badgeTimerRef.current);
-        badgeTimerRef.current = null;
+
+      // Save any unsaved changes before switching
+      if (latestContentRef.current !== lastSavedContentRef.current) {
+        (async () => {
+          try {
+            await saveNote(activeNote.path, latestContentRef.current);
+            lastSavedContentRef.current = latestContentRef.current;
+          } catch {
+            // Keep unsaved status on error
+          } finally {
+            setSaveStatus("idle");
+          }
+        })();
       }
 
       const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
@@ -231,12 +202,6 @@ export function Editor() {
 
   useEffect(() => {
     return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
-      if (badgeTimerRef.current) {
-        clearTimeout(badgeTimerRef.current);
-      }
       if (scrollSaveTimerRef.current) {
         clearTimeout(scrollSaveTimerRef.current);
       }
@@ -262,8 +227,15 @@ export function Editor() {
   const toggleRawMode = useCallback(async () => {
     if (!editor || !activeNote) return;
     if (isRawMode) {
+      isLoadingRef.current = true;
       editor.commands.setContent(rawContent);
       setIsRawMode(false);
+      latestContentRef.current = rawContent;
+      if (rawContent !== lastSavedContentRef.current) {
+        setSaveStatus("unsaved");
+        await saveNow();
+      }
+      setTimeout(() => { isLoadingRef.current = false; }, 100);
     } else {
       try {
         const raw = await invoke<string>("read_note_raw", {
@@ -277,7 +249,7 @@ export function Editor() {
       }
       setIsRawMode(true);
     }
-  }, [editor, isRawMode, rawContent, activeNote]);
+  }, [editor, isRawMode, rawContent, activeNote, saveNow]);
 
   const onRawChange = useCallback(
     (value: string) => {
@@ -286,10 +258,9 @@ export function Editor() {
         if (saveStatus !== "unsaved") {
           setSaveStatus("unsaved");
         }
-        debouncedSave(activeNote.path, value);
       }
     },
-    [activeNote, debouncedSave, saveStatus],
+    [activeNote, saveStatus],
   );
 
   if (!activeNote) {
@@ -309,11 +280,9 @@ export function Editor() {
     );
   }
 
-  const dateLabel = activeNote.updated
-    ? formatNoteDate(activeNote.updated)
-    : activeNote.created
-      ? formatNoteDate(activeNote.created)
-      : null;
+  const dateLabel = activeNote.created
+    ? formatNoteDate(activeNote.created)
+    : null;
 
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
