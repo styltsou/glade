@@ -32,6 +32,11 @@ export function Editor() {
     "idle",
   );
   const saveStatusRef = useRef<"unsaved" | "saved" | "idle">("idle");
+
+  const setSaveStatusWithRef = useCallback((status: "unsaved" | "saved" | "idle") => {
+    saveStatusRef.current = status;
+    setSaveStatus(status);
+  }, []);
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -80,32 +85,30 @@ export function Editor() {
       latestContentRef.current = markdown;
 
       if (markdown !== lastSavedContentRef.current) {
-        saveStatusRef.current = "unsaved";
-        setSaveStatus("unsaved");
+        setSaveStatusWithRef("unsaved");
       }
     },
   });
 
   const saveNow = useCallback(async () => {
-    if (!activeNote || saveStatusRef.current !== "unsaved") return;
+    if (!activeNote) return;
+    if (latestContentRef.current === lastSavedContentRef.current) return;
 
     const content = latestContentRef.current;
     lastSavedContentRef.current = content;
     pendingSaveRef.current = (async () => {
       try {
         await saveNote(activeNote.path, content);
-        saveStatusRef.current = "saved";
-        setSaveStatus("saved");
+        setSaveStatusWithRef("saved");
       } catch {
-        saveStatusRef.current = "unsaved";
-        setSaveStatus("unsaved");
+        setSaveStatusWithRef("unsaved");
       } finally {
         pendingSaveRef.current = null;
       }
     })();
 
     return pendingSaveRef.current;
-  }, [activeNote, saveNote]);
+  }, [activeNote, saveNote, setSaveStatusWithRef]);
 
   // Keyboard shortcut for Ctrl+S / Cmd+S
   useEffect(() => {
@@ -164,8 +167,7 @@ export function Editor() {
           } catch {
             // Keep unsaved status on error
           } finally {
-            saveStatusRef.current = "idle";
-            setSaveStatus("idle");
+            setSaveStatusWithRef("idle");
           }
         })();
       }
@@ -195,8 +197,7 @@ export function Editor() {
         currentPathRef.current = activeNote.path;
       }
 
-      setSaveStatus("idle");
-      saveStatusRef.current = "idle";
+      setSaveStatusWithRef("idle");
       isLoadingRef.current = false;
     }
   }, [
@@ -239,8 +240,7 @@ export function Editor() {
       setIsRawMode(false);
       latestContentRef.current = rawContent;
       if (rawContent !== lastSavedContentRef.current) {
-        saveStatusRef.current = "unsaved";
-        setSaveStatus("unsaved");
+        setSaveStatusWithRef("unsaved");
         await saveNow();
       }
       setTimeout(() => { isLoadingRef.current = false; }, 100);
@@ -262,14 +262,11 @@ export function Editor() {
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
-      if (activeNote) {
-        if (saveStatusRef.current !== "unsaved") {
-          saveStatusRef.current = "unsaved";
-          setSaveStatus("unsaved");
-        }
+      if (activeNote && latestContentRef.current !== lastSavedContentRef.current) {
+        setSaveStatusWithRef("unsaved");
       }
     },
-    [activeNote],
+    [activeNote, setSaveStatusWithRef],
   );
 
   if (!activeNote) {
