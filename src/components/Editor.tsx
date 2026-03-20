@@ -176,10 +176,11 @@ export function Editor() {
 
       // Only update content if it actually changed
       if (pathChanged || currentMarkdown !== activeNote.body) {
-        editor.commands.setContent(activeNote.body || "");
-        setRawContent(activeNote.body || "");
+        // Set refs BEFORE setContent so onUpdate sees correct values
         lastSavedContentRef.current = activeNote.body || "";
         latestContentRef.current = activeNote.body || "";
+        editor.commands.setContent(activeNote.body || "");
+        setRawContent(activeNote.body || "");
 
         // Reset cursor position tracking for new note
         cursorPositionRef.current = null;
