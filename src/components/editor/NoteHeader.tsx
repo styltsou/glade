@@ -19,9 +19,11 @@ export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteH
       </div>
 
       <div className="flex items-center gap-4 shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
-        <span className="text-muted-foreground">
-          {saveStatus === "saved" ? "Saved" : "Unsaved"}
-        </span>
+        {saveStatus !== "idle" && (
+          <span className="text-muted-foreground">
+            {saveStatus === "saved" ? "Saved" : "Unsaved"}
+          </span>
+        )}
         {dateLabel && (
           <div className="flex items-center gap-1.5 opacity-70">
             <ReaderIcon className="w-4 h-4" />

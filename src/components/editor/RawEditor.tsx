@@ -42,7 +42,6 @@ const baseTheme = EditorView.theme({
     padding: "0 !important",
     whiteSpace: "pre-wrap !important",
     wordBreak: "break-word !important",
-    caretColor: "var(--foreground)",
   },
   ".cm-line": {
     padding: "0 !important",
@@ -51,6 +50,21 @@ const baseTheme = EditorView.theme({
   ".cm-scroller": {
     overflow: "visible !important",
     fontFamily: "var(--font-mono)",
+  },
+  ".cm-cursor": {
+    borderLeftColor: "var(--foreground)",
+    borderLeftWidth: "1px",
+    borderLeftStyle: "solid",
+    marginLeft: "-1px",
+  },
+  ".cm-dropCursor": {
+    borderLeftColor: "var(--foreground)",
+    borderLeftWidth: "1px",
+    borderLeftStyle: "solid",
+  },
+  "&.cm-focused .cm-selectionBackground": {
+    backgroundColor: "var(--primary) !important",
+    opacity: "0.3",
   },
   "&.cm-focused": {
     outline: "none",
@@ -65,14 +79,14 @@ export function RawEditor({ content, onChange }: RawEditorProps) {
     EditorView.lineWrapping,
     syntaxHighlighting(customHighlightStyle),
     baseTheme,
+    EditorView.editable.of(true),
   ], []);
 
   return (
-    <div className="codemirror-container">
+    <div className="codemirror-container relative">
       <CodeMirror
         value={content}
-        height="auto"
-        minHeight="500px"
+        height="100%"
         theme={resolvedTheme === "dark" ? "dark" : "light"}
         extensions={extensions}
         onChange={(value) => onChange(value)}
@@ -81,8 +95,14 @@ export function RawEditor({ content, onChange }: RawEditorProps) {
           foldGutter: false,
           highlightActiveLine: false,
           highlightSelectionMatches: false,
+          allowMultipleSelections: false,
+          indentOnInput: true,
+          defaultKeymap: true,
+          historyKeymap: true,
+          drawSelection: true,
+          dropCursor: true,
         }}
-        className="text-[14px] leading-[1.7]"
+        className="text-[14px] leading-[1.7] min-h-[300px] [&_.cm-editor]:outline-none [&_.cm-editor.cm-focused]:outline-none"
       />
     </div>
   );

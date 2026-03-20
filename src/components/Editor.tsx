@@ -44,6 +44,7 @@ export function Editor() {
   const latestContentRef = useRef<string>("");
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const skipUpdateRef = useRef(false);
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
@@ -92,6 +93,10 @@ export function Editor() {
       latestContentRef.current = markdown;
 
       if (markdown !== lastSavedContentRef.current) {
+        if (savedTimeoutRef.current) {
+          clearTimeout(savedTimeoutRef.current);
+          savedTimeoutRef.current = null;
+        }
         setSaveStatusWithRef("unsaved");
       }
     },
@@ -107,6 +112,11 @@ export function Editor() {
       try {
         await saveNote(activeNote.path, content);
         setSaveStatusWithRef("saved");
+        // Show "Saved" briefly, then transition to idle (hide label)
+        if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
+        savedTimeoutRef.current = setTimeout(() => {
+          setSaveStatusWithRef("idle");
+        }, 2000);
       } catch {
         setSaveStatusWithRef("unsaved");
       } finally {
@@ -174,6 +184,10 @@ export function Editor() {
           } catch {
             // Keep unsaved status on error
           } finally {
+            if (savedTimeoutRef.current) {
+              clearTimeout(savedTimeoutRef.current);
+              savedTimeoutRef.current = null;
+            }
             setSaveStatusWithRef("idle");
           }
         })();
@@ -223,6 +237,9 @@ export function Editor() {
       if (scrollSaveTimerRef.current) {
         clearTimeout(scrollSaveTimerRef.current);
       }
+      if (savedTimeoutRef.current) {
+        clearTimeout(savedTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -246,9 +263,11 @@ export function Editor() {
     if (!editor || !activeNote) return;
     if (isRawMode) {
       isLoadingRef.current = true;
+      // Skip the first onUpdate after setContent (TipTap serializes differently than raw markdown)
+      skipUpdateRef.current = true;
+      latestContentRef.current = rawContent;
       editor.commands.setContent(rawContent);
       setIsRawMode(false);
-      latestContentRef.current = rawContent;
       if (rawContent !== lastSavedContentRef.current) {
         setSaveStatusWithRef("unsaved");
         await saveNow();
@@ -272,7 +291,12 @@ export function Editor() {
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
+      latestContentRef.current = value;
       if (activeNote && latestContentRef.current !== lastSavedContentRef.current) {
+        if (savedTimeoutRef.current) {
+          clearTimeout(savedTimeoutRef.current);
+          savedTimeoutRef.current = null;
+        }
         setSaveStatusWithRef("unsaved");
       }
     },
