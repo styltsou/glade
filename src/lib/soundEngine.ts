@@ -38,11 +38,15 @@ class SoundEngine {
     if (!sound) return null;
 
     try {
+      console.log('Fetching sound:', sound.sampleFile);
       const response = await fetch(sound.sampleFile);
+      console.log('Response:', response.status, response.statusText);
       if (!response.ok) return null;
       
       const arrayBuffer = await response.arrayBuffer();
+      console.log('Decoding audio...');
       const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      console.log('Audio decoded successfully');
       this.audioBuffers.set(soundId, audioBuffer);
       return audioBuffer;
     } catch (error) {
@@ -79,13 +83,17 @@ class SoundEngine {
   }
 
   private stopSound(soundId: SoundId): void {
+    console.log('stopSound called for:', soundId);
     const node = this.soundNodes.get(soundId);
+    console.log('node:', node);
     if (!node) return;
 
     if (node.source) {
+      console.log('Stopping source for:', soundId);
       node.source.stop();
       node.source.disconnect();
       node.source = null;
+      console.log('Stopped and disconnected for:', soundId);
     }
   }
 

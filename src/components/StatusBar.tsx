@@ -66,6 +66,7 @@ export function StatusBar() {
 
     const current = soundStates[soundId];
     const newEnabled = !current.enabled;
+    console.log('toggleSound:', soundId, 'current.enabled:', current.enabled, 'newEnabled:', newEnabled, 'masterEnabled:', masterEnabled);
     
     const newStates = {
       ...soundStates,
@@ -73,9 +74,11 @@ export function StatusBar() {
     };
     
     if (newEnabled && masterEnabled) {
+      console.log('Starting sound:', soundId);
       engine.setSoundVolume(soundId, current.volume);
       await engine.setSoundEnabled(soundId, true);
     } else {
+      console.log('Stopping sound:', soundId);
       engine.setSoundEnabled(soundId, false);
     }
     
@@ -96,10 +99,24 @@ export function StatusBar() {
     });
   };
 
-  const handleMasterToggle = (enabled: boolean) => {
+  const handleMasterToggle = async (enabled: boolean) => {
     const engine = engineRef.current;
     if (engine) {
       engine.setMasterEnabled(enabled);
+      
+      if (enabled) {
+        for (const sound of SOUNDS) {
+          const state = soundStates[sound.id];
+          if (state?.enabled) {
+            engine.setSoundVolume(sound.id, state.volume);
+            await engine.setSoundEnabled(sound.id, true);
+          }
+        }
+      } else {
+        for (const sound of SOUNDS) {
+          engine.setSoundEnabled(sound.id, false);
+        }
+      }
     }
     setMasterEnabled(enabled);
   };

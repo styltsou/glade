@@ -8,6 +8,7 @@ export function useCommandShortcuts(
   const createNote = useStore((state) => state.createNote);
   const openDelete = useStore((state) => state.openDelete);
   const openSettings = useStore((state) => state.openSettings);
+  const toggleToc = useStore((state) => state.toggleToc);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -33,8 +34,15 @@ export function useCommandShortcuts(
           openDelete(activeNote.path, activeNote.title);
         }
       }
+      // Toggle TOC
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
+        e.preventDefault();
+        if (activeNote) {
+          toggleToc(activeNote.path);
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [createNote, activeNote, openDelete, openSettings, setOpen]);
+  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc]);
 }

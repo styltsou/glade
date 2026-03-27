@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
-import { FileText, Code, Copy, Check, Download } from "lucide-react";
+import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconSwitch } from "@/components/ui/icon-switch";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
@@ -13,6 +13,9 @@ interface NoteActionButtonsProps {
   onToggleRaw: () => void;
   notePath?: string;
   noteTitle?: string;
+  hasHeadings: boolean;
+  isTocOpen: boolean;
+  onToggleToc: () => void;
 }
 
 export function NoteActionButtons({
@@ -20,6 +23,9 @@ export function NoteActionButtons({
   onToggleRaw,
   notePath,
   noteTitle,
+  hasHeadings,
+  isTocOpen,
+  onToggleToc,
 }: NoteActionButtonsProps) {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
@@ -66,6 +72,20 @@ export function NoteActionButtons({
 
   return (
     <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        title="Table of Contents (Ctrl+Shift+T)"
+        onClick={onToggleToc}
+        disabled={!hasHeadings}
+        className={cn(
+          "h-8 w-8 p-0",
+          isTocOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+        )}
+      >
+        <BookOpen className="h-4 w-4" />
+      </Button>
+
       <IconSwitch
         checked={isRawMode}
         onCheckedChange={onToggleRaw}

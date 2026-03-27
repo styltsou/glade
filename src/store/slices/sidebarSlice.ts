@@ -60,11 +60,14 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
         sidebarWidth: state.width || 260,
         tagsHeight: state.tags_height || 200,
         expandedFolders: new Set(state.expanded_folders || []),
-        soundStates: state.sound_states
-          ? (Object.fromEntries(
-              Object.entries(state.sound_states).map(([k, v]) => [k, { enabled: v.enabled, volume: v.volume }])
-            ) as Record<SoundId, SoundState>)
-          : DEFAULT_SOUND_STATES,
+        soundStates: {
+          ...DEFAULT_SOUND_STATES,
+          ...(state.sound_states
+            ? Object.fromEntries(
+                Object.entries(state.sound_states).map(([k, v]) => [k, { enabled: v.enabled, volume: v.volume }])
+              )
+            : {}),
+        } as Record<SoundId, SoundState>,
         isSidebarLoaded: true,
       });
     } catch {

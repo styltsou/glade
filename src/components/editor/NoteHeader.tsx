@@ -1,5 +1,5 @@
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { BookOpen as ReaderIcon } from "lucide-react";
+import { Clock } from "lucide-react";
 
 interface NoteHeaderProps {
   notePath: string;
@@ -26,7 +26,7 @@ export function NoteHeader({ notePath, noteTitle, dateLabel, saveStatus }: NoteH
         )}
         {dateLabel && (
           <div className="flex items-center gap-1.5 opacity-70">
-            <ReaderIcon className="w-4 h-4" />
+            <Clock className="w-4 h-4" />
             <span>{dateLabel}</span>
           </div>
         )}

@@ -11,6 +11,7 @@ import {
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
+import { TableOfContents } from "@/components/editor/TableOfContents";
 import { formatNoteDate } from "@/lib/dates";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
@@ -25,12 +26,16 @@ export function Editor() {
   const updateNoteScrollPosition = useStore(
     (state) => state.updateNoteScrollPosition,
   );
+  const tocOpen = useStore((state) => state.tocOpen);
+  const toggleToc = useStore((state) => state.toggleToc);
 
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
     "idle",
   );
+  const [isMobile, setIsMobile] = useState(false);
+  const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
   const saveStatusRef = useRef<"unsaved" | "saved" | "idle">("idle");
 
   const setSaveStatusWithRef = useCallback((status: "unsaved" | "saved" | "idle") => {
@@ -243,6 +248,13 @@ export function Editor() {
     };
   }, []);
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   // Update recents list when note is opened
   useEffect(() => {
     if (activeNote) {
@@ -303,6 +315,39 @@ export function Editor() {
     [activeNote, setSaveStatusWithRef],
   );
 
+  // Keep TOC headings updated whenever editor changes
+  useEffect(() => {
+    if (!editor) {
+      setTocHeadings([]);
+      return;
+    }
+
+    const updateHeadings = () => {
+      const headings: { level: number; text: string; pos: number }[] = [];
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === "heading") {
+          const text = node.textContent.trim();
+          if (text) {
+            headings.push({
+              level: node.attrs.level,
+              text,
+              pos,
+            });
+          }
+        }
+        return true;
+      });
+      setTocHeadings(headings);
+    };
+
+    updateHeadings();
+
+    editor.on("update", updateHeadings);
+    return () => {
+      editor.off("update", updateHeadings);
+    };
+  }, [editor]);
+
   if (!activeNote) {
     return (
       <div className="flex flex-col flex-1 h-full bg-background items-center justify-center select-none">
@@ -324,6 +369,13 @@ export function Editor() {
     ? formatNoteDate(activeNote.created)
     : null;
 
+  const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
+  const handleToggleToc = useCallback(() => {
+    if (activeNote) {
+      toggleToc(activeNote.path);
+    }
+  }, [activeNote, toggleToc]);
+
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
       <NoteHeader
@@ -338,6 +390,8 @@ export function Editor() {
         onToggleRaw={toggleRawMode}
         notePath={activeNote.path}
         noteTitle={activeNote.title}
+        isTocOpen={isTocOpen}
+        onToggleToc={handleToggleToc}
       />
 
       <NoteEditor
@@ -348,6 +402,13 @@ export function Editor() {
         onRawChange={onRawChange}
         scrollRef={scrollRef}
         onScroll={handleScroll}
+      />
+      <TableOfContents
+        editor={editor}
+        isOpen={isTocOpen}
+        onClose={handleToggleToc}
+        isMobile={isMobile}
+        headings={tocHeadings}
       />
     </div>
   );

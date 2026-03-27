@@ -33,6 +33,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({ 
         theme: state.theme, 
         mode: state.mode,
+        tocOpen: state.tocOpen,
       } as StoreState),
     }
   )

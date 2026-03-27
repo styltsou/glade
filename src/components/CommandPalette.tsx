@@ -4,6 +4,7 @@ import {
   Plus as PlusIcon,
   Trash2 as TrashIcon,
   Upload as UploadIcon,
+  BookOpen as BookOpenIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -38,6 +39,7 @@ export function CommandPalette() {
   const openDelete = useStore((state) => state.openDelete);
   const openSettingsPage = useStore((state) => state.openSettingsPage);
   const openImport = useStore((state) => state.openImport);
+  const toggleToc = useStore((state) => state.toggleToc);
 
   // Register global shortcuts
   useCommandShortcuts(setOpen);
@@ -54,6 +56,11 @@ export function CommandPalette() {
         case "delete-note":
           if (activeNote) {
             openDelete(activeNote.path, activeNote.title);
+          }
+          break;
+        case "toggle-toc":
+          if (activeNote) {
+            toggleToc(activeNote.path);
           }
           break;
         case "manage-vaults":
@@ -80,6 +87,7 @@ export function CommandPalette() {
       openImport,
       selectNote,
       clearSearch,
+      toggleToc,
     ],
   );
 
@@ -178,6 +186,17 @@ export function CommandPalette() {
             <UploadIcon />
             <span>Import Files</span>
           </CommandItem>
+
+          {activeNote && (
+            <CommandItem
+              value="toggle table of contents"
+              onSelect={() => handleSelect("toggle-toc")}
+            >
+              <BookOpenIcon />
+              <span>Toggle Table of Contents</span>
+              <CommandShortcut>⌘⇧T</CommandShortcut>
+            </CommandItem>
+          )}
         </CommandGroup>
 
         {allNotes.length > 0 && <CommandSeparator />}

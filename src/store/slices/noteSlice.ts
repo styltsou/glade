@@ -19,6 +19,8 @@ export interface NoteSlice {
   createFolder: (path: string) => Promise<void>;
   updateNoteTags: (tags: string[]) => Promise<void>;
   moveEntry: (fromPath: string, toPath: string) => Promise<void>;
+  tocOpen: Record<string, boolean>;
+  toggleToc: (path: string) => void;
 }
 
 import type { StoreState } from "../index";
@@ -293,5 +295,16 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     } catch (e) {
       set({ entries: originalEntries, vaultError: String(e) });
     }
+  },
+
+  tocOpen: {},
+
+  toggleToc: (path: string) => {
+    set((state: StoreState) => ({
+      tocOpen: {
+        ...state.tocOpen,
+        [path]: !state.tocOpen[path],
+      },
+    }));
   },
 });
