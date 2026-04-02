@@ -16,9 +16,15 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
+import { formatRelativeDate } from "@/lib/dates";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
@@ -214,21 +220,30 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
-          <button
-            onClick={handleClick}
-            onMouseDown={handleMouseDown}
-            onMouseEnter={() => prefetchNote(entry.path)}
-            className={cn(
-              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
-              isActive
-                ? "bg-sidebar-accent text-foreground font-medium"
-                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
-            )}
-          >
-            <span className="truncate pr-1">{entry.name}</span>
-          </button>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
+              <button
+                onClick={handleClick}
+                onMouseDown={handleMouseDown}
+                onMouseEnter={() => prefetchNote(entry.path)}
+                className={cn(
+                  "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
+                  isActive
+                    ? "bg-sidebar-accent text-foreground font-medium"
+                    : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
+                )}
+              >
+                <span className="truncate pr-1">{entry.name}</span>
+              </button>
+            </div>
+          </TooltipTrigger>
+          {entry.created_at && (
+            <TooltipContent>
+              Created {formatRelativeDate(entry.created_at)}
+            </TooltipContent>
+          )}
+        </Tooltip>
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">

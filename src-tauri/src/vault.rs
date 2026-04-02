@@ -119,14 +119,11 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 is_dir: true,
                 children: sub_children,
                 modified: None,
+                created_at: None,
                 tags: vec![],
             });
         } else if name.ends_with(".md") {
             let metadata = entry.metadata()?;
-            let modified = metadata.modified().ok().and_then(|t| {
-                let datetime: chrono::DateTime<Utc> = t.into();
-                Some(datetime.to_rfc3339())
-            });
             let content = fs::read_to_string(&path).unwrap_or_default();
             let (meta, _) = parse_frontmatter(&content);
             let stem = path
@@ -147,6 +144,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 is_dir: false,
                 children: vec![],
                 modified,
+                created_at: meta.created,
                 tags: meta.tags,
             });
         }

@@ -93,6 +93,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         is_dir: false,
         children: [],
         modified: note.updated,
+        created_at: note.created,
         tags: note.tags,
       };
       
@@ -168,6 +169,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         is_dir: false,
         children: [],
         modified: note.updated,
+        created_at: note.created,
         tags: note.tags,
       };
       

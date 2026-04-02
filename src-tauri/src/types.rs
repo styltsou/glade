@@ -29,6 +29,8 @@ pub struct VaultEntry {
     pub children: Vec<VaultEntry>,
     /// Last modified timestamp (ISO 8601)
     pub modified: Option<String>,
+    /// Creation timestamp (ISO 8601)
+    pub created_at: Option<String>,
     /// Tags from frontmatter (only populated for notes)
     pub tags: Vec<String>,
 }

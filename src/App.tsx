@@ -11,6 +11,7 @@ import { ImportDialog } from "@/components/ImportDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OpenWithDialog } from "@/components/OpenWithDialog";
 import { SettingsPage } from "@/components/SettingsPage";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useStore } from "@/store";
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
@@ -145,32 +146,34 @@ function App() {
   }
 
   return (
-    <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
-      <div className="flex flex-1 overflow-hidden w-full relative">
-        {currentView !== "settings" && (
-          <>
-            <Sidebar />
-            {sidebarCollapsed && <SidebarCollapseToggle />}
-          </>
-        )}
-        <div className="flex-1 overflow-hidden flex flex-col relative">
-            {currentView === "settings" ? (
-              <SettingsPage />
-            ) : activeNote ? (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <Editor />
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                <HomeView />
-              </div>
-            )}
+    <TooltipProvider delayDuration={700} disableHoverableContent>
+      <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
+        <div className="flex flex-1 overflow-hidden w-full relative">
+          {currentView !== "settings" && (
+            <>
+              <Sidebar />
+              {sidebarCollapsed && <SidebarCollapseToggle />}
+            </>
+          )}
+          <div className="flex-1 overflow-hidden flex flex-col relative">
+              {currentView === "settings" ? (
+                <SettingsPage />
+              ) : activeNote ? (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <Editor />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  <HomeView />
+                </div>
+              )}
+          </div>
         </div>
-      </div>
-      <StatusBar />
-      {currentView !== "settings" && <CommandPalette />}
-      <SharedDialogs />
-    </main>
+        <StatusBar />
+        {currentView !== "settings" && <CommandPalette />}
+        <SharedDialogs />
+      </main>
+    </TooltipProvider>
   );
 }
 
