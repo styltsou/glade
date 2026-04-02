@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/store";
 import { PanelLeft, Plus, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -34,12 +35,10 @@ export function SidebarHeader() {
 
   useEffect(() => {
     if (isCreateDialogOpen) {
-      // Small delay to ensure the dialog and input are fully mounted and ready for focus
       const timer = setTimeout(() => {
         const input = document.getElementById("vault-name");
         if (input) {
           input.focus();
-          // If it's an input element, select the text too
           if (input instanceof HTMLInputElement) {
             input.select();
           }
@@ -49,11 +48,10 @@ export function SidebarHeader() {
     }
   }, [isCreateDialogOpen]);
 
-  // Reset isCreating state when dialog opens
   useEffect(() => {
     if (isCreateDialogOpen) {
       setIsCreating(false);
-      setError(""); // Also clear error when dialog opens
+      setError("");
     }
   }, [isCreateDialogOpen]);
 
@@ -67,8 +65,8 @@ export function SidebarHeader() {
   const handleCreateVault = async () => {
     if (!newVaultName.trim()) return;
     
-    setIsCreating(true); // Start loading
-    setError(""); // Clear previous errors
+    setIsCreating(true);
+    setError("");
 
     const slug = newVaultName
       .toLowerCase()
@@ -77,7 +75,7 @@ export function SidebarHeader() {
     
     if (vaults.some((v: Vault) => v.slug === slug)) {
       setError("A vault with this name already exists");
-      setIsCreating(false); // Stop loading if validation fails
+      setIsCreating(false);
       return;
     }
     
@@ -94,32 +92,37 @@ export function SidebarHeader() {
   };
 
   return (
-    <div className="flex items-center gap-1.5 px-2 py-2 shrink-0">
-      <div className="flex-1 flex items-center gap-1.5 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 rounded-md ring-offset-background">
-        <Select value={activeVault?.id} onValueChange={handleSelectVault} open={isSelectOpen} onOpenChange={setIsSelectOpen}>
-          <SelectTrigger size="sm" className="flex-1 font-medium border-0 focus:ring-0 focus:ring-offset-0">
-            <SelectValue placeholder="Select Vault" />
-          </SelectTrigger>
-          <SelectContent position="popper" className="max-h-[70vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
-            {vaults.map((vault: Vault) => (
-              <SelectItem key={vault.id} value={vault.id}>
-                <span>{vault.name}</span>
-              </SelectItem>
-            ))}
-            <SelectSeparator />
-            <div 
-              className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-sm"
-              onClick={() => {
-                setIsSelectOpen(false);
-                setIsCreateDialogOpen(true);
-              }}
-            >
-              <Plus className="size-4" />
-              <span>Create New Vault</span>
-            </div>
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="flex items-center h-10 shrink-0 border-b">
+      <Select value={activeVault?.id} onValueChange={handleSelectVault} open={isSelectOpen} onOpenChange={setIsSelectOpen}>
+        <SelectTrigger 
+          style={{ background: isSelectOpen ? 'hsl(0 0% 91%)' : 'transparent', transition: 'background 150ms ease-out' }}
+          className={cn(
+            "flex-1 !h-10 !font-medium !border-0 !border-r !focus:ring-0 !focus:ring-offset-0 !rounded-none !text-foreground [&>svg]:!text-foreground [&>svg]:transition-transform [&>svg]:duration-150 [&>svg]:ease-out",
+            isSelectOpen && "[&>svg]:rotate-180",
+            "cursor-pointer"
+          )}
+        >
+          <SelectValue placeholder="Select Vault" />
+        </SelectTrigger>
+        <SelectContent position="popper" className="max-h-[70vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
+          {vaults.map((vault: Vault) => (
+            <SelectItem key={vault.id} value={vault.id}>
+              <span>{vault.name}</span>
+            </SelectItem>
+          ))}
+          <SelectSeparator />
+          <div 
+            className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-sm"
+            onClick={() => {
+              setIsSelectOpen(false);
+              setIsCreateDialogOpen(true);
+            }}
+          >
+            <Plus className="size-4" />
+            <span>Create New Vault</span>
+          </div>
+        </SelectContent>
+      </Select>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
@@ -160,8 +163,7 @@ export function SidebarHeader() {
       
       <Button
         variant="ghost"
-        size="icon-sm"
-        className="text-muted-foreground hover:text-foreground"
+        className="h-10 w-10 rounded-none border-l text-muted-foreground hover:text-foreground"
         onClick={toggleSidebarCollapsed}
         title="Collapse sidebar (Ctrl+B)"
       >

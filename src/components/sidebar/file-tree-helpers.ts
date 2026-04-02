@@ -4,7 +4,19 @@ export function sortEntries(entries: VaultEntry[]): VaultEntry[] {
   return [...entries].sort((a, b) => {
     if (a.is_dir && !b.is_dir) return -1;
     if (!a.is_dir && b.is_dir) return 1;
-    return a.name.localeCompare(b.name);
+
+    if (a.is_dir && b.is_dir) {
+      return a.name.localeCompare(b.name);
+    }
+
+    const aModified = a.modified;
+    const bModified = b.modified;
+
+    if (aModified === null && bModified === null) return a.name.localeCompare(b.name);
+    if (aModified === null) return -1;
+    if (bModified === null) return 1;
+
+    return new Date(bModified).getTime() - new Date(aModified).getTime();
   });
 }
 
