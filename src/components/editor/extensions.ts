@@ -22,7 +22,7 @@ const lowlight = createLowlight(all);
 
 export const extensions = [
   Table.configure({
-    resizable: true,
+    resizable: false,
   }),
   TableRow,
   TableHeader,
