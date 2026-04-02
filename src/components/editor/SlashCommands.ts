@@ -22,7 +22,7 @@ export const slashCommandsList: SlashCommandItem[] = [
   { id: "quote", label: "Blockquote", icon: "Quote", command: "blockquote" },
   { id: "code", label: "Code block", icon: "Code", command: "codeBlock" },
   { id: "table", label: "Table", icon: "Table", command: "table" },
-  { id: "hr", label: "Horizontal rule", icon: "Minus", command: "horizontalRule" },
+  { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule" },
   { id: "link", label: "Add link", icon: "Link2", command: "link" },
 ];
 
@@ -60,7 +60,7 @@ export function unregisterSlashCommandCallbacks() {
   onExitCallback = null;
 }
 
-function executeSlashCommand(editor: Editor, range: { from: number; to: number }, command: string) {
+export function executeSlashCommand(editor: Editor, range: { from: number; to: number }, command: string) {
   switch (command) {
     case "heading1":
       editor.chain().focus().toggleHeading({ level: 1 }).run();

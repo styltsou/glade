@@ -99,7 +99,7 @@ export const slashCommandsList: SlashCommandItem[] = [
   { id: "task", label: "Task list", icon: "CheckSquare", command: "taskList", type: 'command' },
   { id: "quote", label: "Blockquote", icon: "Quote", command: "blockquote", type: 'command' },
   { id: "code", label: "Code block", icon: "Code", command: "codeBlock", type: 'command' },
-  { id: "hr", label: "Horizontal rule", icon: "Minus", command: "horizontalRule", type: 'command' },
+  { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule", type: 'command' },
   { id: "link", label: "Add link", icon: "Link2", command: "link", type: 'command' },
 ];
 

@@ -772,7 +772,7 @@ button, a, input, [role="button"] {
 .tiptap-editor hr {
   border: none;
   border-top: 1px solid hsl(var(--border));
-  margin: 2rem 0;
+  margin: 1rem 0;
 }
 
 /* Links */

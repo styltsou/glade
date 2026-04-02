@@ -1,3 +1,4 @@
+import { HorizontalRule } from "@tiptap/extension-horizontal-rule";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -11,6 +12,7 @@ import { all, createLowlight } from "lowlight";
 import { CustomCodeBlock } from "./CustomCodeBlock";
 import suggestion from "./suggestion";
 import { SlashCommands } from "./SlashCommands";
+import { SuggestionExtension } from "./SuggestionExtension";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -68,4 +70,6 @@ export const extensions = [
     suggestion,
   }),
   SlashCommands,
+  SuggestionExtension,
+  HorizontalRule,
 ];

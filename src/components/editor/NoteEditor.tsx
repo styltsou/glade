@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { Bold, Italic, Strikethrough, Link2, ChevronDown, Clock } from "lucide-react";
+import { Bold, Italic, Strikethrough, Link2, ChevronDown, Clock, Minus } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -11,16 +11,9 @@ import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
 import { MentionList, MentionListHandle } from "./MentionList";
-import {
-  registerSuggestionCallbacks,
-  unregisterSuggestionCallbacks,
-  SuggestionItem,
-} from "./suggestion";
-import {
-  registerSlashCommandCallbacks,
-  unregisterSlashCommandCallbacks,
-  SlashCommandItem,
-} from "./SlashCommands";
+import { SlashCommandMenu, SlashCommandItem } from "./extensions/SlashCommandMenu";
+import { registerSuggestionCallbacks, unregisterSuggestionCallbacks, SuggestionItem } from "./suggestion";
+import { registerSlashCommandCallbacks, unregisterSlashCommandCallbacks } from "./SlashCommands";
 import { cn } from "@/lib/utils";
 import { formatRelativeDate } from "@/lib/dates";
 
@@ -378,6 +371,11 @@ export function NoteEditor({
               >
                 <Link2 className="h-4 w-4" />
               </BubbleButton>
+              <BubbleButton
+                onClick={() => editor.chain().focus().setHorizontalRule().run()}
+              >
+                <Minus className="h-4 w-4" />
+              </BubbleButton>
             </div>
           </BubbleMenu>
         )}
@@ -415,31 +413,58 @@ export function NoteEditor({
         )}
 
         {slashVisible && slashPosition && (
-          <div
-            className="fixed z-[1000] min-w-[200px]"
-            style={{
-              top: slashPosition.top,
-              bottom: slashPosition.bottom,
+          <SlashCommandMenu
+            items={slashItems}
+            command={(item) => {
+              if (!editor) return;
+              const chain = editor.chain().focus();
+              switch (item.command) {
+                case "heading1":
+                  chain.toggleHeading({ level: 1 }).run();
+                  break;
+                case "heading2":
+                  chain.toggleHeading({ level: 2 }).run();
+                  break;
+                case "heading3":
+                  chain.toggleHeading({ level: 3 }).run();
+                  break;
+                case "heading4":
+                  chain.toggleHeading({ level: 4 }).run();
+                  break;
+                case "bulletList":
+                  chain.toggleBulletList().run();
+                  break;
+                case "orderedList":
+                  chain.toggleOrderedList().run();
+                  break;
+                case "taskList":
+                  chain.toggleTaskList().run();
+                  break;
+                case "blockquote":
+                  chain.toggleBlockquote().run();
+                  break;
+                case "codeBlock":
+                  chain.toggleCodeBlock().run();
+                  break;
+                case "table":
+                  chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+                  break;
+                case "horizontalRule":
+                  chain.setHorizontalRule().run();
+                  break;
+                case "link": {
+                  const url = window.prompt("Enter URL:");
+                  if (url) chain.setLink({ href: url }).run();
+                  break;
+                }
+              }
+              setSlashVisible(false);
+            }}
+            position={{
+              top: slashPosition.top ?? window.innerHeight - (slashPosition.bottom ?? 0),
               left: slashPosition.left,
             }}
-          >
-            <div className="flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg">
-              <div className="max-h-[300px] overflow-y-auto p-1 scroll-py-1">
-                {slashItems.length ? (
-                  slashItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
-                    >
-                      <span className="truncate font-medium">{item.label}</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="px-3 py-2 text-sm text-muted-foreground italic text-center">No matches</div>
-                )}
-              </div>
-            </div>
-          </div>
+          />
         )}
       </div>
     </div>
