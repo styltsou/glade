@@ -7,10 +7,15 @@ import {
   VolumeX as VolumeMuteIcon,
 } from "lucide-react";
 import { useStore } from "@/store";
-import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SOUNDS, type SoundId } from "@/lib/sounds";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { soundEngine as SoundEngineType } from "@/lib/soundEngine";
 
 export function StatusBar() {
@@ -130,34 +135,57 @@ export function StatusBar() {
   };
 
   return (
-    <div className="statusbar flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full select-none">
+    <div className="statusbar flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full">
       <div className="flex items-center gap-1.5 pl-2">
         <GitHubLogoIcon className="w-4 h-4" />
         <span>Files changed</span>
       </div>
       <div className="flex items-center">
-        <Button variant="ghost" size="icon-sm">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
-        </Button>
-        <Button variant="ghost" size="icon-sm">
-          <LightningBoltIcon className="w-5 h-5" />
-        </Button>
-        <div className="relative" ref={popoverRef}>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className={isAnyPlaying ? "text-primary" : ""}
-            onClick={() => setVolumePopoverOpen(!volumePopoverOpen)}
-          >
-            {masterEnabled ? (
-              <VolumeIcon className="w-5 h-5" />
-            ) : (
-              <VolumeMuteIcon className="w-5 h-5" />
-            )}
-          </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={10} className="z-[10001]">
+            <span>Live Status</span>
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+              <LightningBoltIcon className="w-4 h-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" sideOffset={10} className="z-[10001]">
+            <span>Quick Actions</span>
+          </TooltipContent>
+        </Tooltip>
+          <div className="relative" ref={popoverRef}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={cn(
+                  "size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer",
+                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  isAnyPlaying && "text-primary"
+                )}
+                onClick={() => setVolumePopoverOpen(!volumePopoverOpen)}
+              >
+                {masterEnabled ? (
+                  <VolumeIcon className="w-4 h-4" />
+                ) : (
+                  <VolumeMuteIcon className="w-4 h-4" />
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={10} className="z-[10001]">
+              <span>Ambient Sounds</span>
+            </TooltipContent>
+          </Tooltip>
           {volumePopoverOpen && (
             <div className="absolute bottom-full mb-2 right-0 p-3 bg-popover border rounded-md shadow-lg z-[9999]">
               <div className="space-y-2">
@@ -210,9 +238,19 @@ export function StatusBar() {
             </div>
           )}
         </div>
-        <Button variant="ghost" size="icon-sm" onClick={() => openSettingsPage("vaults")}>
-          <MixerHorizontalIcon className="w-5 h-5" />
-        </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+            <button 
+              className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              onClick={() => openSettingsPage("vaults")}
+            >
+              <MixerHorizontalIcon className="w-4 h-4" />
+            </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={10} className="z-[10001]">
+              <span>Settings</span>
+            </TooltipContent>
+          </Tooltip>
       </div>
     </div>
   );

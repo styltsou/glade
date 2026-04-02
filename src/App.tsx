@@ -146,7 +146,7 @@ function App() {
   }
 
   return (
-    <TooltipProvider delayDuration={700} disableHoverableContent>
+    <TooltipProvider delayDuration={0} disableHoverableContent>
       <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
         <div className="flex flex-1 overflow-hidden w-full relative">
           {currentView !== "settings" && (
