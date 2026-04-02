@@ -252,7 +252,7 @@ export function FileTree() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center justify-between px-2 pl-4 pt-3 pb-2 shrink-0">
+      <div className="flex items-center justify-between px-2 pl-4 py-2 shrink-0">
         <span className="text-xs font-bold text-foreground uppercase tracking-widest">
           Notes
         </span>

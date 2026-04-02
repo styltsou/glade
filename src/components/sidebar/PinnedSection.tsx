@@ -1,8 +1,11 @@
+import { useState, useEffect, useRef } from "react";
 import {
   Pencil as PencilIcon,
   Copy as CopyIcon,
   PinOff as PinOffIcon,
   Trash2 as TrashIcon,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { useStore } from "@/store";
 import {
@@ -13,7 +16,11 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { NoteCard } from "@/types";
+
+const PINNED_MIN_HEIGHT = 40;
+const PINNED_MAX_HEIGHT = 400;
 
 export function PinnedSection() {
   const activeNote = useStore((state) => state.activeNote);
@@ -21,40 +28,119 @@ export function PinnedSection() {
   const pinnedNotes = useStore((state) => state.pinnedNotes);
   const unpinNote = useStore((state) => state.unpinNote);
   const isVaultsLoading = useStore((state) => state.isVaultsLoading);
+  const pinnedNotesCollapsed = useStore((state) => state.pinnedNotesCollapsed);
+  const togglePinnedNotesCollapsed = useStore((state) => state.togglePinnedNotesCollapsed);
+  const pinnedHeight = useStore((state) => state.pinnedHeight);
+  const setPinnedHeight = useStore((state) => state.setPinnedHeight);
+
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeStartRef = useRef<{ mouseY: number; height: number } | null>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizeStartRef.current = { mouseY: e.clientY, height: pinnedHeight };
+    setIsResizing(true);
+  };
+
+  useEffect(() => {
+    if (!isResizing || !resizeStartRef.current) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const delta = e.clientY - resizeStartRef.current!.mouseY;
+      const newHeight = Math.max(PINNED_MIN_HEIGHT, Math.min(PINNED_MAX_HEIGHT, resizeStartRef.current!.height + delta));
+      setPinnedHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      resizeStartRef.current = null;
+      useStore.getState().saveSidebarState();
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    document.body.style.cursor = "row-resize";
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "default";
+    };
+  }, [isResizing, setPinnedHeight]);
 
   if (pinnedNotes.length === 0 && !isVaultsLoading) return null;
 
   return (
-    <div className="px-2 pt-2 pb-1 shrink-0">
-      <div className="pb-1.5 px-2 flex items-center">
-        <span className="text-xs font-bold text-foreground uppercase tracking-widest">
-          Pinned
-        </span>
+    <div className="shrink-0 mb-1 border-b border-border bg-sidebar/50 relative">
+      <div className="flex items-center">
+        <button
+          onClick={() => togglePinnedNotesCollapsed()}
+          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/50 px-2 py-2 cursor-pointer"
+        >
+          {pinnedNotesCollapsed ? (
+            <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
+          ) : (
+            <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
+          )}
+          <span className="text-xs font-bold text-foreground uppercase tracking-widest group-hover:text-foreground">
+            Pinned
+          </span>
+        </button>
       </div>
-      <div className="space-y-0.5">
-        {isVaultsLoading ? (
-          <div className="space-y-4 px-0">
-            <div className="flex items-center w-full px-2">
-              <Skeleton className="h-4 w-full rounded-md" />
-            </div>
-            <div className="flex items-center w-full px-2">
-              <Skeleton className="h-4 w-full rounded-md" />
-            </div>
-          </div>
-        ) : (
-          pinnedNotes.map((note: NoteCard) => (
-            <PinnedItem
-              key={note.path}
-              path={note.path}
-              name={note.title}
-              active={activeNote?.path === note.path}
-              onClick={() => selectNote(note.path)}
-              onUnpin={() => unpinNote(note.path)}
-            />
-          ))
+
+      <div
+        className={cn(
+          "grid transition-all duration-100 ease-in-out",
+          !pinnedNotesCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
+      >
+        <div className="overflow-hidden">
+          <div
+            style={{ height: pinnedNotes.length === 0 ? pinnedHeight : undefined, maxHeight: pinnedHeight }}
+            className={cn(
+              "px-2 overflow-y-auto pr-1 flex flex-col",
+              pinnedNotes.length === 0 && isVaultsLoading
+                ? "pb-0 pt-0 overflow-hidden"
+                : "pb-3 pt-0.5 [scrollbar-gutter:stable]"
+            )}
+          >
+            {isVaultsLoading ? (
+              <div className="space-y-4 px-0">
+                <div className="flex items-center w-full px-2">
+                  <Skeleton className="h-4 w-full rounded-md" />
+                </div>
+                <div className="flex items-center w-full px-2">
+                  <Skeleton className="h-4 w-full rounded-md" />
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-0.5">
+                {pinnedNotes.map((note: NoteCard) => (
+                  <PinnedItem
+                    key={note.path}
+                    path={note.path}
+                    name={note.title}
+                    active={activeNote?.path === note.path}
+                    onClick={() => selectNote(note.path)}
+                    onUnpin={() => unpinNote(note.path)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="mt-3 mb-2 border-t border-border/50" />
+
+      {/* Resize handle */}
+      {!pinnedNotesCollapsed && (
+        <div
+          onMouseDown={handleMouseDown}
+          className={cn(
+            "absolute bottom-0 left-0 right-0 h-1 cursor-row-resize hover:bg-primary/30 transition-colors z-20",
+            isResizing && "bg-primary/50"
+          )}
+        />
+      )}
     </div>
   );
 }
@@ -82,11 +168,12 @@ function PinnedItem({
         <div className="relative group/note">
           <button
             onClick={onClick}
-            className={`flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm text-left transition-colors cursor-pointer font-medium ${
+            className={cn(
+              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer",
               active
-                ? "bg-sidebar-accent text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-            }`}
+                ? "bg-sidebar-accent text-foreground font-medium"
+                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
+            )}
           >
             <span className="truncate">{name}</span>
           </button>

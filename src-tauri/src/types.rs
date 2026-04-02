@@ -110,12 +110,20 @@ pub struct SoundState {
 pub struct SidebarState {
     pub collapsed: bool,
     pub tags_collapsed: bool,
+    #[serde(default)]
+    pub pinned_collapsed: bool,
     pub width: u32,
     pub tags_height: u32,
+    #[serde(default = "default_pinned_height")]
+    pub pinned_height: u32,
     #[serde(default)]
     pub expanded_folders: Vec<String>,
     #[serde(default)]
     pub sound_states: std::collections::HashMap<String, SoundState>,
+}
+
+fn default_pinned_height() -> u32 {
+    150
 }
 
 impl Default for SidebarState {
@@ -123,8 +131,10 @@ impl Default for SidebarState {
         Self {
             collapsed: false,
             tags_collapsed: true,
+            pinned_collapsed: false,
             width: 260,
             tags_height: 200,
+            pinned_height: 150,
             expanded_folders: Vec::new(),
             sound_states: std::collections::HashMap::new(),
         }
