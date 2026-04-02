@@ -4,13 +4,12 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { IconSwitch } from "@/components/ui/icon-switch";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { cn } from "@/lib/utils";
 
 interface NoteActionButtonsProps {
   isRawMode: boolean;
-  onToggleRaw: () => void;
+  onToggleRaw: (isRaw: boolean) => void;
   notePath?: string;
   noteTitle?: string;
   hasHeadings: boolean;
@@ -35,13 +34,23 @@ export function NoteActionButtons({
 
   useEffect(() => {
     if (!exportMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      const button = document.getElementById('export-button');
+      if (exportMenuRef.current && button && !button.contains(e.target as Node) && !exportMenuRef.current.contains(e.target as Node)) {
         setExportMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [exportMenuOpen]);
 
   const handleCopyMarkdown = useCallback(async () => {
@@ -71,78 +80,87 @@ export function NoteActionButtons({
   }, []);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center">
+      <div className="h-10 w-px bg-border" />
+
       <Button
         variant="ghost"
-        size="sm"
+        className={cn(
+          "h-10 w-10 rounded-none",
+          isTocOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+        )}
         title="Table of Contents (Ctrl+Shift+T)"
         onClick={onToggleToc}
         disabled={!hasHeadings}
-        className={cn(
-          "h-8 w-8 p-0",
-          isTocOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-        )}
       >
         <BookOpen className="h-4 w-4" />
       </Button>
 
-      <IconSwitch
-        checked={isRawMode}
-        onCheckedChange={onToggleRaw}
-        disabled={!notePath}
-        checkedIcon={<Code className="h-4 w-4" />}
-        uncheckedIcon={<FileText className="h-4 w-4" />}
-      />
+      <div className="h-10 w-px bg-border" />
 
-      <div className="flex h-8 items-center rounded-md border border-input bg-muted shadow-xs">
+      <Button
+        variant="ghost"
+        className={cn(
+          "h-10 w-10 rounded-none",
+          isRawMode && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+        )}
+        onClick={() => onToggleRaw(!isRawMode)}
+        disabled={!notePath}
+      >
+        {isRawMode ? (
+          <FileText className="h-4 w-4" />
+        ) : (
+          <Code className="h-4 w-4" />
+        )}
+      </Button>
+
+      <div className="h-10 w-px bg-border" />
+
+      <Button
+        variant="ghost"
+        className={cn(
+          "h-10 w-10 rounded-none",
+          copied && "bg-primary/10 text-primary"
+        )}
+        onClick={handleCopyMarkdown}
+        disabled={!notePath}
+      >
+        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+      </Button>
+
+      <div className="h-10 w-px bg-border" />
+
+      <div className="relative" ref={exportMenuRef}>
         <Button
           variant="ghost"
-          size="sm"
-          onClick={handleCopyMarkdown}
-          disabled={!notePath}
           className={cn(
-            "h-full px-3 rounded-l-[calc(var(--radius-md)-1px)] rounded-r-none gap-1.5",
-            copied && "bg-primary/10 text-primary"
+            "h-10 w-10 rounded-none",
+            exportMenuOpen && "bg-accent"
           )}
+          title="Export"
+          disabled={!notePath}
+          onClick={() => setExportMenuOpen((v) => !v)}
+          id="export-button"
         >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-          <span className="text-sm font-medium">{copied ? "Copied" : "Copy"}</span>
+          <Download className="h-4 w-4" />
         </Button>
 
-        <div className="w-px h-full bg-border" />
-
-        <div className="relative h-full" ref={exportMenuRef}>
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Export"
-            disabled={!notePath}
-            onClick={() => setExportMenuOpen((v) => !v)}
-            className={cn(
-              "h-full w-8 p-0 rounded-l-none rounded-r-[calc(var(--radius-md)-1px)]",
-              exportMenuOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-            )}
-          >
-            <Download className="h-4 w-4" />
-          </Button>
-
-          {exportMenuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
-              <button
-                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                onClick={() => handleExport("markdown")}
-              >
-                Export
-              </button>
-              <button
-                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                onClick={() => handleExport("pdf")}
-              >
-                Export as PDF
-              </button>
-            </div>
-          )}
-        </div>
+        {exportMenuOpen && (
+          <div className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
+            <button
+              className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+              onClick={() => handleExport("markdown")}
+            >
+              Export
+            </button>
+            <button
+              className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+              onClick={() => handleExport("pdf")}
+            >
+              Export as PDF
+            </button>
+          </div>
+        )}
       </div>
 
       {notePath && noteTitle && (

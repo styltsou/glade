@@ -12,7 +12,7 @@ import { NoteActionButtons } from "./NoteActionButtons";
 interface EditorToolbarProps {
   editor: Editor | null;
   isRawMode: boolean;
-  onToggleRaw: () => void;
+  onToggleRaw: (isRaw: boolean) => void;
   notePath?: string;
   noteTitle?: string;
   isTocOpen: boolean;

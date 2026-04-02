@@ -10,41 +10,25 @@ import { Markdown } from "tiptap-markdown";
 import { all, createLowlight } from "lowlight";
 import { CustomCodeBlock } from "./CustomCodeBlock";
 import suggestion from "./suggestion";
-import { Extension } from "@tiptap/core";
+import { SlashCommands } from "./SlashCommands";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 
 const lowlight = createLowlight(all);
 
-const HeadingWithPos = Extension.create({
-  name: "headingWithPos",
-  addGlobalAttributes() {
-    return [
-      {
-        types: ["heading"],
-        attributes: {
-          "data-toc-pos": {
-            default: null,
-            parseHTML: (element) => element.getAttribute("data-toc-pos"),
-            renderHTML: (attributes) => {
-              if (!attributes["data-toc-pos"]) {
-                return {};
-              }
-              return {
-                "data-toc-pos": attributes["data-toc-pos"],
-              };
-            },
-          },
-        },
-      },
-    ];
-  },
-});
-
 export const extensions = [
+  Table.configure({
+    resizable: true,
+  }),
+  TableRow,
+  TableHeader,
+  TableCell,
   StarterKit.configure({
     heading: { levels: [1, 2, 3, 4] },
     codeBlock: false,
   }),
-  HeadingWithPos,
   CustomCodeBlock.configure({
     lowlight,
     HTMLAttributes: { class: "code-block" },
@@ -53,12 +37,24 @@ export const extensions = [
     openOnClick: false,
     HTMLAttributes: { class: "editor-link" },
   }),
-  Placeholder.configure({ placeholder: "Start writing…" }),
+  Placeholder.configure({
+    placeholder: ({ node }) => {
+      if (node.type.name === "heading") {
+        return "Heading " + node.attrs.level;
+      }
+      if (node.type.name === "paragraph" && !node.textContent) {
+        return "Type '/' for commands";
+      }
+      return "";
+    },
+    emptyEditorClass: "is-editor-empty",
+    showOnlyWhenEditable: true,
+  }),
   TaskList,
   CustomTaskItem.configure({ nested: true }),
   Image.configure({ inline: false }),
   BubbleMenu.configure({
-    element: null, // Component will provide the element
+    element: null,
   }),
   Markdown.configure({
     html: true,
@@ -71,4 +67,5 @@ export const extensions = [
     },
     suggestion,
   }),
+  SlashCommands,
 ];
