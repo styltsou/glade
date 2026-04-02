@@ -110,13 +110,7 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
             .to_string_lossy()
             .to_string();
 
-        let metadata = entry.metadata()?;
-        let modified = metadata.modified().ok().and_then(|t| {
-            let datetime: chrono::DateTime<Utc> = t.into();
-            Some(datetime.to_rfc3339())
-        });
-
-        if metadata.is_dir() {
+        if entry.metadata()?.is_dir() {
             let sub_children = build_vault_tree_inner(vault_root, &path)?;
             entries.push(VaultEntry {
                 id: relative.clone(),
@@ -124,10 +118,15 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 path: relative,
                 is_dir: true,
                 children: sub_children,
-                modified,
+                modified: None,
                 tags: vec![],
             });
         } else if name.ends_with(".md") {
+            let metadata = entry.metadata()?;
+            let modified = metadata.modified().ok().and_then(|t| {
+                let datetime: chrono::DateTime<Utc> = t.into();
+                Some(datetime.to_rfc3339())
+            });
             let content = fs::read_to_string(&path).unwrap_or_default();
             let (meta, _) = parse_frontmatter(&content);
             let stem = path
@@ -135,6 +134,11 @@ fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntr
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| name.clone());
             let display_name = meta.title.filter(|t| !t.is_empty()).unwrap_or(stem);
+
+            let modified = metadata.modified().ok().and_then(|t| {
+                let datetime: chrono::DateTime<Utc> = t.into();
+                Some(datetime.to_rfc3339())
+            });
 
             entries.push(VaultEntry {
                 id: meta.id.unwrap_or_else(|| relative.clone()),
@@ -169,16 +173,24 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
 
         // Remap common alias keys for creating dates
         if meta.created.is_none() {
-            if let Some(date) = meta.extra.remove("date").or_else(|| meta.extra.remove("created_at")) {
+            if let Some(date) = meta
+                .extra
+                .remove("date")
+                .or_else(|| meta.extra.remove("created_at"))
+            {
                 if let Some(d) = date.as_str() {
                     meta.created = Some(d.to_string());
                 }
             }
         }
-        
+
         // Remap common alias keys for updating dates
         if meta.updated.is_none() {
-            if let Some(date) = meta.extra.remove("lastmod").or_else(|| meta.extra.remove("updated_at")) {
+            if let Some(date) = meta
+                .extra
+                .remove("lastmod")
+                .or_else(|| meta.extra.remove("updated_at"))
+            {
                 if let Some(d) = date.as_str() {
                     meta.updated = Some(d.to_string());
                 }
@@ -187,11 +199,22 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
 
         // Remap alternative tag arrays or comma-delimited strings
         if meta.tags.is_empty() {
-            if let Some(t) = meta.extra.remove("tags").or_else(|| meta.extra.remove("tag")) {
+            if let Some(t) = meta
+                .extra
+                .remove("tags")
+                .or_else(|| meta.extra.remove("tag"))
+            {
                 if let Some(arr) = t.as_array() {
-                    meta.tags = arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect();
+                    meta.tags = arr
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect();
                 } else if let Some(s) = t.as_str() {
-                    meta.tags = s.split(',').map(|x| x.trim().to_string()).filter(|x| !x.is_empty()).collect();
+                    meta.tags = s
+                        .split(',')
+                        .map(|x| x.trim().to_string())
+                        .filter(|x| !x.is_empty())
+                        .collect();
                 }
             }
         }
@@ -206,7 +229,7 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
 pub fn build_frontmatter(meta: &NoteMeta) -> String {
     let yaml = serde_yaml::to_string(meta).unwrap_or_default();
     let yaml_trimmed = yaml.trim_start_matches("---\n").trim_end();
-    
+
     if yaml_trimmed.is_empty() || yaml_trimmed == "{}" {
         return "---\n---".to_string();
     }
