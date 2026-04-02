@@ -96,9 +96,9 @@ export function PinnedSection() {
       >
         <div className="overflow-hidden">
           <div
-            style={{ height: pinnedNotes.length === 0 ? pinnedHeight : undefined, maxHeight: pinnedHeight }}
+            style={{ height: pinnedHeight }}
             className={cn(
-              "px-2 overflow-y-auto pr-1 flex flex-col",
+              "px-2 overflow-y-auto pr-1 flex flex-col min-h-0",
               pinnedNotes.length === 0 && isVaultsLoading
                 ? "pb-0 pt-0 overflow-hidden"
                 : "pb-3 pt-0.5 [scrollbar-gutter:stable]"

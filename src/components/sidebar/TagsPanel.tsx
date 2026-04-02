@@ -101,9 +101,9 @@ export function TagsPanel() {
       >
         <div className="overflow-hidden">
           <div 
-            style={{ height: tags.length === 0 ? tagsHeight : undefined, maxHeight: tagsHeight }}
+            style={{ height: tagsHeight }}
             className={cn(
-              "px-2 overflow-y-auto pr-1 flex flex-col",
+              "px-2 overflow-y-auto pr-1 flex flex-col min-h-0",
               tags.length === 0 ? "pb-0 pt-0 overflow-hidden" : "pb-3 pt-0.5 [scrollbar-gutter:stable]"
             )}
           >
