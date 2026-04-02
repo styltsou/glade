@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Vault } from "@/types";
 
 export function SidebarHeader() {
@@ -161,14 +162,19 @@ export function SidebarHeader() {
         </DialogContent>
       </Dialog>
       
-      <Button
-        variant="ghost"
-        className="h-10 w-10 rounded-none border-l text-muted-foreground hover:text-foreground"
-        onClick={toggleSidebarCollapsed}
-        title="Collapse sidebar (Ctrl+B)"
-      >
-        <PanelLeft className="h-4 w-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className="h-10 w-10 flex items-center justify-center rounded-none border-l text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+            onClick={toggleSidebarCollapsed}
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right">
+          <p>Collapse sidebar (Ctrl+B)</p>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }

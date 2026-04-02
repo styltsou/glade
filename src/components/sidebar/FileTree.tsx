@@ -5,6 +5,7 @@ import { sortEntries, filterByTags } from "./file-tree-helpers";
 import { FileTreeNode } from "./FileTreeNode";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { VaultEntry } from "@/types";
 
 function isDescendant(ancestorPath: string, nodePath: string): boolean {
@@ -258,20 +259,32 @@ export function FileTree() {
         <div className="flex items-center gap-0.5">
           {!isVaultsLoading && (
             <>
-              <button
-                className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-                onClick={() => openCreateFolder()}
-                title="New folder"
-              >
-                <Folder className="h-4 w-4" />
-              </button>
-              <button
-                className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-                onClick={() => createNote()}
-                title="New note"
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+                    onClick={() => openCreateFolder()}
+                  >
+                    <Folder className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>New folder</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+                    onClick={() => createNote()}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>New note</p>
+                </TooltipContent>
+              </Tooltip>
             </>
           )}
         </div>

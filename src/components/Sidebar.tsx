@@ -3,6 +3,7 @@ import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
@@ -118,12 +119,18 @@ export function SidebarCollapseToggle() {
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
   if (!sidebarCollapsed) return null;
   return (
-    <button
-      onClick={toggleSidebarCollapsed}
-      className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-      title="Expand sidebar (Ctrl+B)"
-    >
-      <PanelLeft className="h-4 w-4" />
-    </button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          onClick={toggleSidebarCollapsed}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        <p>Expand sidebar (Ctrl+B)</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

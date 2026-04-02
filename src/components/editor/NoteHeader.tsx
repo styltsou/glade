@@ -4,8 +4,8 @@ import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Clock, FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface NoteHeaderProps {
@@ -108,67 +108,93 @@ export function NoteHeader({
 
         <div className="h-10 w-px bg-border" />
 
-        <Button
-          variant="ghost"
-          className={cn(
-            "h-10 w-10 rounded-none",
-            isTocOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-          )}
-          title="Table of Contents (Ctrl+Shift+T)"
-          onClick={onToggleToc}
-          disabled={!hasHeadings}
-        >
-          <BookOpen className="h-4 w-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
+                !hasHeadings ? "text-muted-foreground/50 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                isTocOpen && hasHeadings && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+              )}
+              onClick={onToggleToc}
+              disabled={!hasHeadings}
+            >
+              <BookOpen className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Table of Contents (Ctrl+Shift+T)</p>
+          </TooltipContent>
+        </Tooltip>
 
         <div className="h-10 w-px bg-border" />
 
-        <Button
-          variant="ghost"
-          className={cn(
-            "h-10 w-10 rounded-none",
-            isRawMode && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-          )}
-          onClick={() => onToggleRaw?.(!isRawMode)}
-          disabled={!notePath}
-        >
-          {isRawMode ? (
-            <FileText className="h-4 w-4" />
-          ) : (
-            <Code className="h-4 w-4" />
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
+                "text-muted-foreground hover:text-foreground hover:bg-accent",
+                isRawMode && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+              )}
+              onClick={() => onToggleRaw?.(!isRawMode)}
+              disabled={!notePath}
+            >
+              {isRawMode ? (
+                <FileText className="h-4 w-4" />
+              ) : (
+                <Code className="h-4 w-4" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{isRawMode ? "Switch to rich text" : "Switch to raw markdown"}</p>
+          </TooltipContent>
+        </Tooltip>
 
         <div className="h-10 w-px bg-border" />
 
-        <Button
-          variant="ghost"
-          className={cn(
-            "h-10 w-10 rounded-none",
-            copied && "bg-primary/10 text-primary"
-          )}
-          onClick={handleCopyMarkdown}
-          disabled={!notePath}
-        >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className={cn(
+                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
+                "text-muted-foreground hover:text-foreground hover:bg-accent",
+                copied && "bg-primary/10 text-primary"
+              )}
+              onClick={handleCopyMarkdown}
+              disabled={!notePath}
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>Copy as Markdown</p>
+          </TooltipContent>
+        </Tooltip>
 
         <div className="h-10 w-px bg-border" />
 
         <div className="relative">
-          <Button
-            variant="ghost"
-            className={cn(
-              "h-10 w-10 rounded-none",
-              exportMenuOpen && "bg-accent"
-            )}
-            title="Export"
-            disabled={!notePath}
-            onClick={() => setExportMenuOpen((v) => !v)}
-            id="export-button"
-          >
-            <Download className="h-4 w-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className={cn(
+                  "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
+                  "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  exportMenuOpen && "bg-accent"
+                )}
+                disabled={!notePath}
+                onClick={() => setExportMenuOpen((v) => !v)}
+                id="export-button"
+              >
+                <Download className="h-4 w-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Export</p>
+            </TooltipContent>
+          </Tooltip>
 
           {exportMenuOpen && (
             <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
