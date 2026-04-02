@@ -692,6 +692,7 @@ button, a, input, [role="button"] {
   border-left: 2px solid hsl(var(--border));
   padding-left: 1rem;
   margin-left: 0;
+  margin-top: 1.2em;
   margin-bottom: 1.2em;
   font-style: italic;
   color: hsl(var(--muted-foreground));
@@ -706,6 +707,7 @@ button, a, input, [role="button"] {
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
   padding: 1rem;
+  margin-top: 1.2em;
   margin-bottom: 1.2em;
   overflow-x: auto;
   color: hsl(var(--editor-text));
