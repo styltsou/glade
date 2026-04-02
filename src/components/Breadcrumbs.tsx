@@ -1,4 +1,3 @@
-import { Vault } from "lucide-react";
 import { useStore } from "@/store";
 import {
   Breadcrumb,
@@ -32,17 +31,15 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
         <BreadcrumbList className="text-[14px]">
           <BreadcrumbItem>
             {segments.length === 0 && !activeItem ? (
-              <BreadcrumbPage className="flex items-center gap-1.5 font-semibold text-foreground">
-                <Vault className="h-4 w-4" />
+              <BreadcrumbPage className="font-semibold text-foreground truncate max-w-[250px]">
                 {activeVault?.name || "Vault"}
               </BreadcrumbPage>
             ) : (
               <BreadcrumbLink 
                 onClick={() => navigateToFolder(null)} 
-                className="cursor-pointer flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
                 title={`Go to ${activeVault?.name || "Vault"}`}
               >
-                <Vault className="h-4 w-4" />
                 {activeVault?.name || "Vault"}
               </BreadcrumbLink>
             )}

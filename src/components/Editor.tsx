@@ -8,11 +8,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
 import { TableOfContents } from "@/components/editor/TableOfContents";
-import { formatNoteDate } from "@/lib/dates";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 
@@ -365,10 +363,6 @@ export function Editor() {
     );
   }
 
-  const dateLabel = activeNote.created
-    ? formatNoteDate(activeNote.created)
-    : null;
-
   const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
   const handleToggleToc = useCallback(() => {
     if (activeNote) {
@@ -381,17 +375,12 @@ export function Editor() {
       <NoteHeader
         notePath={activeNote.path}
         noteTitle={activeNote.title}
-        dateLabel={dateLabel}
         saveStatus={saveStatus}
-      />
-      <EditorToolbar
-        editor={editor}
-        isRawMode={isRawMode}
-        onToggleRaw={toggleRawMode}
-        notePath={activeNote.path}
-        noteTitle={activeNote.title}
+        hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
+        onToggleRaw={(isRaw) => { if (isRaw !== isRawMode) toggleRawMode(); }}
+        isRawMode={isRawMode}
       />
 
       <NoteEditor

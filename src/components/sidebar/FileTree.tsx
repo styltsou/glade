@@ -1,44 +1,38 @@
 import { useStore } from "@/store";
-import { useState } from "react";
-import {
-  Folder,
-  Plus as PlusIcon,
-} from "lucide-react";
-import {
-  DndContext,
-  DragOverlay,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { createPortal } from "react-dom";
-import { sortEntries, filterByTags, findEntryByPath } from "./file-tree-helpers";
-import { FileTreeNode, FileTreeNodeStatic } from "./FileTreeNode";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { Folder, Plus as PlusIcon, FileText, FolderOpen } from "lucide-react";
+import { sortEntries, filterByTags } from "./file-tree-helpers";
+import { FileTreeNode } from "./FileTreeNode";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import type { VaultEntry } from "@/types";
+
+function isDescendant(ancestorPath: string, nodePath: string): boolean {
+  const ancestorParts = ancestorPath.split("/");
+  const nodeParts = nodePath.split("/");
+  
+  if (ancestorParts.length >= nodeParts.length) return false;
+  
+  for (let i = 0; i < ancestorParts.length; i++) {
+    if (ancestorParts[i] !== nodeParts[i]) return false;
+  }
+  return true;
+}
 
 function FileTreeSkeleton() {
   const rows = [
-    { indent: 0, width: "w-6/12" }, // folder
-    { indent: 1, width: "w-full" },   // note
-    { indent: 1, width: "w-6/12" },  // subfolder
-    { indent: 2, width: "w-8/12" },   // note
-    { indent: 3, width: "w-full" },   // note
-    { indent: 3, width: "w-full" },   // note
-    { indent: 2, width: "w-full" },   // note
-    { indent: 1, width: "w-full" },   // note
-    { indent: 0, width: "w-8/12" },  // folder
-    { indent: 1, width: "w-full" },   // note
-    { indent: 0, width: "w-full" },   // note
-    { indent: 0, width: "w-full" },   // note
+    { indent: 0, width: "w-6/12" },
+    { indent: 1, width: "w-full" },
+    { indent: 1, width: "w-6/12" },
+    { indent: 2, width: "w-8/12" },
+    { indent: 3, width: "w-full" },
+    { indent: 3, width: "w-full" },
+    { indent: 2, width: "w-full" },
+    { indent: 1, width: "w-full" },
+    { indent: 0, width: "w-8/12" },
+    { indent: 1, width: "w-full" },
+    { indent: 0, width: "w-full" },
+    { indent: 0, width: "w-full" },
   ];
 
   return (
@@ -56,7 +50,34 @@ function FileTreeSkeleton() {
   );
 }
 
-// ─── FileTree (exported for use in Sidebar) ───────────────────────────────────
+function DragGhost({ label, type, pos }: { label: string; type: string; pos: { x: number; y: number } | null }) {
+  if (!pos) return null;
+  return (
+    <div
+      style={{
+        position: "fixed",
+        left: pos.x + 14,
+        top: pos.y - 14,
+        pointerEvents: "none",
+        zIndex: 9999,
+        background: "hsl(var(--background))",
+        border: "1px solid hsl(var(--primary))",
+        borderRadius: 6,
+        padding: "4px 10px 4px 8px",
+        fontSize: 13,
+        color: "hsl(var(--foreground))",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {type === "folder" ? <FolderOpen className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
+      {label}
+    </div>
+  );
+}
 
 export function FileTree() {
   const entries = useStore((state) => state.entries);
@@ -65,119 +86,196 @@ export function FileTree() {
   const openCreateFolder = useStore((state) => state.openCreateFolder);
   const activeTagFilters = useStore((state) => state.activeTagFilters);
   const moveEntry = useStore((state) => state.moveEntry);
+  const expandedFolders = useStore((state) => state.expandedFolders);
+  const toggleFolderExpanded = useStore((state) => state.toggleFolderExpanded);
 
   const filteredByTags = filterByTags(entries, activeTagFilters);
   const sortedEntries = sortEntries(filteredByTags);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const [dragState, setDragState] = useState<{ id: string; name: string; type: string } | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const activeEntry = activeId ? findEntryByPath(entries, activeId) : null;
+  const dragRef = useRef<{ id: string; name: string; type: string } | null>(null);
+  const dropTargetRef = useRef<string | null>(null);
+  const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
+  const expandTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  };
+  const clearExpandTimer = useCallback(() => {
+    if (expandTimerRef.current) {
+      clearTimeout(expandTimerRef.current);
+      expandTimerRef.current = null;
+    }
+  }, []);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveId(null);
+  const cancelDrag = useCallback(() => {
+    dragRef.current = null;
+    dropTargetRef.current = null;
+    lastMouseRef.current = null;
+    clearExpandTimer();
+    setDragState(null);
+    setDropTarget(null);
+    setGhostPos(null);
+  }, [clearExpandTimer]);
 
-    if (!over || active.id === over.id) return;
+  useEffect(() => {
+    if (!dragState) return;
 
-    const fromPath = active.id as string;
-    const overPath = over.id as string;
-
-    const overEntry = findEntryByPath(entries, overPath);
-    if (!overEntry) return;
-
-    // Calculate drop position logic (same as in FileTreeNode for consistency)
-    const overRect = over.rect;
-    const activeRect = active.rect.current.translated;
-    let dropPosition: "top" | "bottom" | "into" = "into";
-    
-    if (overRect && activeRect) {
-      const overTop = overRect.top;
-      const overHeight = overRect.height;
-      const activeCenter = activeRect.top + activeRect.height / 2;
-
-      const HEADER_HEIGHT = 32;
-      const threshold = 6;
-
-      if (overEntry.is_dir) {
-        const distFromTop = activeCenter - overTop;
-        if (distFromTop < threshold) {
-          dropPosition = "top";
-        } else if (distFromTop > HEADER_HEIGHT - threshold) {
-          dropPosition = "into"; 
-        } else {
-          dropPosition = "into";
-        }
-      } else {
-        const relativePos = (activeCenter - overTop) / overHeight;
-        if (relativePos < 0.5) dropPosition = "top";
-        else dropPosition = "bottom";
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        cancelDrag();
       }
     }
 
-    let toParentPath = "";
-    if (dropPosition === "into" && overEntry.is_dir) {
-      // Don't move into itself or its own children
-      if (fromPath === overPath || fromPath.startsWith(overPath + "/")) {
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [dragState, cancelDrag]);
+
+  const getFolderDropTarget = useCallback((ev: MouseEvent): string | null => {
+    if (!dragRef.current) return null;
+    
+    const elements = document.elementsFromPoint(ev.clientX, ev.clientY);
+    for (const el of elements) {
+      if (el.getAttribute?.("data-slot")?.startsWith("context-menu")) continue;
+      const id = el.getAttribute?.("data-folder-id");
+      if (!id) continue;
+      if (id === dragRef.current.id) continue;
+      if (dragRef.current.type === "folder" && isDescendant(dragRef.current.id, id)) continue;
+      return id;
+    }
+    return null;
+  }, [sortedEntries]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent, item: VaultEntry) => {
+    if (e.button !== 0) return;
+    const hasOpenContextMenu = document.querySelector('[data-radix-collection-item]') !== null;
+    if (hasOpenContextMenu) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let started = false;
+
+    function onMove(ev: MouseEvent) {
+      lastMouseRef.current = { x: ev.clientX, y: ev.clientY };
+      
+      if (!started && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) {
+        started = true;
+        dragRef.current = { id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" };
+        setDragState({ id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" });
+      }
+      
+      if (!started) return;
+      
+      setGhostPos({ x: ev.clientX, y: ev.clientY });
+
+      const target = getFolderDropTarget(ev);
+      if (target) {
+        if (dropTargetRef.current !== target) {
+          dropTargetRef.current = target;
+          setDropTarget(target);
+
+          if (!expandedFolders.has(target)) {
+            if (!expandTimerRef.current) {
+              expandTimerRef.current = setTimeout(() => {
+                toggleFolderExpanded(target);
+              }, 400);
+            }
+          }
+        }
         return;
       }
-      toParentPath = overPath;
-    } else {
-      // Move next to the item (same parent)
-      const parts = overPath.split("/");
-      parts.pop();
-      toParentPath = parts.join("/");
+
+      const elements = document.elementsFromPoint(ev.clientX, ev.clientY);
+      const isOverContextMenu = elements.some(el => el.getAttribute?.("data-slot")?.startsWith("context-menu"));
+      if (isOverContextMenu) {
+        if (dropTargetRef.current !== null) {
+          dropTargetRef.current = null;
+          setDropTarget(null);
+          clearExpandTimer();
+        }
+        return;
+      }
+
+      const rd = document.getElementById("root-drop");
+      const rdRect = rd?.getBoundingClientRect();
+      if (rdRect && ev.clientX >= rdRect.left && ev.clientX <= rdRect.right && ev.clientY >= rdRect.top && ev.clientY <= rdRect.bottom) {
+        if (dropTargetRef.current !== "__root__") {
+          dropTargetRef.current = "__root__";
+          setDropTarget("__root__");
+        }
+        return;
+      }
+
+      if (dropTargetRef.current !== null && dropTargetRef.current !== "__root__") {
+        dropTargetRef.current = null;
+        setDropTarget(null);
+        clearExpandTimer();
+      }
     }
 
-    const fileName = fromPath.split("/").pop();
-    const toPath = toParentPath ? `${toParentPath}/${fileName}` : fileName!;
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      clearExpandTimer();
 
-    if (fromPath !== toPath) {
-      console.log(`Moving from ${fromPath} to ${toPath} (Position: ${dropPosition})`);
-      await moveEntry(fromPath, toPath);
+      const target = dropTargetRef.current;
+      
+      if (started && dragRef.current && target) {
+        const fromPath = dragRef.current.id;
+        let toPath: string;
+
+        if (target === "__root__") {
+          const fileName = fromPath.split("/").pop()!;
+          toPath = fileName;
+        } else {
+          toPath = `${target}/${fromPath.split("/").pop()}`;
+        }
+
+        if (fromPath !== toPath) {
+          moveEntry(fromPath, toPath);
+        }
+      }
+
+      dragRef.current = null;
+      dropTargetRef.current = null;
+      lastMouseRef.current = null;
+      setDragState(null);
+      setDropTarget(null);
+      setGhostPos(null);
     }
-  };
+
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, [moveEntry, getFolderDropTarget, clearExpandTimer, expandedFolders, toggleFolderExpanded]);
 
   return (
-      <div className="flex flex-col h-full overflow-hidden">
-        <div className="flex items-center justify-between px-2 pl-4 pt-3 pb-2 shrink-0">
-          <span className="text-xs font-bold text-foreground uppercase tracking-widest">
-            Notes
-          </span>
-          <div className="flex items-center gap-0.5">
-            {!isVaultsLoading && (
-              <>
-                <button
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-                  onClick={() => openCreateFolder()}
-                  title="New folder"
-                >
-                  <Folder className="h-4 w-4" />
-                </button>
-                <button
-                  className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-                  onClick={() => createNote()}
-                  title="New note"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                </button>
-              </>
-            )}
-          </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-2 pl-4 pt-3 pb-2 shrink-0">
+        <span className="text-xs font-bold text-foreground uppercase tracking-widest">
+          Notes
+        </span>
+        <div className="flex items-center gap-0.5">
+          {!isVaultsLoading && (
+            <>
+              <button
+                className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+                onClick={() => openCreateFolder()}
+                title="New folder"
+              >
+                <Folder className="h-4 w-4" />
+              </button>
+              <button
+                className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+                onClick={() => createNote()}
+                title="New note"
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
+      </div>
 
       <div className="flex-1 overflow-auto px-2 pb-1 [scrollbar-gutter:stable]">
         {isVaultsLoading ? (
@@ -187,35 +285,51 @@ export function FileTree() {
             <p className="text-xs text-muted-foreground">No notes yet</p>
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={sortedEntries.map(e => e.path)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-0.5">
-                {sortedEntries.map((entry) => (
-                  <FileTreeNode key={entry.path} entry={entry} />
-                ))}
+          <>
+            <div className="flex flex-col gap-0.5">
+              {sortedEntries.map((entry) => (
+                <FileTreeNode
+                  key={entry.path}
+                  entry={entry}
+                  isDraggingId={dragState?.id ?? null}
+                  dropTarget={dropTarget}
+                  onMouseDown={handleMouseDown}
+                />
+              ))}
+            </div>
+
+            {dragState && (
+              <div
+                id="root-drop"
+                className={cn(
+                  "min-h-[32px] rounded-md transition-all duration-150 mt-1 flex items-center justify-center",
+                  dropTarget === "__root__" 
+                    ? "bg-primary/10 ring-2 ring-primary/50" 
+                    : "bg-transparent"
+                )}
+                style={{
+                  border: dropTarget === "__root__" 
+                    ? "1px dashed hsl(var(--primary))"
+                    : "1px dashed transparent",
+                }}
+              >
+                <span className={cn(
+                  "text-xs",
+                  dropTarget === "__root__" ? "text-primary" : "text-muted-foreground"
+                )}>
+                  {dragState ? "Move to root level" : ""}
+                </span>
               </div>
-            </SortableContext>
-            {createPortal(
-              <DragOverlay dropAnimation={null}>
-                {activeEntry ? (
-                  <div className="opacity-80 scale-105 pointer-events-none">
-                    <FileTreeNodeStatic entry={activeEntry} />
-                  </div>
-                ) : null}
-              </DragOverlay>,
-              document.body
             )}
-          </DndContext>
+          </>
         )}
       </div>
+
+      <DragGhost
+        label={dragState?.name ?? ""}
+        type={dragState?.type ?? "note"}
+        pos={ghostPos}
+      />
     </div>
   );
 }

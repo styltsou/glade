@@ -1,6 +1,5 @@
 import { useStore } from "@/store";
 import type { VaultEntry } from "@/types";
-import { useEffect } from "react";
 import {
   Folder,
   FolderOpen,
@@ -17,16 +16,9 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
-import { calculateDropPosition, isDropIntoFolder } from "./dropPosition";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
@@ -74,7 +66,15 @@ function useFileTreeStore() {
   };
 }
 
-export function FileTreeNode({ entry }: { entry: VaultEntry }) {
+interface FileTreeNodeProps {
+  entry: VaultEntry;
+  isDraggingId?: string | null;
+  dropTarget?: string | null;
+  onMouseDown?: (e: React.MouseEvent, entry: VaultEntry) => void;
+  onToggleFolder?: (path: string) => void;
+}
+
+export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onToggleFolder }: FileTreeNodeProps) {
   const {
     activeNotePath,
     selectNote,
@@ -91,63 +91,50 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
   } = useFileTreeStore();
 
   const expanded = expandedFolders.has(entry.path);
+  const isDraggingThis = isDraggingId === entry.path;
+  const isOverFolder = dropTarget === entry.path;
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-    isOver,
-    active,
-    over,
-  } = useSortable({ id: entry.path });
-
-  useEffect(() => {
-    if (isOver && entry.is_dir && !expanded) {
-      const timer = setTimeout(() => {
-        toggleFolderExpanded(entry.path);
-      }, 700);
-      return () => clearTimeout(timer);
+  const handleClick = () => {
+    if (entry.is_dir) {
+      toggleFolderExpanded(entry.path);
+    } else {
+      selectNote(entry.path, {
+        path: entry.path,
+        title: entry.name,
+        tags: entry.tags,
+        updated: entry.modified,
+      });
     }
-  }, [isOver, entry.is_dir, expanded, toggleFolderExpanded, entry.path]);
-
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? 0.3 : 1,
   };
 
-  const dropPosition = calculateDropPosition(isOver, active, over, entry.is_dir, expanded);
-  const isIntoFolder = isDropIntoFolder(dropPosition, entry.is_dir);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (onMouseDown) {
+      onMouseDown(e, entry);
+    }
+  };
 
   if (entry.is_dir) {
     const children = sortEntries(entry.children);
 
     return (
-      <div 
-        ref={setNodeRef} 
-        style={style} 
-        {...attributes}
-        className={cn(
-          "relative transition-all duration-100 rounded-md",
-          isIntoFolder && "bg-primary/10 ring-1 ring-primary/30"
-        )}
+      <div
+        data-folder-id={entry.path}
+        className="relative transition-all duration-100 rounded-md folder-drop-zone"
+        style={{
+          background: isOverFolder ? "hsl(var(--primary) / 0.1)" : "transparent",
+          outline: isOverFolder ? "1px solid hsl(var(--primary))" : "1px solid transparent",
+          outlineOffset: -1,
+          zIndex: isOverFolder ? 10 : "auto",
+        }}
       >
         <ContextMenu>
           <ContextMenuTrigger>
             <div className="relative group/folder">
-              {dropPosition === "top" && (
-                <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-20 rounded-full" />
-              )}
-              
               <button
-                {...listeners}
-                onClick={() => toggleFolderExpanded(entry.path)}
+                onClick={handleClick}
+                onMouseDown={handleMouseDown}
                 className={cn(
-                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground",
-                  isIntoFolder ? "bg-primary/5" : "hover:bg-sidebar-accent"
+                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground hover:bg-sidebar-accent"
                 )}
               >
                 {expanded ? (
@@ -157,10 +144,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
                 )}
                 <span className="truncate pr-1">{entry.name}</span>
               </button>
-
-              {dropPosition === "bottom" && !expanded && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-20 rounded-full" />
-              )}
             </div>
           </ContextMenuTrigger>
 
@@ -203,18 +186,20 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
               transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
               className="overflow-hidden"
             >
-              <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5">
-                <div className={cn(
-                  "absolute top-0 bottom-1 left-0 w-[1px] transition-colors",
-                  isIntoFolder ? "bg-primary/40" : "bg-border/80"
-                )} />
+              <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
+                <div className="absolute top-0 bottom-1 left-0 w-[1px] bg-border/80" />
                 
                 <div className="flex flex-col gap-0.5">
-                  <SortableContext items={children.map(c => c.path)} strategy={verticalListSortingStrategy}>
-                    {children.map((child) => (
-                      <FileTreeNode key={child.path} entry={child} />
-                    ))}
-                  </SortableContext>
+                  {children.map((child) => (
+                    <FileTreeNode 
+                      key={child.path} 
+                      entry={child} 
+                      isDraggingId={isDraggingId}
+                      dropTarget={dropTarget}
+                      onMouseDown={onMouseDown}
+                      onToggleFolder={onToggleFolder}
+                    />
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -229,20 +214,10 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div ref={setNodeRef} style={style} {...attributes} className="relative group/note">
-          {dropPosition === "top" && (
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-primary z-20 rounded-full" />
-          )}
+        <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
           <button
-            {...listeners}
-            onClick={() => { 
-              selectNote(entry.path, { 
-                path: entry.path, 
-                title: entry.name,
-                tags: entry.tags,
-                updated: entry.modified
-              }); 
-            }}
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
             onMouseEnter={() => prefetchNote(entry.path)}
             className={cn(
               "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
@@ -253,10 +228,6 @@ export function FileTreeNode({ entry }: { entry: VaultEntry }) {
           >
             <span className="truncate pr-1">{entry.name}</span>
           </button>
-
-          {dropPosition === "bottom" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary z-20 rounded-full" />
-          )}
         </div>
       </ContextMenuTrigger>
 

@@ -4,10 +4,8 @@ import { useStore } from "@/store";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
-import { SidebarSearch } from "@/components/sidebar/SidebarSearch";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
-import { SearchResultsList } from "@/components/sidebar/SearchResultsList";
 import { TagsPanel } from "@/components/sidebar/TagsPanel";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
@@ -23,7 +21,6 @@ export function Sidebar() {
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
   const [isResizing, setIsResizing] = useState(false);
-  const [isSearchActive, setIsSearchActive] = useState(false);
 
   useEffect(() => {
     loadVault();
@@ -92,10 +89,9 @@ export function Sidebar() {
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
           <SidebarHeader />
-          <SidebarSearch onSearchChange={setIsSearchActive} />
-          {!isSearchActive && <PinnedSection />}
+          <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
-            {isSearchActive ? <SearchResultsList /> : <FileTree />}
+            <FileTree />
           </div>
           <TagsPanel />
         </div>
