@@ -12,6 +12,7 @@ export interface SlashCommandItem {
 }
 
 export const slashCommandsList: SlashCommandItem[] = [
+  { id: "text", label: "Text", icon: "Type", command: "paragraph" },
   { id: "h1", label: "Heading 1", icon: "H1", command: "heading1" },
   { id: "h2", label: "Heading 2", icon: "H2", command: "heading2" },
   { id: "h3", label: "Heading 3", icon: "H3", command: "heading3" },

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { X as Cross2Icon } from "lucide-react";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -17,18 +17,19 @@ export function TagInput() {
   const [positionAbove, setPositionAbove] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showSuggestions && containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      setPositionAbove(spaceBelow < 200); // threshold for tag suggestions
+      setPositionAbove(spaceBelow < 200);
     }
   }, [showSuggestions]);
 
   // Filter and sort suggestions based on relevance and popularity
   const query = typedValue.trim().toLowerCase();
-  const suggestions = query
+  const allSuggestions = query
     ? allTags
         .filter(
           (t: TagCount) =>
@@ -51,8 +52,30 @@ export function TagInput() {
           // Priority 3: Alphabetical order for identical counts
           return aName.localeCompare(bName);
         })
-        .slice(0, 5)
+        .slice(0, 10)
     : [];
+
+  const suggestions = allSuggestions;
+
+  useLayoutEffect(() => {
+    const container = suggestionsRef.current;
+    if (!container) return;
+    
+    const selectedItem = container.querySelector('[data-selected="true"]');
+    if (!selectedItem) return;
+    
+    const containerRect = container.getBoundingClientRect();
+    const itemRect = selectedItem.getBoundingClientRect();
+    
+    const relativeTop = itemRect.top - containerRect.top;
+    const relativeBottom = itemRect.bottom - containerRect.top;
+    
+    if (relativeBottom > containerRect.height - 4) {
+      container.scrollTop += relativeBottom - (containerRect.height - 4);
+    } else if (relativeTop < 4) {
+      container.scrollTop += relativeTop - 4;
+    }
+  }, [selectedIndex]);
 
   const addTag = useCallback(
     (tag: string) => {
@@ -157,16 +180,21 @@ export function TagInput() {
         />
 
         {showSuggestions && suggestions.length > 0 && (
-          <div className={cn(
-            "absolute left-0 bg-popover border border-border rounded-md shadow-xl min-w-[160px] z-50 overflow-hidden h-auto p-1 flex flex-col gap-0.5",
-            positionAbove ? "bottom-full mb-1" : "top-full mt-1"
-          )}>
+          <div 
+            ref={suggestionsRef}
+            className={cn(
+              "absolute left-0 bg-popover border border-border rounded-md shadow-xl min-w-[160px] z-50 flex flex-col gap-0.5 p-1 max-h-[132px] overflow-y-auto",
+              positionAbove ? "bottom-full mb-1" : "top-full mt-1"
+            )}
+            style={{ scrollbarWidth: 'none' }}
+          >
             {suggestions.map((s: TagCount, index: number) => (
               <div
                 key={s.name}
                 onClick={() => addTag(s.name)}
+                data-selected={index === selectedIndex}
                 className={cn(
-                  "flex items-center justify-between gap-4 cursor-pointer py-1 px-2 rounded-sm relative select-none outline-none transition-colors",
+                  "flex items-center justify-between gap-4 cursor-pointer py-1 px-2 rounded-sm relative select-none outline-none",
                   index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
                 )}
               >

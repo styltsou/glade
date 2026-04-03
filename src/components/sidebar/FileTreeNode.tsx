@@ -140,13 +140,13 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}
                 className={cn(
-                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-foreground hover:bg-sidebar-accent"
+                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
                 )}
               >
                 {expanded ? (
-                  <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+                  <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 ) : (
-                  <Folder className="h-3.5 w-3.5 shrink-0" />
+                  <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 )}
                 <span className="truncate pr-1">{entry.name}</span>
               </button>
@@ -231,7 +231,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                   "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
                   isActive
                     ? "bg-sidebar-accent text-foreground font-medium"
-                    : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
+                    : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
                 )}
               >
                 <span className="truncate pr-1">{entry.name}</span>

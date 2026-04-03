@@ -2,9 +2,11 @@ import {
   FolderCog as FolderCogIcon,
   Palette as PaletteIcon,
   Plus as PlusIcon,
+  FolderPlus as FolderPlusIcon,
   Trash2 as TrashIcon,
   Upload as UploadIcon,
   BookOpen as BookOpenIcon,
+  Copy as CopyIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -32,6 +34,9 @@ export function CommandPalette() {
   const activeNote = useStore((state) => state.activeNote);
   const selectNote = useStore((state) => state.selectNote);
   const createNote = useStore((state) => state.createNote);
+  const duplicateNote = useStore((state) => state.duplicateNote);
+  const openCreateFolder = useStore((state) => state.openCreateFolder);
+  const currentFolder = useStore((state) => state.currentFolder);
   const searchNotes = useStore((state) => state.searchNotes);
   const searchResults = useStore((state) => state.searchResults);
   const clearSearch = useStore((state) => state.clearSearch);
@@ -51,11 +56,25 @@ export function CommandPalette() {
 
       switch (action) {
         case "new-note":
-          createNote();
+          createNote(currentFolder || undefined);
+          break;
+        case "new-folder":
+          openCreateFolder(currentFolder || undefined);
+          break;
+        case "duplicate-note":
+          if (activeNote) {
+            duplicateNote(activeNote.path);
+          }
           break;
         case "delete-note":
           if (activeNote) {
             openDelete(activeNote.path, activeNote.title);
+          }
+          break;
+        case "delete-folder":
+          if (currentFolder) {
+            const folderName = currentFolder.split("/").pop() || currentFolder;
+            openDelete(currentFolder, folderName, true);
           }
           break;
         case "toggle-toc":
@@ -82,6 +101,9 @@ export function CommandPalette() {
     [
       activeNote,
       createNote,
+      duplicateNote,
+      openCreateFolder,
+      currentFolder,
       openDelete,
       openSettingsPage,
       openImport,
@@ -142,22 +164,54 @@ export function CommandPalette() {
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Actions">
+          {!activeNote && (
+            <CommandItem
+              value="create new folder"
+              onSelect={() => handleSelect("new-folder")}
+            >
+              <FolderPlusIcon />
+              <span>Create New Folder</span>
+              <CommandShortcut>⌘F</CommandShortcut>
+            </CommandItem>
+          )}
+
           <CommandItem
-            value="new note"
+            value="create new note"
             onSelect={() => handleSelect("new-note")}
           >
             <PlusIcon />
-            <span>New Note</span>
+            <span>Create New Note</span>
             <CommandShortcut>⌘N</CommandShortcut>
           </CommandItem>
 
           {activeNote && (
+            <>
+              <CommandItem
+                value="duplicate note"
+                onSelect={() => handleSelect("duplicate-note")}
+              >
+                <CopyIcon />
+                <span>Duplicate Current Note</span>
+              </CommandItem>
+
+              <CommandItem
+                value="delete note"
+                onSelect={() => handleSelect("delete-note")}
+              >
+                <TrashIcon />
+                <span>Delete Current Note</span>
+                <CommandShortcut>⌘D</CommandShortcut>
+              </CommandItem>
+            </>
+          )}
+
+          {(!activeNote && currentFolder) && (
             <CommandItem
-              value="delete note"
-              onSelect={() => handleSelect("delete-note")}
+              value="delete folder"
+              onSelect={() => handleSelect("delete-folder")}
             >
               <TrashIcon />
-              <span>Delete Current Note</span>
+              <span>Delete Current Folder</span>
               <CommandShortcut>⌘D</CommandShortcut>
             </CommandItem>
           )}

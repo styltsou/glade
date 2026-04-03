@@ -6,6 +6,8 @@ export function useCommandShortcuts(
 ) {
   const activeNote = useStore((state) => state.activeNote);
   const createNote = useStore((state) => state.createNote);
+  const openCreateFolder = useStore((state) => state.openCreateFolder);
+  const currentFolder = useStore((state) => state.currentFolder);
   const openDelete = useStore((state) => state.openDelete);
   const openSettings = useStore((state) => state.openSettings);
   const toggleToc = useStore((state) => state.toggleToc);
@@ -20,7 +22,12 @@ export function useCommandShortcuts(
       // New note
       if ((e.metaKey || e.ctrlKey) && e.key === "n") {
         e.preventDefault();
-        createNote();
+        createNote(currentFolder || undefined);
+      }
+      // New folder
+      if ((e.metaKey || e.ctrlKey) && e.key === "f" && !activeNote) {
+        e.preventDefault();
+        openCreateFolder(currentFolder || undefined);
       }
       // Settings
       if ((e.metaKey || e.ctrlKey) && e.key === ",") {
@@ -32,6 +39,9 @@ export function useCommandShortcuts(
         e.preventDefault();
         if (activeNote) {
           openDelete(activeNote.path, activeNote.title);
+        } else if (currentFolder) {
+          const folderName = currentFolder.split('/').pop() || currentFolder;
+          openDelete(currentFolder, folderName, true);
         }
       }
       // Toggle TOC
@@ -44,5 +54,5 @@ export function useCommandShortcuts(
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc]);
+  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc, openCreateFolder, currentFolder]);
 }

@@ -1,7 +1,24 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback, useState, useLayoutEffect } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { Bold, Italic, Strikethrough, Link2, ChevronDown, Clock, Minus } from "lucide-react";
+import { 
+  Bold, 
+  Italic, 
+  Strikethrough, 
+  Link2, 
+  ChevronDown, 
+  Clock, 
+  Heading1, 
+  Heading2, 
+  Heading3, 
+  Heading4, 
+  List, 
+  ListOrdered, 
+  CheckSquare, 
+  Quote, 
+  Code, 
+  Type 
+} from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -11,7 +28,7 @@ import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
 import { MentionList, MentionListHandle } from "./MentionList";
-import { SlashCommandMenu, SlashCommandItem } from "./extensions/SlashCommandMenu";
+import { SlashCommandMenu, SlashCommandMenuHandle, SlashCommandItem } from "./extensions/SlashCommandMenu";
 import { registerSuggestionCallbacks, unregisterSuggestionCallbacks, SuggestionItem } from "./suggestion";
 import { registerSlashCommandCallbacks, unregisterSlashCommandCallbacks } from "./SlashCommands";
 import { cn } from "@/lib/utils";
@@ -34,16 +51,16 @@ interface NoteEditorProps {
 }
 
 const blockTypes = [
-  { id: "paragraph", label: "Paragraph" },
-  { id: "heading-1", label: "Heading 1", level: 1 },
-  { id: "heading-2", label: "Heading 2", level: 2 },
-  { id: "heading-3", label: "Heading 3", level: 3 },
-  { id: "heading-4", label: "Heading 4", level: 4 },
-  { id: "bulletList", label: "Bullet list" },
-  { id: "orderedList", label: "Ordered list" },
-  { id: "taskList", label: "Task list" },
-  { id: "blockquote", label: "Blockquote" },
-  { id: "codeBlock", label: "Code block" },
+  { id: "paragraph", label: "Text", icon: Type },
+  { id: "heading-1", label: "Heading 1", level: 1, icon: Heading1 },
+  { id: "heading-2", label: "Heading 2", level: 2, icon: Heading2 },
+  { id: "heading-3", label: "Heading 3", level: 3, icon: Heading3 },
+  { id: "heading-4", label: "Heading 4", level: 4, icon: Heading4 },
+  { id: "bulletList", label: "Bullet list", icon: List },
+  { id: "orderedList", label: "Ordered list", icon: ListOrdered },
+  { id: "taskList", label: "Task list", icon: CheckSquare },
+  { id: "blockquote", label: "Blockquote", icon: Quote },
+  { id: "codeBlock", label: "Code block", icon: Code },
 ];
 
 function convertToBlockType(editor: Editor, blockTypeId: string) {
@@ -139,10 +156,64 @@ export function NoteEditor({
   const [slashPosition, setSlashPosition] = useState<{ top?: number; bottom?: number; left: number } | null>(null);
   const [slashVisible, setSlashVisible] = useState(false);
   const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
+  const [blockSelectedIndex, setBlockSelectedIndex] = useState(0);
   const [currentBlockType, setCurrentBlockType] = useState("paragraph");
   const mentionListRef = useRef<MentionListHandle>(null);
+  const slashMenuRef = useRef<SlashCommandMenuHandle>(null);
   const suggestionCommandRef = useRef<((item: SuggestionItem) => void) | null>(null);
+  const slashCommandRef = useRef<((item: SlashCommandItem) => void) | null>(null);
   const blockTriggerRef = useRef<HTMLButtonElement>(null);
+  const blockScrollRef = useRef<HTMLDivElement>(null);
+  const isBlockPopoverClosingRef = useRef(false);
+
+
+
+  // Handle scroll padding in block selector
+  useLayoutEffect(() => {
+    if (blockPopoverOpen && blockScrollRef.current) {
+      const container = blockScrollRef.current;
+      const selectedItem = container.querySelector('[data-selected="true"]') as HTMLElement | null;
+      if (selectedItem) {
+        const containerRect = container.getBoundingClientRect();
+        const itemRect = selectedItem.getBoundingClientRect();
+
+        const relativeTop = itemRect.top - containerRect.top;
+        const relativeBottom = itemRect.bottom - containerRect.top;
+
+        if (relativeBottom > containerRect.height - 4) {
+          container.scrollTop += relativeBottom - (containerRect.height - 4);
+        } else if (relativeTop < 4) {
+          container.scrollTop += relativeTop - 4;
+        }
+      }
+    }
+  }, [blockSelectedIndex, blockPopoverOpen]);
+
+  const handleBlockKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setBlockSelectedIndex(prev => (prev + 1) % blockTypes.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setBlockSelectedIndex(prev => (prev + blockTypes.length - 1) % blockTypes.length);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        setBlockSelectedIndex(prev => (prev + blockTypes.length - 1) % blockTypes.length);
+      } else {
+        setBlockSelectedIndex(prev => (prev + 1) % blockTypes.length);
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      const item = blockTypes[blockSelectedIndex];
+      if (item && editor) {
+        convertToBlockType(editor, item.id);
+        setBlockPopoverOpen(false);
+      }
+    } else if (e.key === "Escape") {
+      setBlockPopoverOpen(false);
+    }
+  }, [blockSelectedIndex, editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -238,6 +309,10 @@ export function NoteEditor({
         const spaceBelow = window.innerHeight - clientRect.bottom;
         const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
 
+        slashCommandRef.current = (item: SlashCommandItem) => {
+          props.command(item);
+        };
+
         requestAnimationFrame(() => {
           setSlashItems(props.items);
           setSlashPosition({
@@ -256,6 +331,10 @@ export function NoteEditor({
         const spaceBelow = window.innerHeight - clientRect.bottom;
         const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
 
+        slashCommandRef.current = (item: SlashCommandItem) => {
+          props.command(item);
+        };
+
         requestAnimationFrame(() => {
           setSlashItems(props.items);
           setSlashPosition({
@@ -268,6 +347,7 @@ export function NoteEditor({
       () => {
         requestAnimationFrame(() => {
           setSlashVisible(false);
+          slashCommandRef.current = null;
         });
       }
     );
@@ -280,63 +360,167 @@ export function NoteEditor({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!suggestionVisible || !mentionListRef.current) return;
-      
-      const result = mentionListRef.current.onKeyDown({ event: e });
-      if (result) {
-        e.preventDefault();
-        e.stopPropagation();
+      if (e.key === "Escape") {
+        // If a dropdown or menu is open, let them handle Esc (they will close themselves)
+        if (suggestionVisible || slashVisible || blockPopoverOpen) return;
+
+        // Otherwise, if we have a selection, clear it to hide the Bubble Menu
+        if (editor && !editor.state.selection.empty) {
+          editor.commands.focus();
+          editor.commands.setTextSelection({ 
+            from: editor.state.selection.to, 
+            to: editor.state.selection.to 
+          });
+          return;
+        }
+      }
+
+      // Handle mention list keyboard navigation
+      if (suggestionVisible && mentionListRef.current) {
+        const result = mentionListRef.current.onKeyDown({ event: e });
+        if (result) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+      }
+      // Handle slash command menu keyboard navigation
+      if (slashVisible && slashMenuRef.current) {
+        const result = slashMenuRef.current.onKeyDown({ event: e });
+        if (result) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown, true);
     return () => document.removeEventListener('keydown', handleKeyDown, true);
-  }, [suggestionVisible]);
+  }, [suggestionVisible, slashVisible, blockPopoverOpen, editor]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      
+      // If click is inside any of our menus (or the trigger), keep it open
+      const isInsideMenu = target.closest('[data-suggestion-menu="true"]');
+      if (isInsideMenu) return;
+
+      // Check if we clicked on any element that belongs to our menus
+      // Popover Content from shadcn/Radix usually closes on its own with its own dismissal logic.
+      
+      // If click is inside the editor content area, let Tiptap handle selection changes
+      if (editor && editor.view.dom.contains(target)) return;
+
+      // Capture menu states BEFORE we change them
+      const wasAnyMenuOpen = suggestionVisible || slashVisible || blockPopoverOpen || isBlockPopoverClosingRef.current;
+
+      // Handle dismissal of suggestion and slash menus
+      if (suggestionVisible) setSuggestionVisible(false);
+      if (slashVisible) setSlashVisible(false);
+
+      // If any menu was open, we only close them and return (don't clear selection yet)
+      if (wasAnyMenuOpen) return;
+
+      // Dismiss text selection (Bubble Menu) if clicking elsewhere
+      if (editor && !editor.state.selection.empty) {
+        editor.commands.setTextSelection({ 
+          from: editor.state.selection.to, 
+          to: editor.state.selection.to 
+        });
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [suggestionVisible, slashVisible, blockPopoverOpen, editor]);
 
   return (
     <div ref={scrollRef as React.RefObject<HTMLDivElement>} onScroll={onScroll} className="flex-1 overflow-auto px-10 py-8">
       <div className="max-w-[680px] mx-auto">
         {editor && (
           <BubbleMenu editor={editor}>
-            <div className="flex items-center bg-background border shadow-lg rounded-md p-0.5 gap-0.5">
-              <Popover open={blockPopoverOpen} onOpenChange={setBlockPopoverOpen}>
+            <div 
+              data-suggestion-menu="true"
+              className="flex items-center bg-background border shadow-lg rounded-md p-0.5 gap-0.5"
+            >
+              <Popover 
+                open={blockPopoverOpen} 
+                onOpenChange={(open) => {
+                  if (open && editor) {
+                    const index = blockTypes.findIndex(bt => bt.id === getCurrentBlockType(editor));
+                    setBlockSelectedIndex(index >= 0 ? index : 0);
+                  }
+                  
+                  if (!open && blockPopoverOpen) {
+                    isBlockPopoverClosingRef.current = true;
+                    setTimeout(() => {
+                      isBlockPopoverClosingRef.current = false;
+                    }, 0);
+                  }
+                  
+                  setBlockPopoverOpen(open);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <button
                     ref={blockTriggerRef}
                     type="button"
                     className={cn(
-                      "inline-flex items-center justify-center gap-2 h-8 px-2 rounded-sm text-sm font-medium transition-colors",
+                      "inline-flex items-center justify-center gap-2 h-8 px-2 rounded-sm text-sm font-medium outline-hidden select-none",
                       "hover:bg-accent hover:text-accent-foreground",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                     )}
                   >
-                    <span className="text-sm">
-                      {blockTypes.find(bt => bt.id === currentBlockType)?.label || "Paragraph"}
-                    </span>
-                    <ChevronDown className="h-3 w-3" />
+                    {(() => {
+                      const currentBT = blockTypes.find(bt => bt.id === currentBlockType) || blockTypes[0];
+                      const Icon = currentBT.icon;
+                      return (
+                        <>
+                          <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <span className="text-sm">
+                            {currentBT.label}
+                          </span>
+                        </>
+                      );
+                    })()}
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent 
-                  className="w-48 p-1" 
+                  className="w-48 p-0 border shadow-lg rounded-md bg-popover text-popover-foreground data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100" 
                   align="start"
                   sideOffset={4}
+                  onKeyDown={handleBlockKeyDown}
                 >
-                  {blockTypes.map((bt) => (
-                    <button
-                      key={bt.id}
-                      type="button"
-                      onClick={() => {
-                        convertToBlockType(editor, bt.id);
-                        setBlockPopoverOpen(false);
-                      }}
-                      className={cn(
-                        "w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer",
-                        currentBlockType === bt.id && "bg-accent text-accent-foreground"
-                      )}
-                    >
-                      {bt.label}
-                    </button>
-                  ))}
+                  <div 
+                    ref={blockScrollRef}
+                    className="max-h-45 overflow-y-auto p-1"
+                    style={{ scrollbarWidth: 'none' }}
+                    data-suggestion-menu="true"
+                  >
+                    {blockTypes.map((bt, index) => (
+                      <div
+                        key={bt.id}
+                        data-selected={index === blockSelectedIndex}
+                        onClick={() => {
+                          convertToBlockType(editor, bt.id);
+                          setBlockPopoverOpen(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer outline-hidden select-none",
+                          index === blockSelectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+                        )}
+                      >
+                        <bt.icon className={cn(
+                          "h-4 w-4 shrink-0",
+                          index === blockSelectedIndex ? "text-accent-foreground/70" : "text-muted-foreground"
+                        )} />
+                        <span className="font-medium">{bt.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </PopoverContent>
               </Popover>
 
@@ -370,11 +554,6 @@ export function NoteEditor({
                 isActive={editor.isActive("link")}
               >
                 <Link2 className="h-4 w-4" />
-              </BubbleButton>
-              <BubbleButton
-                onClick={() => editor.chain().focus().setHorizontalRule().run()}
-              >
-                <Minus className="h-4 w-4" />
               </BubbleButton>
             </div>
           </BubbleMenu>
@@ -414,56 +593,15 @@ export function NoteEditor({
 
         {slashVisible && slashPosition && (
           <SlashCommandMenu
+            ref={slashMenuRef}
             items={slashItems}
             command={(item) => {
-              if (!editor) return;
-              const chain = editor.chain().focus();
-              switch (item.command) {
-                case "heading1":
-                  chain.toggleHeading({ level: 1 }).run();
-                  break;
-                case "heading2":
-                  chain.toggleHeading({ level: 2 }).run();
-                  break;
-                case "heading3":
-                  chain.toggleHeading({ level: 3 }).run();
-                  break;
-                case "heading4":
-                  chain.toggleHeading({ level: 4 }).run();
-                  break;
-                case "bulletList":
-                  chain.toggleBulletList().run();
-                  break;
-                case "orderedList":
-                  chain.toggleOrderedList().run();
-                  break;
-                case "taskList":
-                  chain.toggleTaskList().run();
-                  break;
-                case "blockquote":
-                  chain.toggleBlockquote().run();
-                  break;
-                case "codeBlock":
-                  chain.toggleCodeBlock().run();
-                  break;
-                case "table":
-                  chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-                  break;
-                case "horizontalRule":
-                  chain.setHorizontalRule().run();
-                  break;
-                case "link": {
-                  const url = window.prompt("Enter URL:");
-                  if (url) chain.setLink({ href: url }).run();
-                  break;
-                }
+              if (slashCommandRef.current) {
+                slashCommandRef.current(item);
               }
               setSlashVisible(false);
             }}
-            position={{
-              top: slashPosition.top ?? window.innerHeight - (slashPosition.bottom ?? 0),
-              left: slashPosition.left,
-            }}
+            position={slashPosition}
           />
         )}
       </div>

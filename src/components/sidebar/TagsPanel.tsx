@@ -69,7 +69,7 @@ export function TagsPanel() {
       <div className="flex items-center">
         <button 
           onClick={() => toggleTagsCollapsed()}
-          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/50 px-2 py-2 cursor-pointer"
+          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
         >
           {tagsCollapsed  ? (
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
@@ -86,7 +86,7 @@ export function TagsPanel() {
               e.stopPropagation();
               clearTagFilters();
             }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-2 cursor-pointer hover:bg-sidebar-accent/50 whitespace-nowrap"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-2 cursor-pointer hover:bg-sidebar-accent/60 whitespace-nowrap"
           >
             Clear
           </button>
@@ -120,7 +120,7 @@ export function TagsPanel() {
                     className={`group flex items-center justify-between w-full rounded-md px-2 py-1.5 text-sm transition-all cursor-pointer font-medium ${
                       activeTagFilters.includes(tag.name)
                         ? "bg-sidebar-accent text-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                        : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
                     }`}
                   >
                     <span className="truncate flex items-center gap-2">

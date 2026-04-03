@@ -75,7 +75,7 @@ export function PinnedSection() {
       <div className="flex items-center">
         <button
           onClick={() => togglePinnedNotesCollapsed()}
-          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/50 px-2 py-2 cursor-pointer"
+          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
         >
           {pinnedNotesCollapsed ? (
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
@@ -172,7 +172,7 @@ function PinnedItem({
               "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer",
               active
                 ? "bg-sidebar-accent text-foreground font-medium"
-                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent"
+                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
             )}
           >
             <span className="truncate">{name}</span>

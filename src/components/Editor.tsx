@@ -181,19 +181,22 @@ export function Editor() {
       if (latestContentRef.current !== lastSavedContentRef.current) {
         const contentToSave = latestContentRef.current;
         lastSavedContentRef.current = contentToSave;
-        (async () => {
-          try {
-            await saveNote(activeNote.path, contentToSave);
-          } catch {
-            // Keep unsaved status on error
-          } finally {
-            if (savedTimeoutRef.current) {
-              clearTimeout(savedTimeoutRef.current);
-              savedTimeoutRef.current = null;
+        const pathToSave = pathChanged ? currentPathRef.current : activeNote.path;
+        if (pathToSave) {
+          (async () => {
+            try {
+              await saveNote(pathToSave, contentToSave);
+            } catch {
+              // Keep unsaved status on error
+            } finally {
+              if (savedTimeoutRef.current) {
+                clearTimeout(savedTimeoutRef.current);
+                savedTimeoutRef.current = null;
+              }
+              setSaveStatusWithRef("idle");
             }
-            setSaveStatusWithRef("idle");
-          }
-        })();
+          })();
+        }
       }
 
       const currentMarkdown = (editor.storage as any).markdown.getMarkdown();

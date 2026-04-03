@@ -5,6 +5,7 @@ import { FolderCard } from "@/components/FolderCard";
 import { NoteCard } from "@/components/NoteCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/store";
 import type { VaultEntry } from "@/types";
 
@@ -85,46 +86,105 @@ export function HomeView() {
     (isHomeLoading && !currentFolder && !hasNotes);
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-auto w-full">
-      <div className="px-4 py-10 max-w-6xl mx-auto w-full h-full flex flex-col">
-        {currentFolder && <Breadcrumbs className="mb-3" />}
-
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {currentEntry ? currentEntry.name : activeVault?.name || "Home"}
-            </h1>
-            {currentEntry && (
-              <p className="text-sm text-muted-foreground mt-1">
-                {currentEntry.children.length} item
-                {currentEntry.children.length !== 1 ? "s" : ""}
-              </p>
-            )}
+    <div className="flex flex-col flex-1 h-full w-full bg-background overflow-hidden relative">
+      {/* Folder Header */}
+      {currentFolder && (
+        <div className="flex items-center justify-between h-10 shrink-0 select-none border-b w-full bg-background">
+          <div className="flex items-center pl-3 h-full min-w-0">
+            <Breadcrumbs />
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
             {hasData && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openCreateFolder(currentFolder || undefined)}
-                  className="shadow-sm font-semibold"
-                >
-                  <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
-                  New folder
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => createNote(currentFolder || undefined)}
-                  className="shadow-md font-semibold"
-                >
-                  <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-                  New note
-                </Button>
+                <div className="h-10 w-px bg-border" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className="h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent"
+                      onClick={() => openCreateFolder(currentFolder)}
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>New Folder (Ctrl+F)</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <div className="h-10 w-px bg-border" />
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      className="h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent"
+                      onClick={() => createNote(currentFolder)}
+                    >
+                      <PlusIcon className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>New Note (Ctrl+N)</p>
+                  </TooltipContent>
+                </Tooltip>
               </>
             )}
           </div>
         </div>
+      )}
+
+      {/* Main Content */}
+      <div ref={containerRef} className="flex-1 overflow-auto w-full">
+        <div className="px-4 py-10 max-w-6xl mx-auto w-full h-full flex flex-col">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {currentEntry ? currentEntry.name : activeVault?.name || "Home"}
+              </h1>
+              {currentEntry && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {currentEntry.children.length} item
+                  {currentEntry.children.length !== 1 ? "s" : ""}
+                </p>
+              )}
+            </div>
+            {!currentFolder && hasData && (
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openCreateFolder(undefined)}
+                      className="shadow-sm font-semibold"
+                    >
+                      <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
+                      New folder
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>New Folder (Ctrl+F)</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      onClick={() => createNote(undefined)}
+                      className="shadow-md font-semibold"
+                    >
+                      <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
+                      New note
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>New Note (Ctrl+N)</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+          </div>
 
         <div className="space-y-12">
           {/* Folders section */}
@@ -193,23 +253,38 @@ export function HomeView() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openCreateFolder(currentFolder || undefined)}
-                    className="shadow-sm font-semibold"
-                  >
-                    <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
-                    New folder
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => createNote(currentFolder || undefined)}
-                    className="shadow-md font-semibold"
-                  >
-                    <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-                    Create note
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openCreateFolder(currentFolder || undefined)}
+                        className="shadow-sm font-semibold"
+                      >
+                        <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
+                        New folder
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>New Folder (Ctrl+F)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
+                        onClick={() => createNote(currentFolder || undefined)}
+                        className="shadow-md font-semibold"
+                      >
+                        <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
+                        New note
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>New Note (Ctrl+N)</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
 
                 {!currentFolder && (
@@ -236,6 +311,7 @@ export function HomeView() {
             )}
         </div>
       </div>
+    </div>
     </div>
   );
 }

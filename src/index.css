@@ -910,3 +910,17 @@ button, a, input, [role="button"] {
 .tags-scroll ::-webkit-scrollbar-thumb:hover {
   background: var(--foreground);
 }
+
+.scroll-fade-bottom {
+  mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+}
+
+.overlay-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.overlay-scroll::-webkit-scrollbar {
+  display: none;
+}

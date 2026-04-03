@@ -63,12 +63,12 @@ export default {
           const bTime = b.modified ? new Date(b.modified).getTime() : 0;
           return bTime - aTime;
         })
-        .slice(0, 7);
+        .slice(0, 10);
     }
 
     const filtered = allNotes
       .filter(item => item.label.toLowerCase().includes(query.toLowerCase()))
-      .slice(0, 7);
+      .slice(0, 10);
 
     return filtered;
   },
