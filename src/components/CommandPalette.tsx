@@ -178,6 +178,7 @@ export function CommandPalette() {
           {!activeNote && (
             <CommandItem
               value="create new folder"
+              data-active={selectedValue === "create new folder"}
               onSelect={() => handleSelect("new-folder")}
             >
               <FolderPlusIcon />
@@ -188,6 +189,7 @@ export function CommandPalette() {
 
           <CommandItem
             value="create new note"
+            data-active={selectedValue === "create new note"}
             onSelect={() => handleSelect("new-note")}
           >
             <PlusIcon />
@@ -199,6 +201,7 @@ export function CommandPalette() {
             <>
               <CommandItem
                 value="duplicate note"
+                data-active={selectedValue === "duplicate note"}
                 onSelect={() => handleSelect("duplicate-note")}
               >
                 <CopyIcon />
@@ -207,6 +210,7 @@ export function CommandPalette() {
 
               <CommandItem
                 value="delete note"
+                data-active={selectedValue === "delete note"}
                 onSelect={() => handleSelect("delete-note")}
               >
                 <TrashIcon />
@@ -219,6 +223,7 @@ export function CommandPalette() {
           {(!activeNote && currentFolder) && (
             <CommandItem
               value="delete folder"
+              data-active={selectedValue === "delete folder"}
               onSelect={() => handleSelect("delete-folder")}
             >
               <TrashIcon />
@@ -229,6 +234,7 @@ export function CommandPalette() {
 
           <CommandItem
             value="manage vaults"
+            data-active={selectedValue === "manage vaults"}
             onSelect={() => handleSelect("manage-vaults")}
           >
             <FolderCogIcon />
@@ -237,6 +243,7 @@ export function CommandPalette() {
 
           <CommandItem
             value="appearance"
+            data-active={selectedValue === "appearance"}
             onSelect={() => handleSelect("appearance")}
           >
             <PaletteIcon />
@@ -246,6 +253,7 @@ export function CommandPalette() {
 
           <CommandItem
             value="import files"
+            data-active={selectedValue === "import files"}
             onSelect={() => handleSelect("import-files")}
           >
             <UploadIcon />
@@ -255,6 +263,7 @@ export function CommandPalette() {
           {activeNote && (
             <CommandItem
               value="toggle table of contents"
+              data-active={selectedValue === "toggle table of contents"}
               onSelect={() => handleSelect("toggle-toc")}
             >
               <BookOpenIcon />
@@ -279,14 +288,15 @@ export function CommandPalette() {
                       )
                     : [];
 
+                const itemValue = searchResults.length > 0
+                  ? `${note.title} ${note.preview} ${note.tags.join(" ")} ${searchValue}`
+                  : note.title;
+
                 return (
                   <CommandItem
                     key={note.path}
-                    value={
-                      searchResults.length > 0
-                        ? `${note.title} ${note.preview} ${note.tags.join(" ")} ${searchValue}`
-                        : note.title
-                    }
+                    value={itemValue}
+                    data-active={selectedValue === itemValue}
                     onSelect={() => handleSelect(`note:${note.path}`)}
                   >
                     <div className="flex flex-col gap-0.5 min-w-0 flex-1">
