@@ -160,10 +160,6 @@ function CommandItem({
         className
       )}
       {...props}
-      onPointerMove={(e) => e.preventDefault()}
-      onPointerEnter={(e) => e.preventDefault()}
-      onMouseEnter={(e) => e.preventDefault()}
-      onMouseMove={(e) => e.preventDefault()}
     />
   )
 }

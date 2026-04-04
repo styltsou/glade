@@ -45,6 +45,10 @@ export function CommandPalette() {
   const openSettingsPage = useStore((state) => state.openSettingsPage);
   const openImport = useStore((state) => state.openImport);
   const toggleToc = useStore((state) => state.toggleToc);
+  const [selectedValue, setSelectedValue] = useState("");
+  const [lastInteraction, setLastInteraction] = useState<"mouse" | "keyboard">(
+    "keyboard",
+  );
 
   // Register global shortcuts
   useCommandShortcuts(setOpen);
@@ -139,6 +143,12 @@ export function CommandPalette() {
       showCloseButton={false}
       className="max-w-lg"
       commandProps={{
+        value: selectedValue,
+        onValueChange: (v) => {
+          if (lastInteraction === "keyboard") {
+            setSelectedValue(v);
+          }
+        },
         filter: (value: string, search: string) => {
           if (!search) return 1;
 
@@ -159,8 +169,9 @@ export function CommandPalette() {
       <CommandInput
         placeholder="Type a command or search…"
         onValueChange={setSearchValue}
+        onKeyDown={() => setLastInteraction("keyboard")}
       />
-      <CommandList>
+      <CommandList onMouseMove={() => setLastInteraction("mouse")}>
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Actions">
