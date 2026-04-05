@@ -7,11 +7,11 @@ import {
   Upload as UploadIcon,
   BookOpen as BookOpenIcon,
   Copy as CopyIcon,
+  Search as SearchIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 import {
   CommandDialog,
-  CommandInput,
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command";
@@ -23,6 +23,8 @@ import { HighlightedText } from "./command-palette/HighlightedText";
 import { cn } from "@/lib/utils";
 
 type CommandPaletteNote = NoteSearchResult | NoteData;
+
+type PaletteMode = "notes" | "actions";
 
 interface BaseItem {
   id: string;
@@ -50,6 +52,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mode, setMode] = useState<PaletteMode>("notes");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const entries = useStore((state) => state.entries);
@@ -71,11 +74,23 @@ export function CommandPalette() {
   // Register global shortcuts
   useCommandShortcuts(setOpen);
 
+  // Reset state when palette closes
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setOpen(nextOpen);
+      if (!nextOpen) {
+        setSearchValue("");
+        setMode("notes");
+        setSelectedIndex(0);
+        clearSearch();
+      }
+    },
+    [clearSearch],
+  );
+
   const handleSelectAction = useCallback(
     (action: string) => {
-      setOpen(false);
-      setSearchValue("");
-      clearSearch();
+      handleOpenChange(false);
 
       switch (action) {
         case "new-note":
@@ -131,13 +146,14 @@ export function CommandPalette() {
       openSettingsPage,
       openImport,
       selectNote,
-      clearSearch,
+      handleOpenChange,
       toggleToc,
     ],
   );
 
-  // Debounced search
+  // Debounced search — only search notes in notes mode
   useEffect(() => {
+    if (mode !== "notes") return;
     const timer = setTimeout(() => {
       const query = searchValue.trim();
       if (query.length >= 3) {
@@ -148,15 +164,15 @@ export function CommandPalette() {
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [searchValue, searchNotes, clearSearch]);
+  }, [searchValue, searchNotes, clearSearch, mode]);
 
   const allNotes = useMemo(() => {
     if (!entries) return [];
     return flattenNotes(entries).slice(0, 100);
   }, [entries]);
 
-  // Combined and filtered items
-  const { visibleItems } = useMemo(() => {
+  // Build filtered action and note lists separately
+  const { filteredActions, filteredNotes } = useMemo(() => {
     const s = searchValue.toLowerCase().trim();
 
     const allActionItems: ActionItem[] = [
@@ -236,12 +252,12 @@ export function CommandPalette() {
       },
     ].filter((item) => !item.hidden) as ActionItem[];
 
-    const filteredActions = s
+    const actions = s
       ? allActionItems.filter((item) => item.title.toLowerCase().includes(s))
       : allActionItems;
 
     const notesToSearch = searchResults.length > 0 ? searchResults : allNotes;
-    const filteredNotes: NoteItem[] = notesToSearch
+    const notes: NoteItem[] = notesToSearch
       .map((note) => ({
         id: `note:${note.path}`,
         title: note.title,
@@ -261,20 +277,44 @@ export function CommandPalette() {
       });
 
     return {
-      actions: filteredActions,
-      notes: filteredNotes,
-      visibleItems: [...filteredActions, ...filteredNotes],
+      filteredActions: actions,
+      filteredNotes: notes,
     };
   }, [searchValue, activeNote, currentFolder, allNotes, searchResults]);
+
+  // Derive the visible list based on current mode
+  const visibleItems: PaletteItem[] = useMemo(() => {
+    return mode === "actions" ? filteredActions : filteredNotes;
+  }, [mode, filteredActions, filteredNotes]);
 
   // Reset selectedIndex on search change or list change
   useEffect(() => {
     setSelectedIndex(0);
-  }, [visibleItems.length, searchValue]);
+  }, [visibleItems.length, searchValue, mode]);
 
-  // Handle navigation
+  // Handle navigation and mode switching
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const isEmpty = searchValue.length === 0;
+
+      // --- Mode switching logic ---
+      // Empty search + Tab in notes mode → switch to actions
+      if (e.key === "Tab" && !e.shiftKey && isEmpty && mode === "notes") {
+        e.preventDefault();
+        setMode("actions");
+        setSelectedIndex(0);
+        return;
+      }
+
+      // Backspace on empty search in actions mode → back to notes
+      if (e.key === "Backspace" && isEmpty && mode === "actions") {
+        e.preventDefault();
+        setMode("notes");
+        setSelectedIndex(0);
+        return;
+      }
+
+      // --- List navigation ---
       if (visibleItems.length === 0) return;
 
       if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) {
@@ -291,14 +331,13 @@ export function CommandPalette() {
         }
       }
     },
-    [visibleItems, selectedIndex, handleSelectAction],
+    [visibleItems, selectedIndex, handleSelectAction, searchValue, mode],
   );
 
   // Scroll active item into view
   useLayoutEffect(() => {
     if (!scrollContainerRef.current) return;
     const container = scrollContainerRef.current;
-    // Important: we look for data-active="true", not just the attribute presence
     const selectedItem = container.querySelector(
       "[data-active='true']",
     ) as HTMLElement | null;
@@ -317,23 +356,46 @@ export function CommandPalette() {
     }
   }, [selectedIndex]);
 
+  const placeholder = mode === "actions" ? "Search actions…" : "Search notes…";
+
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleOpenChange}
       showCloseButton={false}
       className="max-w-lg"
     >
-      <CommandInput
-        placeholder="Type a command or search…"
-        value={searchValue}
-        onValueChange={setSearchValue}
-        onKeyDown={onKeyDown}
-      />
+      <div
+        data-slot="command-input-wrapper"
+        className="flex h-12 items-center gap-2 border-b px-3"
+      >
+        {mode === "actions" ? (
+          <span className="flex items-center shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground leading-none">
+            Actions
+          </span>
+        ) : (
+          <SearchIcon className="size-4 shrink-0 opacity-50" />
+        )}
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={searchValue}
+          onChange={(e) => setSearchValue(e.target.value)}
+          onKeyDown={onKeyDown}
+          className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+          autoFocus
+        />
+      </div>
       <CommandList ref={scrollContainerRef} className="[&::-webkit-scrollbar]:hidden">
         {visibleItems.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            No results found.
+            {mode === "actions" && searchValue
+              ? "No actions found."
+              : mode === "notes" && searchValue
+                ? "No notes found."
+                : mode === "actions"
+                  ? "No actions available."
+                  : "No notes yet."}
           </div>
         ) : (
           <div className="flex flex-col p-1.5 gap-0.5">
@@ -349,6 +411,26 @@ export function CommandPalette() {
           </div>
         )}
       </CommandList>
+      {/* Hint for mode switching */}
+      <div className="flex items-center justify-between border-t px-3 py-1.5 text-[11px] text-muted-foreground/60">
+        {mode === "notes" && !searchValue ? (
+          <span>
+            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Tab</kbd> actions
+          </span>
+        ) : mode === "actions" && !searchValue ? (
+          <span>
+            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">⌫</kbd> back
+          </span>
+        ) : (
+          <span>
+            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Tab</kbd> navigate
+          </span>
+        )}
+        <span className="flex items-center gap-2">
+          <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↑↓</kbd> navigate
+          <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↵</kbd> select
+        </span>
+      </div>
     </CommandDialog>
   );
 }
@@ -372,63 +454,29 @@ function ItemRow({
       onClick={onClick}
       className={cn(
         "relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none",
-        "hover:bg-accent/50",
+        "text-muted-foreground",
+        "hover:text-foreground hover:bg-accent/50",
         "data-[active=true]:bg-accent data-[active=true]:text-accent-foreground",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4 [&_svg]:text-muted-foreground",
-        active && "[&_svg]:text-accent-foreground/70"
+        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4",
       )}
     >
-      {item.icon ? (
+      {item.icon && (
         <span className="flex items-center justify-center w-4 h-4">
           {item.icon}
         </span>
-      ) : (
-        <span className="flex items-center justify-center w-4 h-4 text-muted-foreground/40 text-[10px] font-bold">
-          #
-        </span>
       )}
-      <div className="flex flex-col gap-0.5 min-w-0 flex-1">
-        <div className="flex items-center gap-2 overflow-hidden">
-          <span className="truncate shrink-0 font-medium">
-            {searchValue ? (
-              <HighlightedText text={item.title} query={searchValue} />
-            ) : (
-              item.title
-            )}
-          </span>
-          {item.type === "note" && item.tags.length > 0 && (
-            <div className="flex gap-1 overflow-hidden">
-              {item.tags.filter(t => t.toLowerCase().includes((searchValue || "").toLowerCase())).map((tag: string) => (
-                <span
-                  key={tag}
-                  className="px-1 py-0.5 rounded-sm bg-primary/10 text-primary text-[10px] font-medium leading-none whitespace-nowrap"
-                >
-                  #
-                  {searchValue ? (
-                    <HighlightedText text={tag} query={searchValue} />
-                  ) : (
-                    tag
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        {item.type === "note" && item.preview && (
-          <span className="text-muted-foreground/80 text-[11px] truncate leading-tight">
-            {searchValue ? (
-              <HighlightedText text={item.preview} query={searchValue} />
-            ) : (
-              item.preview
-            )}
-          </span>
+      <span className="truncate font-medium min-w-0 flex-1">
+        {searchValue ? (
+          <HighlightedText text={item.title} query={searchValue} />
+        ) : (
+          item.title
         )}
-      </div>
+      </span>
       {item.shortcut && (
-        <CommandShortcut className="opacity-60">{item.shortcut}</CommandShortcut>
+        <CommandShortcut className="text-inherit opacity-60">{item.shortcut}</CommandShortcut>
       )}
       {item.type === "note" && item.note.path.includes("/") && (
-        <span className="text-muted-foreground/60 text-[10px] ml-auto shrink-0 font-medium">
+        <span className="text-inherit text-[10px] ml-auto shrink-0 font-medium opacity-60">
           {item.note.path.split("/").slice(0, -1).join("/")}
         </span>
       )}
