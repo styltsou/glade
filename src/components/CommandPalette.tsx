@@ -8,12 +8,11 @@ import {
   BookOpen as BookOpenIcon,
   Copy as CopyIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 import {
   CommandDialog,
   CommandInput,
   CommandList,
-  CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
 import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
@@ -157,7 +156,7 @@ export function CommandPalette() {
   }, [entries]);
 
   // Combined and filtered items
-  const { actions, notes, visibleItems } = useMemo(() => {
+  const { visibleItems } = useMemo(() => {
     const s = searchValue.toLowerCase().trim();
 
     const allActionItems: ActionItem[] = [
@@ -296,13 +295,25 @@ export function CommandPalette() {
   );
 
   // Scroll active item into view
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!scrollContainerRef.current) return;
-    const activeElement = scrollContainerRef.current.querySelector(
-      `[data-active="true"]`,
-    ) as HTMLElement;
-    if (activeElement) {
-      activeElement.scrollIntoView({ block: "nearest", behavior: "auto" });
+    const container = scrollContainerRef.current;
+    // Important: we look for data-active="true", not just the attribute presence
+    const selectedItem = container.querySelector(
+      "[data-active='true']",
+    ) as HTMLElement | null;
+    if (selectedItem) {
+      const containerRect = container.getBoundingClientRect();
+      const itemRect = selectedItem.getBoundingClientRect();
+
+      const relativeTop = itemRect.top - containerRect.top;
+      const relativeBottom = itemRect.bottom - containerRect.top;
+
+      if (relativeBottom > containerRect.height - 4) {
+        container.scrollTop += relativeBottom - (containerRect.height - 4);
+      } else if (relativeTop < 4) {
+        container.scrollTop += relativeTop - 4;
+      }
     }
   }, [selectedIndex]);
 
@@ -320,48 +331,21 @@ export function CommandPalette() {
         onKeyDown={onKeyDown}
       />
       <CommandList ref={scrollContainerRef} className="[&::-webkit-scrollbar]:hidden">
-        {visibleItems.length === 0 && (
+        {visibleItems.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
             No results found.
           </div>
-        )}
-
-        {actions.length > 0 && (
-          <div className="px-2 py-3">
-            <h3 className="px-3 mb-2 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-              Actions
-            </h3>
-            <div className="flex flex-col">
-              {actions.map((item, index) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  active={selectedIndex === index}
-                  onClick={() => handleSelectAction(item.action)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {actions.length > 0 && notes.length > 0 && <CommandSeparator />}
-
-        {notes.length > 0 && (
-          <div className="px-2 py-3">
-            <h3 className="px-3 mb-2 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-              {searchResults.length > 0 ? "Search Results" : "Notes"}
-            </h3>
-            <div className="flex flex-col">
-              {notes.map((item, index) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  searchValue={searchValue}
-                  active={selectedIndex === index + actions.length}
-                  onClick={() => handleSelectAction(item.action)}
-                />
-              ))}
-            </div>
+        ) : (
+          <div className="flex flex-col p-1.5 gap-0.5">
+            {visibleItems.map((item, index) => (
+              <ItemRow
+                key={item.id}
+                item={item}
+                active={selectedIndex === index}
+                onClick={() => handleSelectAction(item.action)}
+                searchValue={searchValue}
+              />
+            ))}
           </div>
         )}
       </CommandList>
@@ -384,10 +368,10 @@ function ItemRow({
     <div
       role="option"
       aria-selected={active}
-      data-active={active}
+      data-active={active ? "true" : "false"}
       onClick={onClick}
       className={cn(
-        "relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none transition-colors",
+        "relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none",
         "hover:bg-accent/50",
         "data-[active=true]:bg-accent data-[active=true]:text-accent-foreground",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4 [&_svg]:text-muted-foreground",

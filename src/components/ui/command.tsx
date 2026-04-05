@@ -91,21 +91,21 @@ function CommandInput({
   )
 }
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
-  return (
-    <CommandPrimitive.List
-      data-slot="command-list"
-      className={cn(
-        "max-h-[350px] scroll-py-1 overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]",
-        className
-      )}
-      {...props}
-    />
-  )
-}
+const CommandList = React.forwardRef<
+  React.ElementRef<typeof CommandPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
+>(({ className, ...props }, ref) => (
+  <CommandPrimitive.List
+    ref={ref}
+    data-slot="command-list"
+    className={cn(
+      "h-[364px] scrollbar-hide overflow-x-hidden overflow-y-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]",
+      className
+    )}
+    {...props}
+  />
+))
+CommandList.displayName = CommandPrimitive.List.displayName
 
 function CommandEmpty({
   ...props
