@@ -70,7 +70,7 @@ export function PinnedSection() {
   if (pinnedNotes.length === 0 && !isVaultsLoading) return null;
 
   return (
-    <div className="shrink-0 mb-1 border-b border-border bg-sidebar/50 relative">
+    <div className="shrink-0 mb-1 border-b border-border bg-sidebar relative">
       <div className="flex items-center">
         <button
           onClick={() => togglePinnedNotesCollapsed()}

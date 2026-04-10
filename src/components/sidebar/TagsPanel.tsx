@@ -53,7 +53,7 @@ export function TagsPanel() {
   }, [isResizing, setTagsHeight]);
 
   return (
-    <div className="shrink-0 mt-1 border-t border-border bg-sidebar/50 relative">
+    <div className="shrink-0 mt-1 border-t border-border bg-sidebar relative">
       {/* Resize handle */}
       {!tagsCollapsed && (
         <div
