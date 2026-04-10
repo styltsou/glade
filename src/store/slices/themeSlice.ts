@@ -8,6 +8,7 @@ export interface ThemeSlice {
   setTheme: (theme: ThemeId) => void;
   setMode: (mode: ThemeMode) => void;
   setResolvedMode: (resolvedMode: "light" | "dark") => void;
+  toggleAppearance: () => void;
 }
 
 export function resolveMode(mode: ThemeMode): "light" | "dark" {
@@ -40,5 +41,13 @@ export const createThemeSlice: StateCreator<StoreState, [], [], ThemeSlice> = (s
 
   setResolvedMode: (resolvedMode) => {
     set({ resolvedMode });
+  },
+
+  toggleAppearance: () => {
+    set((state) => {
+      const newMode: ThemeMode = state.mode === "dark" ? "light" : "dark";
+      applyToDOM(state.theme, newMode);
+      return { mode: newMode, resolvedMode: newMode };
+    });
   },
 });

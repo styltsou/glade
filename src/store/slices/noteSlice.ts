@@ -21,6 +21,10 @@ export interface NoteSlice {
   moveEntry: (fromPath: string, toPath: string) => Promise<void>;
   tocOpen: Record<string, boolean>;
   toggleToc: (path: string) => void;
+  tocWidth: number;
+  setTocWidth: (width: number) => void;
+  noteEditMode: Record<string, boolean>;
+  setNoteEditMode: (path: string, isEditMode: boolean) => void;
 }
 
 import type { StoreState } from "../index";
@@ -306,6 +310,23 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       tocOpen: {
         ...state.tocOpen,
         [path]: !state.tocOpen[path],
+      },
+    }));
+  },
+
+  tocWidth: 280,
+
+  setTocWidth: (width: number) => {
+    set({ tocWidth: width });
+  },
+
+  noteEditMode: {},
+
+  setNoteEditMode: (path: string, isEditMode: boolean) => {
+    set((state: StoreState) => ({
+      noteEditMode: {
+        ...state.noteEditMode,
+        [path]: isEditMode,
       },
     }));
   },

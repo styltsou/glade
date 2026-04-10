@@ -30,11 +30,23 @@ export const useStore = create<StoreState>()(
     }),
     {
       name: "glade-store",
-      partialize: (state) => ({ 
-        theme: state.theme, 
+      partialize: (state) => ({
+        theme: state.theme,
         mode: state.mode,
         tocOpen: state.tocOpen,
-      } as StoreState),
+        noteEditMode: state.noteEditMode,
+        tocWidth: state.tocWidth,
+        sidebarCollapsed: state.sidebarCollapsed,
+        tagsCollapsed: state.tagsCollapsed,
+        pinnedNotesCollapsed: state.pinnedNotesCollapsed,
+        sidebarWidth: state.sidebarWidth,
+        tagsHeight: state.tagsHeight,
+        pinnedHeight: state.pinnedHeight,
+        expandedFolders: state.expandedFolders,
+        soundStates: state.soundStates,
+        currentView: state.currentView,
+        settingsSection: state.settingsSection,
+      }),
     }
   )
 );
