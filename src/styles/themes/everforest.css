@@ -1,0 +1,111 @@
+[data-theme="everforest"][data-mode="light"] {
+  --background:             44 86% 94%;
+  --foreground:             202 11% 40%;
+
+  --card:                   51 55% 90%;
+  --card-foreground:        202 11% 40%;
+
+  --popover:                44 86% 94%;
+  --popover-foreground:     202 11% 40%;
+
+  --primary:                67 99% 32%;
+  --primary-foreground:     0 0% 100%;
+
+  --secondary:              52 46% 88%;
+  --secondary-foreground:   202 11% 40%;
+
+  --muted:                  52 46% 88%;
+  --muted-foreground:       116 7% 55%;
+
+  --accent:                 51 34% 85%;
+  --accent-foreground:      202 11% 40%;
+
+  --destructive:            1 92% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 51 29% 83%;
+  --input:                  51 29% 83%;
+  --ring:                   67 99% 32%;
+
+  --radius:                 0.125rem;
+
+  --chart-1:                67 99% 32%;
+  --chart-2:                25 91% 55%;
+  --chart-3:                201 55% 50%;
+  --chart-4:                43 100% 44%;
+  --chart-5:                319 65% 64%;
+
+  --sidebar:                44 70% 93%;
+  --sidebar-foreground:     202 11% 40%;
+  --sidebar-primary:        67 99% 32%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent:         51 34% 85%;
+  --sidebar-accent-foreground: 202 11% 40%;
+  --sidebar-border:         51 29% 83%;
+  --sidebar-ring:           67 99% 32%;
+
+  --editor-bg:              44 86% 94%;
+  --editor-text:            202 11% 40%;
+  --syntax-keyword:         25 91% 55%;
+  --syntax-string:          67 99% 32%;
+  --syntax-comment:         116 7% 55%;
+  --syntax-number:          319 65% 64%;
+  --syntax-function:        201 55% 50%;
+  --syntax-parameter:       202 11% 40%;
+}
+
+[data-theme="everforest"][data-mode="dark"] {
+  --background:             206 13% 20%;
+  --foreground:             41 32% 75%;
+
+  --card:                   199 13% 24%;
+  --card-foreground:        41 32% 75%;
+
+  --popover:                199 13% 24%;
+  --popover-foreground:     41 32% 75%;
+
+  --primary:                83 34% 63%;
+  --primary-foreground:     0 0% 10%;
+
+  --secondary:              199 12% 27%;
+  --secondary-foreground:   41 32% 75%;
+
+  --muted:                  199 12% 27%;
+  --muted-foreground:       111 5% 49%;
+
+  --accent:                 201 11% 31%;
+  --accent-foreground:      41 32% 75%;
+
+  --destructive:            359 68% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 200 12% 25%;
+  --input:                  200 12% 25%;
+  --ring:                   83 34% 63%;
+
+  --radius:                 0.125rem;
+
+  --chart-1:                83 34% 63%;
+  --chart-2:                19 69% 68%;
+  --chart-3:                172 31% 62%;
+  --chart-4:                40 56% 68%;
+  --chart-5:                331 43% 72%;
+
+  --sidebar:                206 13% 21%;
+  --sidebar-foreground:     41 32% 75%;
+  --sidebar-primary:        83 34% 63%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent:         201 11% 31%;
+  --sidebar-accent-foreground: 41 32% 75%;
+  --sidebar-border:         200 12% 25%;
+  --sidebar-ring:           83 34% 63%;
+
+  --editor-bg:              206 13% 20%;
+  --editor-text:            41 32% 75%;
+  --syntax-keyword:         19 69% 68%;
+  --syntax-string:          83 34% 63%;
+  --syntax-comment:         111 5% 49%;
+  --syntax-number:          331 43% 72%;
+  --syntax-function:        172 31% 62%;
+  --syntax-parameter:       41 32% 75%;
+}

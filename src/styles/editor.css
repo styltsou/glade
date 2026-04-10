@@ -1,0 +1,315 @@
+.tiptap-editor {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  color: hsl(var(--editor-text));
+  outline: none;
+}
+
+.tiptap-editor:focus {
+  outline: none;
+}
+
+.tiptap-editor h1 {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: hsl(var(--foreground));
+}
+
+.tiptap-editor h2 {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.tiptap-editor h3 {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.tiptap-editor h4 {
+  font-family: "Inter", -apple-system, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: hsl(var(--foreground));
+}
+
+.tiptap-editor p {
+  margin-bottom: 0.15em;
+}
+
+.tiptap-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-editor ul {
+  list-style-type: disc;
+  padding-left: 1.25rem;
+  margin-bottom: 1.2em;
+}
+
+.tiptap-editor ol {
+  list-style-type: decimal;
+  padding-left: 1.25rem;
+  margin-bottom: 1.2em;
+}
+
+.tiptap-editor li {
+  margin-bottom: 0.3em;
+}
+
+.tiptap-editor li p {
+  margin-bottom: 0.3em;
+}
+
+.tiptap-editor ul ::marker,
+.tiptap-editor ol ::marker {
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.tiptap-editor ul[data-type="taskList"] li label {
+  margin-top: 0.15em;
+}
+
+.tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  opacity: 0.4;
+}
+
+.tiptap-editor blockquote {
+  border-left: 2px solid hsl(var(--border));
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor .code-block {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-top: 1.2em;
+  margin-bottom: 1.2em;
+  overflow-x: auto;
+  color: hsl(var(--editor-text));
+}
+
+.tiptap-editor .code-block .hljs-keyword,
+.tiptap-editor .code-block .hljs-operator,
+.tiptap-editor .code-block .hljs-pattern-match {
+  color: hsl(var(--syntax-keyword));
+}
+
+.tiptap-editor .code-block .hljs-string,
+.tiptap-editor .code-block .hljs-meta .hljs-string {
+  color: hsl(var(--syntax-string));
+}
+
+.tiptap-editor .code-block .hljs-comment {
+  color: hsl(var(--syntax-comment));
+  font-style: italic;
+}
+
+.tiptap-editor .code-block .hljs-number {
+  color: hsl(var(--syntax-number));
+}
+
+.tiptap-editor .code-block .hljs-built_in,
+.tiptap-editor .code-block .hljs-class .hljs-title {
+  color: hsl(var(--syntax-function));
+}
+
+.tiptap-editor .code-block .hljs-title.function_,
+.tiptap-editor .code-block .hljs-function .hljs-title {
+  color: hsl(var(--syntax-function));
+}
+
+.tiptap-editor .code-block .hljs-variable,
+.tiptap-editor .code-block .hljs-attr,
+.tiptap-editor .code-block .hljs-params {
+  color: hsl(var(--syntax-parameter));
+}
+
+.tiptap-editor .code-block .hljs-type,
+.tiptap-editor .code-block .hljs-literal {
+  color: hsl(var(--syntax-keyword));
+}
+
+.tiptap-editor .code-block .hljs-regexp {
+  color: hsl(var(--syntax-string));
+}
+
+.tiptap-editor code:not(.code-block code) {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 14px;
+  background: hsl(var(--muted));
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.4rem;
+  color: hsl(var(--editor-text));
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 1rem 0;
+}
+
+.tiptap-editor .editor-link {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tiptap-editor .editor-link:hover {
+  color: hsl(var(--primary));
+  opacity: 0.8;
+}
+
+.tiptap-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
+
+.tiptap-editor s {
+  opacity: 0.4;
+}
+
+.tiptap-editor strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.tiptap-editor table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.tiptap-editor table td,
+.tiptap-editor table th {
+  min-width: 1em;
+  border: 1px solid hsl(var(--border) / 80%);
+  padding: 0.5rem 0.75rem;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.tiptap-editor table th {
+  font-weight: 600;
+  text-align: left;
+  background-color: hsl(var(--muted) / 50%);
+}
+
+.tiptap-editor table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: hsl(var(--primary) / 10%);
+  pointer-events: none;
+}
+
+.tiptap-editor table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.tiptap-editor .tableWrapper {
+  overflow-x: auto;
+}
+
+.tiptap-editor.resize-cursor {
+  cursor: ew-resize;
+  cursor: col-resize;
+}
+
+.ProseMirror.ProseMirror-focused .is-empty::before,
+.ProseMirror:focus-within .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: hsl(var(--muted-foreground) / 0.5);
+  pointer-events: none;
+  height: 0;
+  font-family: var(--font-sans);
+  font-size: inherit;
+  font-weight: 400;
+}
+
+.tiptap-editor.is-editor-empty > .ProseMirror,
+.tiptap-editor.is-editor-empty {
+  min-height: 1.5em;
+}
+
+.tiptap.ProseMirror {
+  outline: none;
+}
+
+.tiptap.ProseMirror:focus {
+  outline: none;
+}
+
+.mention {
+  background-color: hsl(var(--primary) / 15%);
+  color: hsl(var(--primary));
+  border-radius: 4px;
+  padding: 0 4px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid hsl(var(--primary) / 30%);
+}
+
+.mention:hover {
+  background-color: hsl(var(--primary) / 25%);
+  border-color: hsl(var(--primary) / 50%);
+}

@@ -1,0 +1,111 @@
+[data-theme="claude"][data-mode="light"] {
+  --background:             35 33% 97%;
+  --foreground:             28 18% 9%;
+
+  --card:                   34 25% 93%;
+  --card-foreground:        28 18% 9%;
+
+  --popover:                35 33% 97%;
+  --popover-foreground:     28 18% 9%;
+
+  --primary:                25 60% 50%;
+  --primary-foreground:     0 0% 100%;
+
+  --secondary:              33 20% 90%;
+  --secondary-foreground:   28 18% 9%;
+
+  --muted:                  33 20% 90%;
+  --muted-foreground:       25 12% 35%;
+
+  --accent:                 32 22% 87%;
+  --accent-foreground:      28 18% 9%;
+
+  --destructive:            0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 32 20% 83%;
+  --input:                  32 20% 83%;
+  --ring:                   25 60% 50%;
+
+  --radius:                 0.125rem;
+
+  --chart-1:                25 60% 50%;
+  --chart-2:                35 40% 50%;
+  --chart-3:                210 35% 48%;
+  --chart-4:                28 45% 55%;
+  --chart-5:                20 60% 55%;
+
+  --sidebar:                34 30% 95%;
+  --sidebar-foreground:     28 18% 9%;
+  --sidebar-primary:        25 60% 50%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent:         32 22% 86%;
+  --sidebar-accent-foreground: 28 18% 9%;
+  --sidebar-border:         32 20% 83%;
+  --sidebar-ring:           25 60% 50%;
+
+  --editor-bg:              35 40% 98%;
+  --editor-text:            28 18% 9%;
+  --syntax-keyword:         25 60% 45%;
+  --syntax-string:          100 28% 38%;
+  --syntax-comment:         25 10% 50%;
+  --syntax-number:          210 40% 42%;
+  --syntax-function:        210 40% 42%;
+  --syntax-parameter:       28 18% 9%;
+}
+
+[data-theme="claude"][data-mode="dark"] {
+  --background:             240 7% 11%;
+  --foreground:             240 1% 93%;
+
+  --card:                   240 6% 14%;
+  --card-foreground:       240 1% 93%;
+
+  --popover:                240 6% 14%;
+  --popover-foreground:     240 1% 93%;
+
+  --primary:                25 65% 55%;
+  --primary-foreground:     0 0% 100%;
+
+  --secondary:              240 4% 17%;
+  --secondary-foreground:   240 1% 93%;
+
+  --muted:                  240 4% 17%;
+  --muted-foreground:       240 0% 60%;
+
+  --accent:                 240 4% 18%;
+  --accent-foreground:      240 1% 93%;
+
+  --destructive:            0 62% 52%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border:                 240 4% 20%;
+  --input:                  240 4% 20%;
+  --ring:                   25 65% 55%;
+
+  --radius:                 0.125rem;
+
+  --chart-1:                25 65% 55%;
+  --chart-2:                35 45% 55%;
+  --chart-3:                210 40% 62%;
+  --chart-4:                28 50% 55%;
+  --chart-5:                20 65% 55%;
+
+  --sidebar:                240 5% 12%;
+  --sidebar-foreground:     240 1% 93%;
+  --sidebar-primary:        25 65% 55%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent:         240 4% 18%;
+  --sidebar-accent-foreground: 240 1% 93%;
+  --sidebar-border:         240 4% 20%;
+  --sidebar-ring:           25 65% 55%;
+
+  --editor-bg:              240 3% 15%;
+  --editor-text:            240 1% 93%;
+  --syntax-keyword:         25 65% 50%;
+  --syntax-string:          100 30% 58%;
+  --syntax-comment:         25 12% 52%;
+  --syntax-number:          210 40% 62%;
+  --syntax-function:        210 40% 62%;
+  --syntax-parameter:       240 1% 93%;
+}
