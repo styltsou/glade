@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { OpenWithDialog } from "@/components/OpenWithDialog";
 import { SettingsPage } from "@/components/SettingsPage";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 import { useStore } from "@/store";
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
@@ -172,6 +173,7 @@ function App() {
         <StatusBar />
         {currentView !== "settings" && <CommandPalette />}
         <SharedDialogs />
+        <Toaster />
       </main>
     </TooltipProvider>
   );

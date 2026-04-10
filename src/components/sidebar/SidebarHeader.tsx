@@ -93,7 +93,7 @@ export function SidebarHeader() {
   };
 
   return (
-    <div className="flex items-center h-10 shrink-0 border-b">
+    <div className="flex items-center h-10 shrink-0 border-b border-border">
       <Select value={activeVault?.id} onValueChange={handleSelectVault} open={isSelectOpen} onOpenChange={setIsSelectOpen}>
         <SelectTrigger 
           style={{ background: isSelectOpen ? 'hsl(0 0% 91%)' : 'transparent', transition: 'background 150ms ease-out' }}
@@ -165,7 +165,7 @@ export function SidebarHeader() {
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            className="h-10 w-10 flex items-center justify-center rounded-none border-l text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+            className="h-10 w-10 flex items-center justify-center rounded-none text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
             onClick={toggleSidebarCollapsed}
           >
             <PanelLeft className="h-4 w-4" />

@@ -29,14 +29,14 @@ import { formatRelativeDate } from "@/lib/dates";
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
     return (
-      <div className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium bg-sidebar-accent text-foreground border border-border/50 shadow-lg">
+      <div className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium bg-sidebar-accent text-foreground shadow-lg">
         <Folder className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">{entry.name}</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left bg-sidebar-accent text-foreground border border-border/50 shadow-lg">
+    <div className="flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left bg-sidebar-accent text-foreground shadow-lg">
       <span className="truncate">{entry.name}</span>
     </div>
   );
@@ -96,7 +96,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     toggleFolderExpanded,
   } = useFileTreeStore();
 
-  const expanded = expandedFolders.has(entry.path);
+  const expanded = expandedFolders.includes(entry.path);
   const isDraggingThis = isDraggingId === entry.path;
   const isOverFolder = dropTarget === entry.path;
 

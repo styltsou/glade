@@ -54,7 +54,6 @@ export function PinnedSection() {
     const handleMouseUp = () => {
       setIsResizing(false);
       resizeStartRef.current = null;
-      useStore.getState().saveSidebarState();
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -98,10 +97,10 @@ export function PinnedSection() {
           <div
             style={{ height: pinnedHeight }}
             className={cn(
-              "px-2 overflow-y-auto pr-1 flex flex-col min-h-0",
+              "px-2 overflow-y-auto flex flex-col min-h-0 w-full",
               pinnedNotes.length === 0 && isVaultsLoading
                 ? "pb-0 pt-0 overflow-hidden"
-                : "pb-3 pt-0.5 [scrollbar-gutter:stable]"
+                : "pb-3 pt-0.5"
             )}
           >
             {isVaultsLoading ? (

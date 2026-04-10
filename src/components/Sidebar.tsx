@@ -63,7 +63,6 @@ export function Sidebar() {
 
     const handleMouseUp = () => {
       setIsResizing(false);
-      useStore.getState().saveSidebarState();
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -82,10 +81,8 @@ export function Sidebar() {
       <motion.aside
         initial={false}
         animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        transition={{ 
-          width: isResizing ? { duration: 0 } : { duration: 0.1, ease: [0.4, 0, 0.2, 1] }
-        }}
-        className="sidebar flex flex-col h-full bg-sidebar select-none overflow-hidden border-r border-border"
+        transition={{ duration: 0 }}
+        className="flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border"
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
@@ -102,10 +99,7 @@ export function Sidebar() {
       {!sidebarCollapsed && (
         <div
           onMouseDown={handleMouseDown}
-          className={cn(
-            "absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20",
-            isResizing && "bg-primary/50"
-          )}
+          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20"
         />
       )}
     </div>

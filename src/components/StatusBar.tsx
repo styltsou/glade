@@ -135,7 +135,7 @@ export function StatusBar() {
   };
 
   return (
-    <div className="statusbar flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full">
+    <div className="flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full border-t border-border">
       <div className="flex items-center gap-1.5 pl-2">
         <GitHubLogoIcon className="w-4 h-4" />
         <span>Files changed</span>

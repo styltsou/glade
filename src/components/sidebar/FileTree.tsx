@@ -176,7 +176,7 @@ export function FileTree() {
           dropTargetRef.current = target;
           setDropTarget(target);
 
-          if (!expandedFolders.has(target)) {
+          if (!expandedFolders.includes(target)) {
             if (!expandTimerRef.current) {
               expandTimerRef.current = setTimeout(() => {
                 toggleFolderExpanded(target);

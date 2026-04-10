@@ -8,6 +8,9 @@ import {
   BookOpen as BookOpenIcon,
   Copy as CopyIcon,
   Search as SearchIcon,
+  Sidebar as SidebarIcon,
+  Sun as SunIcon,
+  Pencil as PencilIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
 import {
@@ -20,7 +23,16 @@ import { flattenNotes } from "@/lib/notes";
 import { useStore } from "@/store";
 import type { NoteData, NoteSearchResult } from "@/types";
 import { HighlightedText } from "./command-palette/HighlightedText";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+type InteractionMethod = "click" | "enter" | "keybind";
+
+interface PendingConfirmation {
+  actionId: "delete-note" | "delete-folder";
+  method: InteractionMethod;
+  keybind?: string;
+}
 
 type CommandPaletteNote = NoteSearchResult | NoteData;
 
@@ -53,7 +65,13 @@ export function CommandPalette() {
   const [searchValue, setSearchValue] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mode, setMode] = useState<PaletteMode>("notes");
+  const [pendingDeleteConfirmation, setPendingDeleteConfirmation] = useState<PendingConfirmation | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef(open);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
 
   const entries = useStore((state) => state.entries);
   const activeNote = useStore((state) => state.activeNote);
@@ -66,13 +84,20 @@ export function CommandPalette() {
   const searchResults = useStore((state) => state.searchResults);
   const clearSearch = useStore((state) => state.clearSearch);
 
-  const openDelete = useStore((state) => state.openDelete);
   const openSettingsPage = useStore((state) => state.openSettingsPage);
   const openImport = useStore((state) => state.openImport);
   const toggleToc = useStore((state) => state.toggleToc);
+  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
+  const toggleAppearance = useStore((state) => state.toggleAppearance);
+  const setNoteEditMode = useStore((state) => state.setNoteEditMode);
+  const noteEditMode = useStore((state) => state.noteEditMode);
 
   // Register global shortcuts
-  useCommandShortcuts(setOpen);
+  useCommandShortcuts(setOpen, openRef, (action) => {
+    handleSelectAction(action, "keyboard");
+  });
+
+  const deleteEntry = useStore((state) => state.deleteEntry);
 
   // Reset state when palette closes
   const handleOpenChange = useCallback(
@@ -83,13 +108,62 @@ export function CommandPalette() {
         setMode("notes");
         setSelectedIndex(0);
         clearSearch();
+        setPendingDeleteConfirmation(null);
       }
     },
     [clearSearch],
   );
 
   const handleSelectAction = useCallback(
-    (action: string) => {
+    (action: string, source: "click" | "keyboard" = "click") => {
+      // Map source to interaction method
+      const method: InteractionMethod = source === "click" ? "click" : "enter";
+
+      // Handle delete actions with inline confirmation
+      if (action === "delete-note" || action === "delete-folder") {
+        const pending = pendingDeleteConfirmation;
+
+        // Check if we should confirm based on method
+        let shouldConfirm = false;
+        if (pending && pending.actionId === action) {
+          // Click confirms if pending was triggered by click
+          if (source === "click" && pending.method === "click") {
+            shouldConfirm = true;
+          }
+          // Keyboard (Enter or Ctrl+D) confirms if pending was triggered by keyboard
+          if (source === "keyboard" && (pending.method === "enter" || pending.method === "keybind")) {
+            shouldConfirm = true;
+          }
+        }
+
+        if (shouldConfirm) {
+          handleOpenChange(false);
+          if (action === "delete-note" && activeNote) {
+            deleteEntry(activeNote.path);
+            toast.success(`Deleted ${activeNote.title}`, {
+              duration: 5000,
+            });
+          } else if (action === "delete-folder" && currentFolder) {
+            const folderName = currentFolder.split("/").pop() || currentFolder;
+            deleteEntry(currentFolder);
+            toast.success(`Deleted ${folderName}`, {
+              duration: 5000,
+            });
+          }
+          setPendingDeleteConfirmation(null);
+          return;
+        }
+
+        // Otherwise set/update pending confirmation
+        setPendingDeleteConfirmation({
+          actionId: action,
+          method: method,
+          keybind: source === "keyboard" ? "⌘D" : undefined,
+        });
+        return;
+      }
+
+      // Non-delete actions: execute directly
       handleOpenChange(false);
 
       switch (action) {
@@ -104,21 +178,13 @@ export function CommandPalette() {
             duplicateNote(activeNote.path);
           }
           break;
-        case "delete-note":
-          if (activeNote) {
-            openDelete(activeNote.path, activeNote.title);
-          }
-          break;
-        case "delete-folder":
-          if (currentFolder) {
-            const folderName = currentFolder.split("/").pop() || currentFolder;
-            openDelete(currentFolder, folderName, true);
-          }
-          break;
         case "toggle-toc":
           if (activeNote) {
             toggleToc(activeNote.path);
           }
+          break;
+        case "toggle-sidebar":
+          toggleSidebarCollapsed();
           break;
         case "manage-vaults":
           openSettingsPage("vaults");
@@ -126,8 +192,17 @@ export function CommandPalette() {
         case "appearance":
           openSettingsPage("appearance");
           break;
+        case "toggle-appearance":
+          toggleAppearance();
+          break;
         case "import-files":
           openImport();
+          break;
+        case "toggle-read-edit-mode":
+          if (activeNote) {
+            const currentMode = noteEditMode[activeNote.path] ?? false;
+            setNoteEditMode(activeNote.path, !currentMode);
+          }
           break;
         default:
           if (action.startsWith("note:")) {
@@ -142,12 +217,17 @@ export function CommandPalette() {
       duplicateNote,
       openCreateFolder,
       currentFolder,
-      openDelete,
+      deleteEntry,
       openSettingsPage,
       openImport,
       selectNote,
       handleOpenChange,
       toggleToc,
+      toggleSidebarCollapsed,
+      toggleAppearance,
+      setNoteEditMode,
+      noteEditMode,
+      pendingDeleteConfirmation,
     ],
   );
 
@@ -177,6 +257,14 @@ export function CommandPalette() {
 
     const allActionItems: ActionItem[] = [
       {
+        id: "new-note",
+        title: "Create New Note",
+        icon: <PlusIcon />,
+        shortcut: "⌘N",
+        type: "action",
+        action: "new-note",
+      },
+      {
         id: "new-folder",
         title: "Create New Folder",
         icon: <FolderPlusIcon />,
@@ -186,19 +274,29 @@ export function CommandPalette() {
         hidden: !!activeNote,
       },
       {
-        id: "new-note",
-        title: "Create New Note",
-        icon: <PlusIcon />,
-        shortcut: "⌘N",
-        type: "action",
-        action: "new-note",
-      },
-      {
         id: "duplicate-note",
         title: "Duplicate Current Note",
         icon: <CopyIcon />,
         type: "action",
         action: "duplicate-note",
+        hidden: !activeNote,
+      },
+      {
+        id: "toggle-toc",
+        title: "Toggle Table of Contents",
+        icon: <BookOpenIcon />,
+        shortcut: "⌘⇧T",
+        type: "action",
+        action: "toggle-toc",
+        hidden: !activeNote,
+      },
+      {
+        id: "toggle-read-edit-mode",
+        title: "Toggle Read/Edit Mode",
+        icon: <PencilIcon />,
+        shortcut: "⌘E",
+        type: "action",
+        action: "toggle-read-edit-mode",
         hidden: !activeNote,
       },
       {
@@ -220,6 +318,21 @@ export function CommandPalette() {
         hidden: !!activeNote || !currentFolder,
       },
       {
+        id: "import-files",
+        title: "Import Files",
+        icon: <UploadIcon />,
+        type: "action",
+        action: "import-files",
+      },
+      {
+        id: "toggle-sidebar",
+        title: "Toggle Sidebar",
+        icon: <SidebarIcon />,
+        shortcut: "⌘B",
+        type: "action",
+        action: "toggle-sidebar",
+      },
+      {
         id: "manage-vaults",
         title: "Manage Vaults",
         icon: <FolderCogIcon />,
@@ -228,27 +341,18 @@ export function CommandPalette() {
       },
       {
         id: "appearance",
-        title: "Appearance",
+        title: "Switch Theme",
         icon: <PaletteIcon />,
         shortcut: "⌘,",
         type: "action",
         action: "appearance",
       },
       {
-        id: "import-files",
-        title: "Import Files",
-        icon: <UploadIcon />,
+        id: "toggle-appearance",
+        title: "Toggle Appearance",
+        icon: <SunIcon />,
         type: "action",
-        action: "import-files",
-      },
-      {
-        id: "toggle-toc",
-        title: "Toggle Table of Contents",
-        icon: <BookOpenIcon />,
-        shortcut: "⌘⇧T",
-        type: "action",
-        action: "toggle-toc",
-        hidden: !activeNote,
+        action: "toggle-appearance",
       },
     ].filter((item) => !item.hidden) as ActionItem[];
 
@@ -311,6 +415,7 @@ export function CommandPalette() {
         e.preventDefault();
         setMode("notes");
         setSelectedIndex(0);
+        setPendingDeleteConfirmation(null);
         return;
       }
 
@@ -327,11 +432,20 @@ export function CommandPalette() {
         e.preventDefault();
         const selected = visibleItems[selectedIndex];
         if (selected) {
-          handleSelectAction(selected.action);
+          handleSelectAction(selected.action, "keyboard");
+        }
+      } else if (e.key === "Escape") {
+        if (pendingDeleteConfirmation) {
+          e.preventDefault();
+          setPendingDeleteConfirmation(null);
+        }
+      } else if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
+        if (pendingDeleteConfirmation) {
+          setPendingDeleteConfirmation(null);
         }
       }
     },
-    [visibleItems, selectedIndex, handleSelectAction, searchValue, mode],
+    [visibleItems, selectedIndex, handleSelectAction, searchValue, mode, pendingDeleteConfirmation, setPendingDeleteConfirmation],
   );
 
   // Scroll active item into view
@@ -404,8 +518,13 @@ export function CommandPalette() {
                 key={item.id}
                 item={item}
                 active={selectedIndex === index}
-                onClick={() => handleSelectAction(item.action)}
+                onClick={() => handleSelectAction(item.action, "click")}
                 searchValue={searchValue}
+                pendingConfirmation={
+                  pendingDeleteConfirmation?.actionId === item.action
+                    ? pendingDeleteConfirmation
+                    : null
+                }
               />
             ))}
           </div>
@@ -440,12 +559,33 @@ function ItemRow({
   active,
   onClick,
   searchValue,
+  pendingConfirmation,
 }: {
   item: PaletteItem;
   active: boolean;
   onClick: () => void;
   searchValue?: string;
+  pendingConfirmation: PendingConfirmation | null;
 }) {
+  const isPending = pendingConfirmation !== null;
+  const isDanger = isPending && (item.action === "delete-note" || item.action === "delete-folder");
+
+  const getConfirmationText = () => {
+    if (!pendingConfirmation) return null;
+    switch (pendingConfirmation.method) {
+      case "click":
+        return "Click again to confirm";
+      case "enter":
+        return "Press Enter or Ctrl+D to confirm";
+      case "keybind":
+        return "Press Enter or Ctrl+D to confirm";
+      default:
+        return null;
+    }
+  };
+
+  const confirmationText = getConfirmationText();
+
   return (
     <div
       role="option"
@@ -454,9 +594,13 @@ function ItemRow({
       onClick={onClick}
       className={cn(
         "relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none",
-        "text-muted-foreground",
-        "hover:text-foreground hover:bg-accent/50",
-        "data-[active=true]:bg-accent data-[active=true]:text-accent-foreground",
+        isDanger ? "text-destructive" : "text-muted-foreground",
+        isDanger 
+          ? "bg-destructive/10 hover:bg-destructive/20" 
+          : "hover:bg-accent/50",
+        isDanger && active ? "bg-destructive/20" : "data-[active=true]:bg-accent",
+        !isDanger && "hover:text-foreground",
+        isDanger && active ? "text-destructive" : "data-[active=true]:text-accent-foreground",
         "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4",
       )}
     >
@@ -466,13 +610,15 @@ function ItemRow({
         </span>
       )}
       <span className="truncate font-medium min-w-0 flex-1">
-        {searchValue ? (
+        {isPending && confirmationText ? (
+          confirmationText
+        ) : searchValue ? (
           <HighlightedText text={item.title} query={searchValue} />
         ) : (
           item.title
         )}
       </span>
-      {item.shortcut && (
+      {item.shortcut && !isPending && (
         <CommandShortcut className="text-inherit opacity-60">{item.shortcut}</CommandShortcut>
       )}
       {item.type === "note" && item.note.path.includes("/") && (
