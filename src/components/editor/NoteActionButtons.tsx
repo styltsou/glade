@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { toast } from "sonner";
 import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
@@ -67,9 +66,8 @@ export function NoteActionButtons({
       await writeText(finalMarkdown);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
-      toast.success("Markdown copied to clipboard");
     } catch (err) {
-      toast.error(`Failed to copy: ${err}`);
+      console.error("Failed to copy:", err);
     }
   }, [notePath, noteTitle]);
 

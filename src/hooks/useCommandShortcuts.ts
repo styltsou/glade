@@ -3,6 +3,8 @@ import { useStore } from "@/store";
 
 export function useCommandShortcuts(
   setOpen: (open: boolean | ((prev: boolean) => boolean)) => void,
+  isOpenRef?: React.RefObject<boolean>,
+  onDeleteWhenOpen?: (action: "delete-note" | "delete-folder") => void,
 ) {
   const activeNote = useStore((state) => state.activeNote);
   const createNote = useStore((state) => state.createNote);
@@ -14,38 +16,49 @@ export function useCommandShortcuts(
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      const isMeta = e.metaKey || e.ctrlKey;
+      const paletteOpen = isOpenRef?.current ?? false;
+
       // Open palette
-      if ((e.metaKey || e.ctrlKey) && (e.key === "p" || e.key === "k")) {
+      if (isMeta && (e.key === "p" || e.key === "k")) {
         e.preventDefault();
         setOpen((prev) => !prev);
       }
       // New note
-      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+      if (isMeta && e.key === "n") {
         e.preventDefault();
         createNote(currentFolder || undefined);
       }
       // New folder
-      if ((e.metaKey || e.ctrlKey) && e.key === "f" && !activeNote) {
+      if (isMeta && e.key === "f" && !activeNote) {
         e.preventDefault();
         openCreateFolder(currentFolder || undefined);
       }
       // Settings
-      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+      if (isMeta && e.key === ",") {
         e.preventDefault();
         openSettings();
       }
       // Delete
-      if ((e.metaKey || e.ctrlKey) && e.key === "d" && !e.shiftKey) {
+      if (isMeta && e.key === "d" && !e.shiftKey) {
         e.preventDefault();
-        if (activeNote) {
-          openDelete(activeNote.path, activeNote.title);
-        } else if (currentFolder) {
-          const folderName = currentFolder.split('/').pop() || currentFolder;
-          openDelete(currentFolder, folderName, true);
+        if (paletteOpen && onDeleteWhenOpen) {
+          if (activeNote) {
+            onDeleteWhenOpen("delete-note");
+          } else if (currentFolder) {
+            onDeleteWhenOpen("delete-folder");
+          }
+        } else {
+          if (activeNote) {
+            openDelete(activeNote.path, activeNote.title);
+          } else if (currentFolder) {
+            const folderName = currentFolder.split('/').pop() || currentFolder;
+            openDelete(currentFolder, folderName, true);
+          }
         }
       }
       // Toggle TOC
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "T") {
+      if (isMeta && e.shiftKey && e.key === "T") {
         e.preventDefault();
         if (activeNote) {
           toggleToc(activeNote.path);
@@ -54,5 +67,5 @@ export function useCommandShortcuts(
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc, openCreateFolder, currentFolder]);
+  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc, openCreateFolder, currentFolder, isOpenRef, onDeleteWhenOpen]);
 }

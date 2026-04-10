@@ -1,12 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { toast } from "sonner";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Clock, FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { FindBar } from "./FindBar";
 
 interface NoteHeaderProps {
   notePath: string;
@@ -18,6 +18,32 @@ interface NoteHeaderProps {
   onToggleToc?: () => void;
   onToggleRaw?: (isRaw: boolean) => void;
   isRawMode?: boolean;
+  findVisible?: boolean;
+  findQuery?: string;
+  onFindQueryChange?: (query: string) => void;
+  currentMatch?: number;
+  totalMatches?: number;
+  onNavigateNext?: () => void;
+  onNavigatePrev?: () => void;
+  onFindClose?: () => void;
+  findInputRef?: React.RefObject<HTMLInputElement>;
+  onFindKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  // Replace
+  isReplaceVisible?: boolean;
+  onToggleReplace?: () => void;
+  replaceQuery?: string;
+  onReplaceQueryChange?: (query: string) => void;
+  onReplace?: () => void;
+  onReplaceAll?: () => void;
+  replaceInputRef?: React.RefObject<HTMLInputElement>;
+  onReplaceKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  // Search options
+  caseSensitive?: boolean;
+  onToggleCaseSensitive?: () => void;
+  matchWholeWord?: boolean;
+  onToggleMatchWholeWord?: () => void;
+  useRegex?: boolean;
+  onToggleUseRegex?: () => void;
 }
 
 export function NoteHeader({ 
@@ -30,6 +56,30 @@ export function NoteHeader({
   onToggleToc,
   onToggleRaw,
   isRawMode = false,
+  findVisible = false,
+  findQuery = "",
+  onFindQueryChange,
+  currentMatch = 0,
+  totalMatches = 0,
+  onNavigateNext,
+  onNavigatePrev,
+  onFindClose,
+  findInputRef,
+  onFindKeyDown,
+  isReplaceVisible = false,
+  onToggleReplace,
+  replaceQuery = "",
+  onReplaceQueryChange,
+  onReplace,
+  onReplaceAll,
+  replaceInputRef,
+  onReplaceKeyDown,
+  caseSensitive = false,
+  onToggleCaseSensitive,
+  matchWholeWord = false,
+  onToggleMatchWholeWord,
+  useRegex = false,
+  onToggleUseRegex,
 }: NoteHeaderProps) {
   const segments = notePath.split("/");
   const parentPath = segments.slice(0, -1).join("/") || null;
@@ -75,9 +125,8 @@ export function NoteHeader({
       await writeText(finalMarkdown);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
-      toast.success("Markdown copied to clipboard");
     } catch (err) {
-      toast.error(`Failed to copy: ${err}`);
+      console.error("Failed to copy:", err);
     }
   }, [notePath, noteTitle]);
 
@@ -88,12 +137,45 @@ export function NoteHeader({
   }, []);
 
   return (
-    <div className="flex items-center justify-between h-10 shrink-0 select-none border-b">
+    <div className="flex items-center justify-between h-10 shrink-0 select-none border-b relative">
+      {/* Floating FindBar — positioned absolutely in top-right of the editor */}
+      {findVisible && (
+        <div className="absolute top-full right-4 z-50 mt-1">
+          <FindBar
+            isVisible={findVisible}
+            query={findQuery}
+            onQueryChange={onFindQueryChange || (() => {})}
+            currentMatch={currentMatch}
+            totalMatches={totalMatches}
+            onNavigateNext={onNavigateNext || (() => {})}
+            onNavigatePrev={onNavigatePrev || (() => {})}
+            onClose={onFindClose || (() => {})}
+            inputRef={findInputRef || { current: null }}
+            onKeyDown={onFindKeyDown || (() => {})}
+            isReplaceVisible={isReplaceVisible}
+            onToggleReplace={onToggleReplace}
+            replaceQuery={replaceQuery}
+            onReplaceQueryChange={onReplaceQueryChange}
+            onReplace={onReplace}
+            onReplaceAll={onReplaceAll}
+            replaceInputRef={replaceInputRef}
+            onReplaceKeyDown={onReplaceKeyDown}
+            caseSensitive={caseSensitive}
+            onToggleCaseSensitive={onToggleCaseSensitive}
+            matchWholeWord={matchWholeWord}
+            onToggleMatchWholeWord={onToggleMatchWholeWord}
+            useRegex={useRegex}
+            onToggleUseRegex={onToggleUseRegex}
+          />
+        </div>
+      )}
+
       <div className="flex items-center pl-3 h-full min-w-0">
         <Breadcrumbs path={parentPath} activeItem={noteTitle} />
       </div>
 
       <div className="flex items-center h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
+
         {saveStatus !== "idle" && (
           <span className="text-muted-foreground">
             {saveStatus === "saved" ? "Saved" : "Unsaved"}
@@ -213,6 +295,9 @@ export function NoteHeader({
             </div>
           )}
         </div>
+
+        <div className="h-10 w-px bg-border" />
+
       </div>
 
       {notePath && noteTitle && (

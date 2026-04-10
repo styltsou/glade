@@ -11,6 +11,7 @@ import {
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
 import { TableOfContents } from "@/components/editor/TableOfContents";
+import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/editor/SearchHighlight";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 
@@ -26,14 +27,45 @@ export function Editor() {
   );
   const tocOpen = useStore((state) => state.tocOpen);
   const toggleToc = useStore((state) => state.toggleToc);
+  const noteEditMode = useStore((state) => state.noteEditMode);
+  const setNoteEditMode = useStore((state) => state.setNoteEditMode);
+
+  const isEditMode = activeNote ? noteEditMode[activeNote.path] ?? false : false;
+  
+  // Track pending cursor position when entering edit mode
+  const pendingCursorPosRef = useRef<number | null>(null);
+
+  const handleEnterEditMode = useCallback((cursorPos?: number | null) => {
+    if (activeNote) {
+      pendingCursorPosRef.current = cursorPos ?? null;
+      setNoteEditMode(activeNote.path, true);
+    }
+  }, [activeNote, setNoteEditMode]);
+
+  const handleExitEditMode = useCallback(() => {
+    if (activeNote) {
+      setNoteEditMode(activeNote.path, false);
+    }
+  }, [activeNote, setNoteEditMode]);
 
   const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
     "idle",
   );
-  const [isMobile, setIsMobile] = useState(false);
   const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
+  const [findVisible, setFindVisible] = useState(false);
+  const [findQuery, setFindQuery] = useState("");
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [replaceVisible, setReplaceVisible] = useState(false);
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [matchWholeWord, setMatchWholeWord] = useState(false);
+  const [useRegex, setUseRegex] = useState(false);
+  const findInputRef = useRef<HTMLInputElement>(null);
+  const replaceInputRef = useRef<HTMLInputElement>(null);
+  const wasEditorFocusedRef = useRef(false);
   const saveStatusRef = useRef<"unsaved" | "saved" | "idle">("idle");
 
   const setSaveStatusWithRef = useCallback((status: "unsaved" | "saved" | "idle") => {
@@ -51,9 +83,17 @@ export function Editor() {
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
+  const lastFocusedPositionRef = useRef<number | null>(null);
 
   const editor = useEditor({
-    extensions,
+    extensions: [
+      ...extensions,
+      SearchHighlight.configure({
+        query: "",
+        activeIndex: 0,
+        caseSensitive: true,
+      }),
+    ],
     content: "",
     editorProps: {
       attributes: { class: "tiptap-editor" },
@@ -76,6 +116,9 @@ export function Editor() {
     onSelectionUpdate: ({ editor }) => {
       if (!isLoadingRef.current) {
         cursorPositionRef.current = editor.state.selection.from;
+        if (editor.isFocused) {
+          lastFocusedPositionRef.current = editor.state.selection.from;
+        }
       }
     },
     onUpdate: ({ editor }) => {
@@ -141,6 +184,80 @@ export function Editor() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [saveNow]);
+
+  const handleFindClose = useCallback(() => {
+    setFindVisible(false);
+    setFindQuery("");
+    setTotalMatches(0);
+    setCurrentMatchIndex(0);
+    setReplaceVisible(false);
+    setReplaceQuery("");
+    
+    // Only focus the editor if it was originally focused, or we actively searched and found matches
+    if (editor && (wasEditorFocusedRef.current || (findQuery && totalMatches > 0))) {
+      editor.commands.focus();
+    }
+  }, [editor, findQuery, totalMatches]);
+
+  // Keyboard shortcuts for Ctrl+F / Cmd+F and Ctrl+H / Cmd+H
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const isModPressed = e.metaKey || e.ctrlKey;
+      if (isModPressed && e.key === "f") {
+        e.preventDefault();
+        wasEditorFocusedRef.current = editor?.isFocused ?? false;
+        const { from, to } = editor?.state.selection ?? { from: 0, to: 0 };
+        const selectedText = editor && from !== to ? editor.state.doc.textBetween(from, to) : "";
+        setFindVisible(true);
+        setReplaceVisible(false);
+        setFindQuery(selectedText || "");
+        setCurrentMatchIndex(0);
+        if (selectedText && editor) {
+          const matches = findMatches(editor.state.doc, selectedText, { caseSensitive, matchWholeWord, useRegex });
+          setTotalMatches(matches.length);
+        }
+        setTimeout(() => findInputRef.current?.focus(), 50);
+      }
+
+      if (isModPressed && e.key === "h") {
+        e.preventDefault();
+        wasEditorFocusedRef.current = editor?.isFocused ?? false;
+        setFindVisible(true);
+        setReplaceVisible(true);
+        setTimeout(() => findInputRef.current?.focus(), 50);
+      }
+      
+      // Close find bar on Escape
+      if (e.key === "Escape" && findVisible) {
+        e.preventDefault();
+        handleFindClose();
+      }
+
+      // Alt+C / Alt+W / Alt+R — search option toggles
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.key === "c" || e.key === "C") {
+          e.preventDefault();
+          setCaseSensitive((v) => !v);
+        } else if (e.key === "w" || e.key === "W") {
+          e.preventDefault();
+          setMatchWholeWord((v) => !v);
+        } else if (e.key === "r" || e.key === "R") {
+          e.preventDefault();
+          setUseRegex((v) => !v);
+        }
+      }
+
+      // Cmd/Ctrl+E to toggle read/edit mode
+      if (isModPressed && e.key === "e") {
+        e.preventDefault();
+        if (activeNote) {
+          setNoteEditMode(activeNote.path, !isEditMode);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [editor, findVisible, handleFindClose, activeNote, isEditMode, setNoteEditMode]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current || !activeNote?.path) return;
@@ -208,8 +325,24 @@ export function Editor() {
         latestContentRef.current = activeNote.body || "";
         // Skip the first onUpdate (fires during setContent)
         skipUpdateRef.current = true;
-        editor.commands.setContent(activeNote.body || "");
+        // Use setContent with emitUpdate: false to avoid focusing
+        editor.commands.setContent(activeNote.body || "", { emitUpdate: false });
         setRawContent(activeNote.body || "");
+
+        // Manually trigger TOC update since emitUpdate: false skips the event
+        setTimeout(() => {
+          const headings: { level: number; text: string; pos: number }[] = [];
+          editor.state.doc.descendants((node, pos) => {
+            if (node.type.name === "heading") {
+              const text = node.textContent.trim();
+              if (text) {
+                headings.push({ level: node.attrs.level, text, pos });
+              }
+            }
+            return true;
+          });
+          setTocHeadings(headings);
+        }, 0);
 
         // Reset cursor position tracking for new note
         cursorPositionRef.current = null;
@@ -220,6 +353,41 @@ export function Editor() {
         const savedPosition = noteScrollPositions[activeNote.path];
         if (scrollRef.current) {
           scrollRef.current.scrollTop = savedPosition || 0;
+        }
+
+        // Only restore cursor if in edit mode - not in read mode
+        if (isEditMode) {
+          // Use pending cursor position if set (from double-click), otherwise use last saved
+          if (pendingCursorPosRef.current !== null) {
+            requestAnimationFrame(() => {
+              if (editor && pendingCursorPosRef.current !== null) {
+                const pos = pendingCursorPosRef.current;
+                const docSize = editor.state.doc.content.size;
+                if (pos >= 0 && pos <= docSize) {
+                  editor.commands.setTextSelection({ from: pos, to: pos });
+                }
+              }
+            });
+            pendingCursorPosRef.current = null;
+          } else if (lastFocusedPositionRef.current !== null) {
+            requestAnimationFrame(() => {
+              if (editor && lastFocusedPositionRef.current !== null) {
+                const pos = lastFocusedPositionRef.current;
+                const docSize = editor.state.doc.content.size;
+                // Only restore if position is valid
+                if (pos >= 0 && pos <= docSize) {
+                  editor.commands.setTextSelection({ from: pos, to: pos });
+                }
+              }
+            });
+          } else {
+            // No prior position known - default to start of document
+            requestAnimationFrame(() => {
+              if (editor) {
+                editor.commands.setTextSelection({ from: 0, to: 0 });
+              }
+            });
+          }
         }
       }
 
@@ -249,13 +417,6 @@ export function Editor() {
     };
   }, []);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
-
   // Update recents list when note is opened
   useEffect(() => {
     if (activeNote) {
@@ -279,7 +440,7 @@ export function Editor() {
       // Skip the first onUpdate after setContent (TipTap serializes differently than raw markdown)
       skipUpdateRef.current = true;
       latestContentRef.current = rawContent;
-      editor.commands.setContent(rawContent);
+      editor.commands.setContent(rawContent, { emitUpdate: false });
       setIsRawMode(false);
       if (rawContent !== lastSavedContentRef.current) {
         setSaveStatusWithRef("unsaved");
@@ -341,8 +502,10 @@ export function Editor() {
       setTocHeadings(headings);
     };
 
+    // Run updateHeadings immediately
     updateHeadings();
 
+    // Also listen for updates
     editor.on("update", updateHeadings);
     return () => {
       editor.off("update", updateHeadings);
@@ -373,6 +536,152 @@ export function Editor() {
     }
   }, [activeNote, toggleToc]);
 
+  const searchOpts = { caseSensitive, matchWholeWord, useRegex };
+
+  const handleFindQueryChange = useCallback((query: string) => {
+    setFindQuery(query);
+    setCurrentMatchIndex(0);
+    if (query) {
+      if (isRawMode) {
+        const matches = findMatchesRaw(latestContentRef.current, query, searchOpts);
+        setTotalMatches(matches.length);
+      } else if (editor) {
+        const matches = findMatches(editor.state.doc, query, searchOpts);
+        setTotalMatches(matches.length);
+      }
+    } else {
+      setTotalMatches(0);
+    }
+  }, [editor, isRawMode, caseSensitive, matchWholeWord, useRegex]);
+
+  const handleNavigateNext = useCallback(() => {
+    if (totalMatches === 0) return;
+    const nextIndex = (currentMatchIndex + 1) % totalMatches;
+    setCurrentMatchIndex(nextIndex);
+  }, [currentMatchIndex, totalMatches]);
+
+  const handleNavigatePrev = useCallback(() => {
+    if (totalMatches === 0) return;
+    const prevIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches;
+    setCurrentMatchIndex(prevIndex);
+  }, [currentMatchIndex, totalMatches]);
+
+
+  const handleFindKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === "Tab" || e.key === "ArrowDown") {
+      e.preventDefault();
+      if (e.shiftKey) {
+        handleNavigatePrev();
+      } else {
+        handleNavigateNext();
+      }
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      handleNavigatePrev();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      handleFindClose();
+    }
+  }, [handleNavigateNext, handleNavigatePrev, handleFindClose]);
+
+  const handleToggleReplace = useCallback(() => {
+    setReplaceVisible((v) => !v);
+    // Focus back to find input so keyboard flow stays natural
+    setTimeout(() => findInputRef.current?.focus(), 0);
+  }, []);
+
+  const handleReplace = useCallback(() => {
+    if (totalMatches === 0 || !replaceQuery && replaceQuery !== "") return;
+
+    if (isRawMode) {
+      const content = latestContentRef.current;
+      const matches = findMatchesRaw(content, findQuery, searchOpts);
+      const match = matches[currentMatchIndex];
+      if (!match) return;
+      const newContent = content.slice(0, match.from) + replaceQuery + content.slice(match.to);
+      onRawChange(newContent);
+      setTimeout(() => {
+        const newMatches = findMatchesRaw(newContent, findQuery, searchOpts);
+        setTotalMatches(newMatches.length);
+        setCurrentMatchIndex(Math.min(currentMatchIndex, Math.max(0, newMatches.length - 1)));
+      }, 0);
+    } else if (editor) {
+      const matches = findMatches(editor.state.doc, findQuery, searchOpts);
+      const match = matches[currentMatchIndex];
+      if (!match) return;
+      editor.chain()
+        .focus()
+        .deleteRange({ from: match.from, to: match.to })
+        .insertContentAt(match.from, replaceQuery)
+        .run();
+      setTimeout(() => {
+        const newMatches = findMatches(editor.state.doc, findQuery, searchOpts);
+        setTotalMatches(newMatches.length);
+        setCurrentMatchIndex(Math.min(currentMatchIndex, Math.max(0, newMatches.length - 1)));
+      }, 0);
+    }
+  }, [editor, isRawMode, findQuery, replaceQuery, currentMatchIndex, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
+
+  const handleReplaceAll = useCallback(() => {
+    if (totalMatches === 0) return;
+
+    if (isRawMode) {
+      const content = latestContentRef.current;
+      const matches = findMatchesRaw(content, findQuery, searchOpts);
+      let newContent = content;
+      for (let i = matches.length - 1; i >= 0; i--) {
+        const m = matches[i];
+        newContent = newContent.slice(0, m.from) + replaceQuery + newContent.slice(m.to);
+      }
+      onRawChange(newContent);
+      setTotalMatches(0);
+      setCurrentMatchIndex(0);
+    } else if (editor) {
+      const matches = findMatches(editor.state.doc, findQuery, searchOpts);
+      if (matches.length === 0) return;
+      const { tr } = editor.state;
+      for (let i = matches.length - 1; i >= 0; i--) {
+        const m = matches[i];
+        tr.insertText(replaceQuery, m.from, m.to);
+      }
+      editor.view.dispatch(tr);
+      setTotalMatches(0);
+      setCurrentMatchIndex(0);
+    }
+  }, [editor, isRawMode, findQuery, replaceQuery, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
+
+  // Update search highlight decorations when query or match index changes
+  useEffect(() => {
+    if (!editor) return;
+    
+    const extension = editor.extensionManager.extensions.find(
+      (ext) => ext.name === "searchHighlight"
+    );
+    if (extension) {
+      // Dispatch a transaction with new options to force ProseMirror plugin state to update
+      editor.view.dispatch(
+        editor.state.tr.setMeta("searchHighlight", {
+          query: findQuery,
+          activeIndex: currentMatchIndex,
+          caseSensitive,
+          matchWholeWord,
+          useRegex,
+        })
+      );
+
+      // Defer scroll operation slightly so ProseMirror can render the new decorations first.
+      // This is purely visual and does not modify text selection, avoiding mention triggers.
+      if (!isRawMode && findQuery) {
+        requestAnimationFrame(() => {
+          const activeMatch = editor.view.dom.querySelector(".search-highlight-active");
+          if (activeMatch) {
+            activeMatch.scrollIntoView({ block: "center", behavior: "smooth" });
+          }
+        });
+      }
+    }
+  }, [editor, findQuery, currentMatchIndex, isRawMode, caseSensitive, matchWholeWord, useRegex]);
+
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
       <NoteHeader
@@ -384,24 +693,69 @@ export function Editor() {
         onToggleToc={handleToggleToc}
         onToggleRaw={(isRaw) => { if (isRaw !== isRawMode) toggleRawMode(); }}
         isRawMode={isRawMode}
+        findVisible={findVisible}
+        findQuery={findQuery}
+        onFindQueryChange={handleFindQueryChange}
+        currentMatch={currentMatchIndex + 1}
+        totalMatches={totalMatches}
+        onNavigateNext={handleNavigateNext}
+        onNavigatePrev={handleNavigatePrev}
+        onFindClose={handleFindClose}
+        findInputRef={findInputRef}
+        onFindKeyDown={handleFindKeyDown}
+        isReplaceVisible={replaceVisible}
+        onToggleReplace={handleToggleReplace}
+        replaceQuery={replaceQuery}
+        onReplaceQueryChange={setReplaceQuery}
+        onReplace={handleReplace}
+        onReplaceAll={handleReplaceAll}
+        replaceInputRef={replaceInputRef}
+        onReplaceKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (e.altKey) {
+              handleReplaceAll();
+            } else {
+              handleReplace();
+            }
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            handleFindClose();
+          }
+        }}
+        caseSensitive={caseSensitive}
+        onToggleCaseSensitive={() => setCaseSensitive((v) => !v)}
+        matchWholeWord={matchWholeWord}
+        onToggleMatchWholeWord={() => setMatchWholeWord((v) => !v)}
+        useRegex={useRegex}
+        onToggleUseRegex={() => setUseRegex((v) => !v)}
       />
 
-      <NoteEditor
-        activeNote={activeNote}
-        editor={editor}
-        isRawMode={isRawMode}
-        rawContent={rawContent}
-        onRawChange={onRawChange}
-        scrollRef={scrollRef}
-        onScroll={handleScroll}
-      />
-      <TableOfContents
-        editor={editor}
-        isOpen={isTocOpen}
-        onClose={handleToggleToc}
-        isMobile={isMobile}
-        headings={tocHeadings}
-      />
+      <div className="flex flex-1 overflow-hidden">
+        <NoteEditor
+          activeNote={activeNote}
+          editor={editor}
+          isRawMode={isRawMode}
+          rawContent={rawContent}
+          onRawChange={onRawChange}
+          scrollRef={scrollRef}
+          onScroll={handleScroll}
+          findQuery={findQuery}
+          currentMatchIndex={currentMatchIndex}
+          searchOpts={{ caseSensitive, matchWholeWord, useRegex }}
+          isEditMode={isEditMode}
+          onEnterEditMode={handleEnterEditMode}
+          onExitEditMode={handleExitEditMode}
+        />
+        {isTocOpen && (
+          <TableOfContents
+            editor={editor}
+            isOpen={isTocOpen}
+            onClose={handleToggleToc}
+            headings={tocHeadings}
+          />
+        )}
+      </div>
     </div>
   );
 }

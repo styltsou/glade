@@ -139,7 +139,26 @@ export function getSlashCommands(query: string): SlashCommandItem[] {
 }
 
 function executeSlashCommand(editor: any, range: { from: number; to: number }, command: string) {
+  const text = editor.state.doc.textBetween(range.from, range.to);
+  const slashPos = text.lastIndexOf('/');
+  const deleteEnd = slashPos > 0 ? range.from + slashPos + 1 : range.to;
+  
+  const cursorPos = range.from;
+  
+  editor.chain().focus().deleteRange({
+    from: range.from,
+    to: deleteEnd,
+  }).run();
+  
+  editor.commands.setTextSelection({
+    from: cursorPos,
+    to: cursorPos,
+  });
+
   switch (command) {
+    case "paragraph":
+      editor.chain().focus().setParagraph().run();
+      break;
     case "heading1":
       editor.chain().focus().toggleHeading({ level: 1 }).run();
       break;
@@ -178,15 +197,6 @@ function executeSlashCommand(editor: any, range: { from: number; to: number }, c
       break;
     }
   }
-  
-  const text = editor.state.doc.textBetween(range.from, range.to);
-  const slashPos = text.lastIndexOf('/');
-  const deleteEnd = slashPos > 0 ? range.from + slashPos + 1 : range.to;
-  
-  editor.chain().focus().deleteRange({
-    from: range.from,
-    to: deleteEnd,
-  }).run();
 }
 
 export const SuggestionExtension = Extension.create({
