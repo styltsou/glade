@@ -20,6 +20,7 @@ import {
 	Link2,
 	Table,
 	Type,
+	GitBranch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,7 @@ const iconMap: Record<string, React.ReactNode> = {
 	Table: <Table className="h-4 w-4" />,
 	Minus: <Minus className="h-4 w-4" />,
 	Link2: <Link2 className="h-4 w-4" />,
+	GitBranch: <GitBranch className="h-4 w-4" />,
 };
 
 export interface SlashCommandMenuHandle {
@@ -106,8 +108,7 @@ export const SlashCommandMenu = forwardRef<
 				const relativeBottom = itemRect.bottom - containerRect.top;
 
 				if (relativeBottom > containerRect.height - 4) {
-					container.scrollTop +=
-						relativeBottom - (containerRect.height - 4);
+					container.scrollTop += relativeBottom - (containerRect.height - 4);
 				} else if (relativeTop < 4) {
 					container.scrollTop += relativeTop - 4;
 				}
@@ -161,16 +162,16 @@ export const SlashCommandMenu = forwardRef<
 					: undefined
 			}
 		>
-			<div 
+			<div
 				className="relative flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
 				data-suggestion-menu="true"
 			>
 				<div
 					ref={commandListRef}
 					className="max-h-45 overflow-y-auto p-1"
-					style={{ scrollbarWidth: 'none' }}
+					style={{ scrollbarWidth: "none" }}
 				>
-						{props.items.length ? (
+					{props.items.length ? (
 						props.items.map((item, index) => (
 							<div
 								key={item.id}
@@ -178,7 +179,9 @@ export const SlashCommandMenu = forwardRef<
 								data-selected={index === selectedIndex}
 								className={cn(
 									"relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
-									index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+									index === selectedIndex
+										? "bg-accent text-accent-foreground"
+										: "hover:bg-accent/50",
 								)}
 							>
 								<span

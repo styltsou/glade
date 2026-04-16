@@ -685,7 +685,7 @@ export function NoteEditor({
 						findQuery={findQuery}
 						currentMatchIndex={currentMatchIndex}
 						searchOpts={searchOpts}
-						readOnly={!isEditMode}
+						readOnly={false}
 					/>
 				) : (
 					<EditorContent editor={editor} />

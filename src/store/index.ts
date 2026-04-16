@@ -35,6 +35,7 @@ export const useStore = create<StoreState>()(
         mode: state.mode,
         tocOpen: state.tocOpen,
         noteEditMode: state.noteEditMode,
+        isRawMode: state.isRawMode,
         tocWidth: state.tocWidth,
         sidebarCollapsed: state.sidebarCollapsed,
         tagsCollapsed: state.tagsCollapsed,

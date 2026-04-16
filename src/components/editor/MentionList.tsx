@@ -55,8 +55,7 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 					const relativeBottom = itemRect.bottom - containerRect.top;
 
 					if (relativeBottom > containerRect.height - 4) {
-						container.scrollTop +=
-							relativeBottom - (containerRect.height - 4);
+						container.scrollTop += relativeBottom - (containerRect.height - 4);
 					} else if (relativeTop < 4) {
 						container.scrollTop += relativeTop - 4;
 					}
@@ -97,29 +96,29 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 			},
 		}));
 
-	return (
-		<div
-			className="fixed z-1000 min-w-50"
-			style={
-				props.position
-					? {
-							top: props.position.top,
-							bottom: props.position.bottom,
-							left: props.position.left,
-						}
-					: undefined
-			}
-		>
-			<div 
-				className="relative flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
-				data-suggestion-menu="true"
+		return (
+			<div
+				className="fixed z-1000 min-w-50"
+				style={
+					props.position
+						? {
+								top: props.position.top,
+								bottom: props.position.bottom,
+								left: props.position.left,
+							}
+						: undefined
+				}
 			>
 				<div
-					ref={commandListRef}
-					className="max-h-56.25 overflow-y-auto p-1"
-					style={{ scrollbarWidth: 'none' }}
+					className="relative flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
+					data-suggestion-menu="true"
 				>
-					{props.items.length ? (
+					<div
+						ref={commandListRef}
+						className="max-h-56.25 overflow-y-auto p-1"
+						style={{ scrollbarWidth: "none" }}
+					>
+						{props.items.length ? (
 							props.items.map((item, index) => (
 								<div
 									key={item.id}
@@ -127,7 +126,9 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 									data-selected={index === selectedIndex}
 									className={cn(
 										"relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
-										index === selectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
+										index === selectedIndex
+											? "bg-accent text-accent-foreground"
+											: "hover:bg-accent/50",
 									)}
 								>
 									<div className="flex flex-col min-w-0 flex-1">
@@ -152,11 +153,11 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 								No matches
 							</div>
 						)}
+					</div>
 				</div>
 			</div>
-		</div>
-	);
-},
+		);
+	},
 );
 
 MentionList.displayName = "MentionList";

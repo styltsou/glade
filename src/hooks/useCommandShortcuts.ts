@@ -13,6 +13,7 @@ export function useCommandShortcuts(
   const openDelete = useStore((state) => state.openDelete);
   const openSettings = useStore((state) => state.openSettings);
   const toggleToc = useStore((state) => state.toggleToc);
+  const toggleRawMode = useStore((state) => state.toggleRawMode);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -64,8 +65,15 @@ export function useCommandShortcuts(
           toggleToc(activeNote.path);
         }
       }
+      // Toggle Raw/Rich
+      if (isMeta && e.shiftKey && e.key === "R") {
+        e.preventDefault();
+        if (activeNote) {
+          toggleRawMode(activeNote.path);
+        }
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc, openCreateFolder, currentFolder, isOpenRef, onDeleteWhenOpen]);
+  }, [createNote, activeNote, openDelete, openSettings, setOpen, toggleToc, toggleRawMode, openCreateFolder, currentFolder, isOpenRef, onDeleteWhenOpen]);
 }

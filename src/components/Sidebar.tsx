@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";

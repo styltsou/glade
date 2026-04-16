@@ -91,6 +91,7 @@ export function CommandPalette() {
   const toggleAppearance = useStore((state) => state.toggleAppearance);
   const setNoteEditMode = useStore((state) => state.setNoteEditMode);
   const noteEditMode = useStore((state) => state.noteEditMode);
+  const toggleRawModeFromStore = useStore((state) => state.toggleRawMode);
 
   // Register global shortcuts
   useCommandShortcuts(setOpen, openRef, (action) => {
@@ -204,6 +205,11 @@ export function CommandPalette() {
             setNoteEditMode(activeNote.path, !currentMode);
           }
           break;
+        case "toggle-raw-mode":
+          if (activeNote) {
+            toggleRawModeFromStore(activeNote.path);
+          }
+          break;
         default:
           if (action.startsWith("note:")) {
             selectNote(action.slice(5));
@@ -228,6 +234,7 @@ export function CommandPalette() {
       setNoteEditMode,
       noteEditMode,
       pendingDeleteConfirmation,
+      toggleRawModeFromStore,
     ],
   );
 
@@ -297,6 +304,15 @@ export function CommandPalette() {
         shortcut: "⌘E",
         type: "action",
         action: "toggle-read-edit-mode",
+        hidden: !activeNote,
+      },
+      {
+        id: "toggle-raw-mode",
+        title: "Toggle Raw/Rich View",
+        icon: <PencilIcon />,
+        shortcut: "⌘⇧R",
+        type: "action",
+        action: "toggle-raw-mode",
         hidden: !activeNote,
       },
       {

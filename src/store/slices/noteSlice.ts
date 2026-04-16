@@ -25,6 +25,10 @@ export interface NoteSlice {
   setTocWidth: (width: number) => void;
   noteEditMode: Record<string, boolean>;
   setNoteEditMode: (path: string, isEditMode: boolean) => void;
+  isRawMode: Record<string, boolean>;
+  toggleRawMode: (path: string) => void;
+  mermaidFullscreenOpen: boolean;
+  setMermaidFullscreenOpen: (open: boolean) => void;
 }
 
 import type { StoreState } from "../index";
@@ -329,5 +333,22 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         [path]: isEditMode,
       },
     }));
+  },
+
+  isRawMode: {},
+
+  toggleRawMode: (path: string) => {
+    set((state: StoreState) => ({
+      isRawMode: {
+        ...state.isRawMode,
+        [path]: !state.isRawMode[path],
+      },
+    }));
+  },
+
+  mermaidFullscreenOpen: false,
+
+  setMermaidFullscreenOpen: (open: boolean) => {
+    set({ mermaidFullscreenOpen: open });
   },
 });

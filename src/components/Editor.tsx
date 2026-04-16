@@ -29,8 +29,11 @@ export function Editor() {
   const toggleToc = useStore((state) => state.toggleToc);
   const noteEditMode = useStore((state) => state.noteEditMode);
   const setNoteEditMode = useStore((state) => state.setNoteEditMode);
+  const isRawModeMap = useStore((state) => state.isRawMode);
+  const toggleRawModeFromStore = useStore((state) => state.toggleRawMode);
 
   const isEditMode = activeNote ? noteEditMode[activeNote.path] ?? false : false;
+  const isRawMode = activeNote ? isRawModeMap[activeNote.path] ?? false : false;
   
   // Track pending cursor position when entering edit mode
   const pendingCursorPosRef = useRef<number | null>(null);
@@ -48,12 +51,12 @@ export function Editor() {
     }
   }, [activeNote, setNoteEditMode]);
 
-  const [isRawMode, setIsRawMode] = useState(false);
   const [rawContent, setRawContent] = useState("");
   const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
     "idle",
   );
   const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
+  const mermaidFullscreenOpen = useStore((state) => state.mermaidFullscreenOpen);
   const [findVisible, setFindVisible] = useState(false);
   const [findQuery, setFindQuery] = useState("");
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
@@ -432,16 +435,16 @@ export function Editor() {
     }
   }, [activeNote?.path, onNoteOpened]);
 
-  // Toggle raw mode
-  const toggleRawMode = useCallback(async () => {
+  // Toggle raw mode using store action
+  const handleToggleRawMode = useCallback(async () => {
     if (!editor || !activeNote) return;
-    if (isRawMode) {
+    const currentlyRaw = isRawModeMap[activeNote.path] ?? false;
+    if (currentlyRaw) {
       isLoadingRef.current = true;
-      // Skip the first onUpdate after setContent (TipTap serializes differently than raw markdown)
       skipUpdateRef.current = true;
       latestContentRef.current = rawContent;
       editor.commands.setContent(rawContent, { emitUpdate: false });
-      setIsRawMode(false);
+      toggleRawModeFromStore(activeNote.path);
       if (rawContent !== lastSavedContentRef.current) {
         setSaveStatusWithRef("unsaved");
         await saveNow();
@@ -458,9 +461,9 @@ export function Editor() {
         const md = (editor.storage as any).markdown.getMarkdown();
         setRawContent(md);
       }
-      setIsRawMode(true);
+      toggleRawModeFromStore(activeNote.path);
     }
-  }, [editor, isRawMode, rawContent, activeNote, saveNow]);
+  }, [editor, isRawModeMap, rawContent, activeNote, saveNow, toggleRawModeFromStore]);
 
   const onRawChange = useCallback(
     (value: string) => {
@@ -684,14 +687,15 @@ export function Editor() {
 
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
-      <NoteHeader
-        notePath={activeNote.path}
+      {!mermaidFullscreenOpen && (
+        <NoteHeader
+          notePath={activeNote.path}
         noteTitle={activeNote.title}
         saveStatus={saveStatus}
         hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
-        onToggleRaw={(isRaw) => { if (isRaw !== isRawMode) toggleRawMode(); }}
+        onToggleRaw={(isRaw) => { if (isRaw !== isRawMode) handleToggleRawMode(); }}
         isRawMode={isRawMode}
         findVisible={findVisible}
         findQuery={findQuery}
@@ -730,8 +734,10 @@ export function Editor() {
         useRegex={useRegex}
         onToggleUseRegex={() => setUseRegex((v) => !v)}
       />
+      )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        <div id="note-overlay-portal" className="absolute inset-0 pointer-events-none z-40 overflow-hidden" />
         <NoteEditor
           activeNote={activeNote}
           editor={editor}
