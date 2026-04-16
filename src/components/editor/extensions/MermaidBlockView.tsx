@@ -22,7 +22,7 @@ import { useStore } from '@/store'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import svgPanZoom from 'svg-pan-zoom'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 import { renderMermaid, onMermaidThemeChange } from '@/lib/mermaid'
@@ -57,6 +57,10 @@ export function MermaidBlockView({
   
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const svgContainerRef = useRef<HTMLDivElement | null>(null)
+  const zoomInstanceRef = useRef<ReturnType<typeof svgPanZoom> | null>(null)
+
+  const previewSvg = error ? lastValidSvg : (svg || lastValidSvg)
 
   // Find portal target on mount
   useEffect(() => {
@@ -119,6 +123,57 @@ export function MermaidBlockView({
     })
   }, [isFullViewOpen, draft, source, doRender])
 
+  // Initialize svg-pan-zoom when full view opens and SVG is rendered
+  useEffect(() => {
+    if (!isFullViewOpen || !previewSvg || !svgContainerRef.current) return
+
+    // Give React time to render the SVG into the DOM
+    const timer = setTimeout(() => {
+      const svgEl = svgContainerRef.current?.querySelector('svg')
+      if (!svgEl) return
+
+      // Clean up previous instance
+      if (zoomInstanceRef.current) {
+        zoomInstanceRef.current.destroy()
+        zoomInstanceRef.current = null
+      }
+
+      // Initialize svg-pan-zoom
+      zoomInstanceRef.current = svgPanZoom(svgEl, {
+        zoomEnabled: true,
+        controlIconsEnabled: false,
+        mouseWheelZoomEnabled: true,
+        panEnabled: true,
+        dblClickZoomEnabled: true,
+        center: true,
+        minZoom: 0.5,
+        maxZoom: 10,
+        fit: true,
+      })
+    }, 150)
+
+    return () => clearTimeout(timer)
+  }, [isFullViewOpen, previewSvg])
+
+  // Cleanup when closing full view
+  useEffect(() => {
+    if (!isFullViewOpen) {
+      if (zoomInstanceRef.current) {
+        zoomInstanceRef.current.destroy()
+        zoomInstanceRef.current = null
+      }
+    }
+  }, [isFullViewOpen])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomInstanceRef.current) {
+        zoomInstanceRef.current.destroy()
+      }
+    }
+  }, [])
+
   // Copy helpers
   const handleCopySource = useCallback(async (text: string) => {
     try {
@@ -127,8 +182,6 @@ export function MermaidBlockView({
       setTimeout(() => setCopied(false), 1500)
     } catch {}
   }, [])
-
-  const previewSvg = error ? lastValidSvg : (svg || lastValidSvg)
 
   const handleExportPng = useCallback(async () => {
     if (!previewSvg) return
@@ -386,54 +439,32 @@ export function MermaidBlockView({
 
             {/* Canvas Pane */}
             <div className="mermaid-full-pane-canvas">
-              <TransformWrapper
-                initialScale={1}
-                minScale={0.1}
-                maxScale={10}
-                centerOnInit={true}
-                doubleClick={{ disabled: false, mode: 'reset' }}
-              >
-                {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-                  <div className="mermaid-full-preview">
-                    <TransformComponent
-                      wrapperStyle={{ width: '100%', height: '100%' }}
-                      contentStyle={{ 
-                        width: '100%', 
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <div className="mermaid-canvas-container">
-                        {previewSvg ? (
-                          <div 
-                            className="mermaid-svg-container-canvas" 
-                            dangerouslySetInnerHTML={{ __html: previewSvg }} 
-                          />
-                        ) : (
-                          <div className="mermaid-block-empty">
-                            {draft.trim() ? 'Rendering...' : 'Empty Diagram'}
-                          </div>
-                        )}
-                      </div>
-                    </TransformComponent>
-                    
-                    {/* Floating Zoom Controls */}
-                    <div className="mermaid-full-zoom-controls">
-                      <button type="button" onClick={() => zoomIn()} title="Zoom In">
-                        <ZoomIn className="size-4" />
-                      </button>
-                      <button type="button" onClick={() => zoomOut()} title="Zoom Out">
-                        <ZoomOut className="size-4" />
-                      </button>
-                      <button type="button" onClick={() => { centerView(); resetTransform(); }} title="Reset">
-                        <Maximize className="size-4" />
-                      </button>
-                    </div>
+              <div className="mermaid-full-preview">
+                {previewSvg ? (
+                  <div 
+                    ref={svgContainerRef}
+                    className="mermaid-svg-container-canvas" 
+                    dangerouslySetInnerHTML={{ __html: previewSvg }} 
+                  />
+                ) : (
+                  <div className="mermaid-block-empty">
+                    {draft.trim() ? 'Rendering...' : 'Empty Diagram'}
                   </div>
                 )}
-              </TransformWrapper>
+                
+                {/* Floating Zoom Controls */}
+                <div className="mermaid-full-zoom-controls">
+                  <button type="button" onClick={() => { zoomInstanceRef.current?.fit(); zoomInstanceRef.current?.center(); }} title="Center">
+                    <Maximize className="size-4" />
+                  </button>
+                  <button type="button" onClick={() => zoomInstanceRef.current?.zoomIn()} title="Zoom In">
+                    <ZoomIn className="size-4" />
+                  </button>
+                  <button type="button" onClick={() => zoomInstanceRef.current?.zoomOut()} title="Zoom Out">
+                    <ZoomOut className="size-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>,

@@ -34,16 +34,6 @@ export function Editor() {
 
   const isEditMode = activeNote ? noteEditMode[activeNote.path] ?? false : false;
   const isRawMode = activeNote ? isRawModeMap[activeNote.path] ?? false : false;
-  
-  // Track pending cursor position when entering edit mode
-  const pendingCursorPosRef = useRef<number | null>(null);
-
-  const handleEnterEditMode = useCallback((cursorPos?: number | null) => {
-    if (activeNote) {
-      pendingCursorPosRef.current = cursorPos ?? null;
-      setNoteEditMode(activeNote.path, true);
-    }
-  }, [activeNote, setNoteEditMode]);
 
   const handleExitEditMode = useCallback(() => {
     if (activeNote) {
@@ -360,31 +350,17 @@ export function Editor() {
 
         // Only restore cursor if in edit mode - not in read mode
         if (isEditMode) {
-          // Use pending cursor position if set (from double-click), otherwise use last saved
-          if (pendingCursorPosRef.current !== null) {
-            requestAnimationFrame(() => {
-              if (editor && pendingCursorPosRef.current !== null) {
-                const pos = pendingCursorPosRef.current;
-                const docSize = editor.state.doc.content.size;
-                if (pos >= 0 && pos <= docSize) {
-                  editor.commands.setTextSelection({ from: pos, to: pos });
-                }
-              }
-            });
-            pendingCursorPosRef.current = null;
-          } else if (lastFocusedPositionRef.current !== null) {
+          if (lastFocusedPositionRef.current !== null) {
             requestAnimationFrame(() => {
               if (editor && lastFocusedPositionRef.current !== null) {
                 const pos = lastFocusedPositionRef.current;
                 const docSize = editor.state.doc.content.size;
-                // Only restore if position is valid
                 if (pos >= 0 && pos <= docSize) {
                   editor.commands.setTextSelection({ from: pos, to: pos });
                 }
               }
             });
           } else {
-            // No prior position known - default to start of document
             requestAnimationFrame(() => {
               if (editor) {
                 editor.commands.setTextSelection({ from: 0, to: 0 });
@@ -692,6 +668,7 @@ export function Editor() {
           notePath={activeNote.path}
         noteTitle={activeNote.title}
         saveStatus={saveStatus}
+        isEditMode={isEditMode}
         hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
@@ -750,7 +727,6 @@ export function Editor() {
           currentMatchIndex={currentMatchIndex}
           searchOpts={{ caseSensitive, matchWholeWord, useRegex }}
           isEditMode={isEditMode}
-          onEnterEditMode={handleEnterEditMode}
           onExitEditMode={handleExitEditMode}
         />
         {isTocOpen && (

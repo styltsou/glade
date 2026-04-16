@@ -69,7 +69,6 @@ interface NoteEditorProps {
 	currentMatchIndex?: number;
 	searchOpts?: { caseSensitive?: boolean; matchWholeWord?: boolean; useRegex?: boolean };
 	isEditMode?: boolean;
-	onEnterEditMode?: (cursorPos?: number) => void;
 	onExitEditMode?: () => void;
 }
 
@@ -175,7 +174,6 @@ export function NoteEditor({
 	currentMatchIndex,
 	searchOpts,
 	isEditMode = false,
-	onEnterEditMode,
 	onExitEditMode,
 }: NoteEditorProps) {
 	const [suggestionItems, setSuggestionItems] = useState<SuggestionItem[]>([]);
@@ -500,9 +498,6 @@ export function NoteEditor({
 		return () => document.removeEventListener("keydown", handleKeyDown);
 	}, [suggestionVisible, slashVisible]);
 
-	// Track last click position in read mode for double-click to use
-	const lastClickPosRef = useRef<number | null>(null);
-
 	// Update editor editable state when isEditMode changes
 	useEffect(() => {
 		if (editor) {
@@ -514,24 +509,9 @@ export function NoteEditor({
 		<div
 			ref={scrollRef as React.RefObject<HTMLDivElement>}
 			onScroll={onScroll}
-			onClick={(e) => {
-				// Track click position in read mode for double-click
-				if (!isEditMode && editor) {
-					const pos = editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
-					if (pos) {
-						lastClickPosRef.current = pos.pos;
-					}
-				}
-			}}
-			onDoubleClick={() => {
-				if (!isEditMode && onEnterEditMode) {
-					const pos = lastClickPosRef.current;
-					onEnterEditMode(pos !== null ? pos : undefined);
-				}
-			}}
 			className="flex-1 overflow-auto px-10 py-8"
 		>
-			<div className="max-w-[750px] mx-auto">
+				<div className="max-w-[750px] mx-auto">
 				{editor && (
 					<BubbleMenu editor={editor}>
 						<div

@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 export const CustomTaskItem = TaskItem.extend({
   addNodeView() {
     return ReactNodeViewRenderer((props) => {
-      const { node, updateAttributes, editor } = props;
+      const { node, updateAttributes } = props;
       const checked: boolean = node.attrs.checked;
       
       return (

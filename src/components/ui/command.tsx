@@ -51,7 +51,7 @@ function CommandDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("overflow-hidden p-0 shadow-lg rounded-lg data-[state=open]:slide-in-from-top-2 data-[state=closed]:slide-out-to-top-2", className)}
+        className={cn("overflow-hidden p-0 shadow-lg rounded-lg", className)}
         showCloseButton={showCloseButton}
       >
         <DialogHeader className="sr-only">

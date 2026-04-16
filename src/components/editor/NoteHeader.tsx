@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
+import { Clock, FileText, Code, Copy, Check, Download, BookOpen, Pencil, Eye } from "lucide-react";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ interface NoteHeaderProps {
   noteTitle: string;
   dateLabel?: string | null;
   saveStatus: "unsaved" | "saved" | "idle";
+  isEditMode?: boolean;
   hasHeadings?: boolean;
   isTocOpen?: boolean;
   onToggleToc?: () => void;
@@ -51,6 +52,7 @@ export function NoteHeader({
   noteTitle,
   dateLabel,
   saveStatus,
+  isEditMode = false,
   hasHeadings = false,
   isTocOpen = false,
   onToggleToc,
@@ -181,6 +183,23 @@ export function NoteHeader({
             {saveStatus === "saved" ? "Saved" : "Unsaved"}
           </span>
         )}
+
+        <div
+          className={cn(
+            "flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium mx-3",
+            isEditMode
+              ? "bg-primary/10 text-primary"
+              : "bg-secondary text-secondary-foreground"
+          )}
+        >
+          {isEditMode ? (
+            <Pencil className="w-3 h-3" />
+          ) : (
+            <Eye className="w-3 h-3" />
+          )}
+          <span>{isEditMode ? "Edit mode" : "Read mode"}</span>
+        </div>
+
         {dateLabel && (
           <span className="text-muted-foreground text-xs flex items-center gap-1">
             <Clock className="w-3 h-3" />
