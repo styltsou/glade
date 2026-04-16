@@ -7,7 +7,7 @@ mod vault;
 use tauri::{Emitter, Manager};
 use commands::{
     create_folder, create_note, create_vault, delete_entry, delete_vault, duplicate_note,
-    export_markdown, export_pdf, get_active_vault, get_pinned_notes, get_recent_notes,
+    export_markdown, export_pdf, get_active_vault, get_pinned_notes, get_recent_notes, write_file,
     get_sidebar_state, initialize_app, list_tags, list_vault, list_vaults, pin_note, read_note,
     read_note_raw, record_note_opened, rename_folder, rename_note, rename_vault, save_sidebar_state,
     search_notes, set_active_vault, unpin_note, update_tags, update_vault_last_opened, write_note,
@@ -64,6 +64,7 @@ pub fn run() {
             read_note_raw,
             export_markdown,
             export_pdf,
+            write_file,
             move_entry,
             scan_import_source,
             import_files,

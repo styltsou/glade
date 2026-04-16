@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::PathBuf;
 use crate::error::AppError;
 use crate::vault;
 
@@ -225,5 +226,13 @@ th {{ background: #f5f5f5; font-weight: 600; }}
         }}, 500);
     "#)).map_err(|e| AppError::Internal(format!("Failed to execute print script: {}", e)))?;
 
+    Ok(())
+}
+
+/// Write binary data to a file at the given path.
+#[tauri::command]
+pub async fn write_file(path: String, contents: Vec<u8>) -> Result<(), AppError> {
+    let dest: PathBuf = path.into();
+    fs::write(&dest, contents)?;
     Ok(())
 }

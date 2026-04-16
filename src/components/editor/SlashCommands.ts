@@ -25,6 +25,7 @@ export const slashCommandsList: SlashCommandItem[] = [
   { id: "table", label: "Table", icon: "Table", command: "table" },
   { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule" },
   { id: "link", label: "Add link", icon: "Link2", command: "link" },
+  { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock" },
 ];
 
 export function getSlashCommands(query: string): SlashCommandItem[] {
@@ -122,6 +123,14 @@ export function executeSlashCommand(editor: Editor, range: { from: number; to: n
       }
       break;
     }
+    case "mermaidBlock":
+      editor.chain().focus().insertContent({
+        type: 'mermaidBlock',
+        attrs: { source: 'graph TD\n  A[Start] --> B[End]' },
+      }).run();
+      break;
+    default:
+      break;
   }
 }
 
