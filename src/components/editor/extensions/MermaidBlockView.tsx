@@ -155,6 +155,17 @@ export function MermaidBlockView({
     return () => clearTimeout(timer)
   }, [isFullViewOpen, previewSvg])
 
+  // Re-fit when the code pane visibility changes (observes the body layout)
+  useEffect(() => {
+    if (!zoomInstanceRef.current || !isFullViewOpen) return
+
+    const timer = setTimeout(() => {
+      zoomInstanceRef.current?.fit()
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [showCodePane, isFullViewOpen])
+
   // Cleanup when closing full view
   useEffect(() => {
     if (!isFullViewOpen) {
