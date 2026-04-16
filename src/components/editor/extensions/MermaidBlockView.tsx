@@ -155,16 +155,35 @@ export function MermaidBlockView({
     return () => clearTimeout(timer)
   }, [isFullViewOpen, previewSvg])
 
-  // Re-fit when the code pane visibility changes (observes the body layout)
+  // Handle resize - re-fit the diagram when container size changes
+  const handleResize = useCallback(() => {
+    if (!zoomInstanceRef.current) return
+    
+    // Use requestAnimationFrame to ensure DOM has updated
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        zoomInstanceRef.current?.fit()
+      })
+    })
+  }, [])
+
+  // Listen for window resize
+  useEffect(() => {
+    if (!isFullViewOpen) return
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isFullViewOpen, handleResize])
+
+  // Re-fit on code pane toggle
   useEffect(() => {
     if (!zoomInstanceRef.current || !isFullViewOpen) return
 
-    const timer = setTimeout(() => {
-      zoomInstanceRef.current?.fit()
-    }, 100)
+    // Wait for CSS transitions to complete (350ms matches CSS animation)
+    const timer = setTimeout(handleResize, 350)
 
     return () => clearTimeout(timer)
-  }, [showCodePane, isFullViewOpen])
+  }, [showCodePane, isFullViewOpen, handleResize])
 
   // Cleanup when closing full view
   useEffect(() => {
