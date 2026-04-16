@@ -117,18 +117,108 @@
 }
 
 .tiptap-editor .code-block {
+  position: relative;
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 14px;
   line-height: 1.6;
   background: hsl(var(--muted));
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
-  padding: 1rem;
   margin-top: 1.2em;
   margin-bottom: 1.2em;
   overflow-x: auto;
   color: hsl(var(--editor-text));
 }
+
+.tiptap-editor .code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 1rem;
+}
+
+.tiptap-editor .code-block-content {
+  padding: 0 1rem 1rem;
+}
+
+.tiptap-editor .code-block-lang-label {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  text-transform: lowercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap-editor .code-block pre {
+  margin: 0;
+}
+
+.tiptap-editor .code-block-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.1s ease;
+  opacity: 0;
+}
+
+.tiptap-editor .code-block:hover .code-block-btn,
+.tiptap-editor .code-block-btn.visible {
+  opacity: 1;
+}
+
+.tiptap-editor .code-block-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.tiptap-editor .code-block-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.tiptap-editor .code-block:hover .code-block-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tiptap-editor .code-block-toolbar-visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.tiptap-editor .code-block-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.1s ease;
+}
+
+.tiptap-editor .code-block-copy-btn:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
 
 .tiptap-editor .code-block .hljs-keyword,
 .tiptap-editor .code-block .hljs-operator,

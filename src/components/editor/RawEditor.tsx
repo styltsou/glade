@@ -1,12 +1,10 @@
 import { useMemo, useEffect, useRef } from "react";
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { languages } from "@codemirror/language-data";
+import { markdown } from "@codemirror/lang-markdown";
 import { EditorView, Decoration, DecorationSet } from "@codemirror/view";
 import { StateField, StateEffect, RangeSetBuilder } from "@codemirror/state";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags } from "@lezer/highlight";
-import { useTheme } from "next-themes";
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
 import { findMatchesRaw, SearchOptions } from "./SearchHighlight";
 
 interface RawEditorProps {
@@ -18,7 +16,29 @@ interface RawEditorProps {
   readOnly?: boolean;
 }
 
-export const setRawSearchState = StateEffect.define<{query: string, activeIndex: number, opts: SearchOptions}>();
+const rawHighlightStyle = HighlightStyle.define([
+  { tag: t.heading1, fontSize: "30px", fontWeight: "700", fontFamily: '"Inter", -apple-system, sans-serif', letterSpacing: "-0.02em", lineHeight: "1.2", color: "hsl(var(--primary))" },
+  { tag: t.heading2, fontSize: "23px", fontWeight: "600", fontFamily: '"Inter", -apple-system, sans-serif', letterSpacing: "-0.01em", lineHeight: "1.3", color: "hsl(var(--primary))" },
+  { tag: t.heading3, fontSize: "19px", fontWeight: "600", fontFamily: '"Inter", -apple-system, sans-serif', letterSpacing: "-0.01em", lineHeight: "1.4", color: "hsl(var(--primary))" },
+  { tag: t.heading4, fontSize: "17px", fontWeight: "600", fontFamily: '"Inter", -apple-system, sans-serif', lineHeight: "1.4", color: "hsl(var(--primary))" },
+  { tag: t.heading5, fontWeight: "600", fontFamily: '"Inter", -apple-system, sans-serif', color: "hsl(var(--primary))" },
+  { tag: t.heading6, fontWeight: "600", fontFamily: '"Inter", -apple-system, sans-serif', color: "hsl(var(--primary))" },
+  { tag: t.heading, fontWeight: "600", color: "hsl(var(--primary))" },
+  { tag: t.emphasis, fontStyle: "italic", color: "hsl(var(--foreground))" },
+  { tag: t.strong, fontWeight: "700", color: "hsl(var(--foreground))" },
+  { tag: t.strikethrough, textDecoration: "line-through", color: "hsl(var(--foreground))" },
+  { tag: t.link, color: "hsl(var(--primary))" },
+  { tag: t.url, color: "hsl(var(--foreground))" },
+  { tag: t.quote, fontStyle: "italic", color: "hsl(var(--foreground))" },
+  { tag: t.monospace, fontFamily: "var(--font-mono)", color: "hsl(var(--foreground))" },
+  { tag: t.list, color: "hsl(var(--foreground))" },
+  { tag: t.contentSeparator, color: "hsl(var(--foreground))" },
+  { tag: t.processingInstruction, color: "hsl(var(--primary))" },
+  { tag: t.meta, color: "hsl(var(--foreground))" },
+  { tag: t.punctuation, color: "hsl(var(--foreground))" },
+]);
+
+export const setRawSearchState = StateEffect.define<{ query: string, activeIndex: number, opts: SearchOptions }>();
 
 interface SearchState {
   query: string;
@@ -32,7 +52,7 @@ const rawSearchHighlightField = StateField.define<SearchState>({
   update(value, tr) {
     let { query, activeIndex, opts, decos } = value;
     let changed = false;
-    
+
     for (const e of tr.effects) {
       if (e.is(setRawSearchState)) {
         query = e.value.query;
@@ -41,12 +61,12 @@ const rawSearchHighlightField = StateField.define<SearchState>({
         changed = true;
       }
     }
-    
+
     if (tr.docChanged) changed = true;
-    
+
     if (changed) {
       if (!query) return { query, activeIndex, opts, decos: Decoration.none };
-      
+
       const text = tr.state.doc.toString();
       const matches = findMatchesRaw(text, query, opts);
       const builder = new RangeSetBuilder<Decoration>();
@@ -57,66 +77,43 @@ const rawSearchHighlightField = StateField.define<SearchState>({
       });
       return { query, activeIndex, opts, decos: builder.finish() };
     }
-    
+
     if (tr.docChanged) return { query, activeIndex, opts, decos: decos.map(tr.changes) };
     return value;
   },
   provide: f => EditorView.decorations.from(f, state => state.decos)
 });
 
-// Define custom highlighting style based on app CSS variables
-const customHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: "var(--syntax-keyword)" },
-  { tag: tags.string, color: "var(--syntax-string)" },
-  { tag: tags.comment, color: "var(--syntax-comment)", fontStyle: "italic" },
-  { tag: tags.number, color: "var(--syntax-number)" },
-  { tag: tags.function(tags.variableName), color: "var(--syntax-function)" },
-  { tag: tags.variableName, color: "var(--syntax-parameter)" },
-  { tag: tags.propertyName, color: "var(--syntax-keyword)" },
-  { tag: tags.labelName, color: "var(--syntax-keyword)" },
-  { tag: tags.heading, fontWeight: "bold", color: "var(--foreground)" },
-  { tag: tags.strong, fontWeight: "bold" },
-  { tag: tags.emphasis, fontStyle: "italic" },
-  { tag: tags.link, color: "var(--primary)", textDecoration: "underline" },
-  { tag: tags.url, color: "var(--primary)", opacity: 0.7 },
-  { tag: tags.list, color: "var(--muted-foreground)" },
-  { tag: tags.quote, color: "var(--muted-foreground)" },
-  { tag: tags.processingInstruction, color: "var(--syntax-comment)" }, // Frontmatter
-]);
-
-// Base theme to handle editor appearance
+// Base theme — transparent background, no outlines
 const baseTheme = EditorView.theme({
   "&": {
     backgroundColor: "transparent !important",
-    width: "100% !important",
+    width: "100%",
   },
   ".cm-content": {
-    padding: "0 !important",
-    whiteSpace: "pre-wrap !important",
-    wordBreak: "break-word !important",
+    padding: "0",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
   },
   ".cm-line": {
-    padding: "0 !important",
-    color: "var(--foreground)",
+    padding: "0",
   },
   ".cm-scroller": {
-    overflow: "visible !important",
+    overflow: "visible",
     fontFamily: "var(--font-mono)",
   },
   ".cm-cursor": {
-    borderLeftColor: "var(--foreground)",
+    borderLeftColor: "hsl(var(--foreground))",
     borderLeftWidth: "1px",
     borderLeftStyle: "solid",
-    marginLeft: "-1px",
   },
   ".cm-dropCursor": {
-    borderLeftColor: "var(--foreground)",
+    borderLeftColor: "hsl(var(--foreground))",
     borderLeftWidth: "1px",
     borderLeftStyle: "solid",
   },
   "&.cm-focused .cm-selectionBackground": {
-    backgroundColor: "var(--primary) !important",
-    opacity: "0.3",
+    backgroundColor: "hsl(var(--primary) / 25%)",
   },
   "&.cm-focused": {
     outline: "none",
@@ -124,13 +121,23 @@ const baseTheme = EditorView.theme({
 });
 
 export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex = 0, searchOpts = {}, readOnly = false }: RawEditorProps) {
-  const { resolvedTheme } = useTheme();
   const cmRef = useRef<ReactCodeMirrorRef>(null);
 
+  useEffect(() => {
+    if (cmRef.current?.view) {
+      const tree = syntaxTree(cmRef.current.view.state);
+      const nodes: string[] = [];
+      tree.cursor().iterate(node => {
+        nodes.push(`${node.name}(${node.from}-${node.to})`);
+      });
+      console.log('Parse tree:', nodes.join(', '));
+    }
+  }, [content]);
+
   const extensions = useMemo(() => [
-    markdown({ base: markdownLanguage, codeLanguages: languages }),
+    markdown(),
     EditorView.lineWrapping,
-    syntaxHighlighting(customHighlightStyle),
+    syntaxHighlighting(rawHighlightStyle),
     baseTheme,
     rawSearchHighlightField,
     EditorView.editable.of(!readOnly),
@@ -142,15 +149,15 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
       view.dispatch({
         effects: setRawSearchState.of({ query: findQuery, activeIndex: currentMatchIndex, opts: searchOpts })
       });
-      
+
       if (findQuery) {
         const matches = findMatchesRaw(view.state.doc.toString(), findQuery, searchOpts);
         if (matches[currentMatchIndex]) {
-           const { from, to } = matches[currentMatchIndex];
-           view.dispatch({
-             selection: { anchor: from, head: to },
-             effects: EditorView.scrollIntoView(from, { y: "center" })
-           });
+          const { from, to } = matches[currentMatchIndex];
+          view.dispatch({
+            selection: { anchor: from, head: to },
+            effects: EditorView.scrollIntoView(from, { y: "center" })
+          });
         }
       }
     }
@@ -162,7 +169,7 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
         ref={cmRef}
         value={content}
         height="100%"
-        theme={resolvedTheme === "dark" ? "dark" : "light"}
+        theme="none"
         extensions={extensions}
         onChange={readOnly ? undefined : (value) => onChange(value)}
         basicSetup={{
@@ -176,6 +183,7 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
           historyKeymap: true,
           drawSelection: true,
           dropCursor: true,
+          //syntaxHighlighting: false,
         }}
         className="text-[14px] leading-[1.7] min-h-[300px] [&_.cm-editor]:outline-none [&_.cm-editor.cm-focused]:outline-none"
       />

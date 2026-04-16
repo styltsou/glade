@@ -531,7 +531,7 @@ export function NoteEditor({
 			}}
 			className="flex-1 overflow-auto px-10 py-8"
 		>
-			<div className="max-w-[680px] mx-auto">
+			<div className="max-w-[750px] mx-auto">
 				{editor && (
 					<BubbleMenu editor={editor}>
 						<div
