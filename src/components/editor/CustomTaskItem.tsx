@@ -19,7 +19,6 @@ export const CustomTaskItem = TaskItem.extend({
               className="cursor-pointer"
               checked={checked}
               onCheckedChange={(newChecked) => {
-                if (!editor.isEditable) return;
                 updateAttributes({ checked: !!newChecked });
               }}
             />
