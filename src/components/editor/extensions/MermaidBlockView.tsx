@@ -155,29 +155,44 @@ export function MermaidBlockView({
     return () => clearTimeout(timer)
   }, [isFullViewOpen, previewSvg])
 
-  // Handle resize - re-fit the diagram when container size changes
+  // Handle resize - re-create zoom instance to fit new container size
   const handleResize = useCallback(() => {
-    if (!zoomInstanceRef.current) return
-    
-    // Use requestAnimationFrame to ensure DOM has updated
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        zoomInstanceRef.current?.fit()
-      })
+    if (!svgContainerRef.current || !isFullViewOpen) return
+
+    const svgEl = svgContainerRef.current.querySelector('svg')
+    if (!svgEl) return
+
+    // Destroy old instance
+    if (zoomInstanceRef.current) {
+      zoomInstanceRef.current.destroy()
+      zoomInstanceRef.current = null
+    }
+
+    // Re-create with fit: true to calculate for new container size
+    zoomInstanceRef.current = svgPanZoom(svgEl, {
+      zoomEnabled: true,
+      controlIconsEnabled: false,
+      mouseWheelZoomEnabled: true,
+      panEnabled: true,
+      dblClickZoomEnabled: true,
+      center: true,
+      minZoom: 0.5,
+      maxZoom: 10,
+      fit: true,
     })
-  }, [])
+  }, [isFullViewOpen])
 
   // Listen for window resize
   useEffect(() => {
     if (!isFullViewOpen) return
-    
+
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [isFullViewOpen, handleResize])
 
   // Re-fit on code pane toggle
   useEffect(() => {
-    if (!zoomInstanceRef.current || !isFullViewOpen) return
+    if (!isFullViewOpen) return
 
     // Wait for CSS transitions to complete (350ms matches CSS animation)
     const timer = setTimeout(handleResize, 350)
