@@ -93,35 +93,36 @@ export function HomeView() {
           <div className="flex items-center pl-3 h-full min-w-0">
             <Breadcrumbs />
           </div>
-          
-          <div className="flex items-center h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
+
+          <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
             {hasData && (
               <>
-                <div className="h-10 w-px bg-border" />
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      className="h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent"
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground"
                       onClick={() => openCreateFolder(currentFolder)}
                     >
                       <FolderPlus className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>New Folder (Ctrl+F)</p>
                   </TooltipContent>
                 </Tooltip>
-                
-                <div className="h-10 w-px bg-border" />
-                
+
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <button
-                      className="h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-accent"
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="text-muted-foreground"
                       onClick={() => createNote(currentFolder)}
                     >
                       <PlusIcon className="h-4 w-4" />
-                    </button>
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="bottom">
                     <p>New Note (Ctrl+N)</p>

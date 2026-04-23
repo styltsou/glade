@@ -38,7 +38,6 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
               <BreadcrumbLink 
                 onClick={() => navigateToFolder(null)} 
                 className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
-                title={`Go to ${activeVault?.name || "Vault"}`}
               >
                 {activeVault?.name || "Vault"}
               </BreadcrumbLink>

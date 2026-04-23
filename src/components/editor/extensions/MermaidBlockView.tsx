@@ -91,22 +91,27 @@ export function MermaidBlockView({
     }
   }, [])
 
-  // Debounced render on draft change
+  // Instant render when in code view (typing), deferred for initial/preview
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => {
-      doRender(draft)
-    }, 300)
-    return () => {
+    if (viewMode === 'code' && draft !== source) {
       if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        doRender(draft)
+      }, 150)
+      return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+      }
     }
-  }, [draft, doRender])
+  }, [draft, viewMode, source, doRender])
 
-  // Initial render for committed source
+  // Deferred initial render - let editor paint first
   useEffect(() => {
-    if (source) {
-      doRender(source)
-    }
+    if (!source) return
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        doRender(source)
+      })
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-render on theme change

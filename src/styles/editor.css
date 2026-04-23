@@ -101,9 +101,9 @@
   margin-top: 0.15em;
 }
 
-.tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div > p {
+.tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div {
   text-decoration: line-through;
-  opacity: 0.4;
+  color: hsl(var(--muted-foreground));
 }
 
 .tiptap-editor blockquote {

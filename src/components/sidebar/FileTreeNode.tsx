@@ -6,6 +6,7 @@ import {
   Pencil as PencilIcon,
   Copy as CopyIcon,
   Pin as DrawingPinFilledIcon,
+  PinOff as PinOffIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
 } from "lucide-react";
@@ -16,15 +17,9 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
-import { formatRelativeDate } from "@/lib/dates";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
@@ -49,11 +44,13 @@ function useFileTreeStore() {
   const createNote = useStore((state) => state.createNote);
   const openCreateFolder = useStore((state) => state.openCreateFolder);
   const pinNote = useStore((state) => state.pinNote);
+  const unpinNote = useStore((state) => state.unpinNote);
   const prefetchNote = useStore((state) => state.prefetchNote);
   const openRename = useStore((state) => state.openRename);
   const openDelete = useStore((state) => state.openDelete);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
   const expandedFolders = useStore((state) => state.expandedFolders);
+  const pinnedNotePaths = useStore((state) => state.pinnedNotePaths);
   const toggleFolderExpanded = useStore((state) => state.toggleFolderExpanded);
 
   return {
@@ -63,11 +60,13 @@ function useFileTreeStore() {
     createNote,
     openCreateFolder,
     pinNote,
+    unpinNote,
     prefetchNote,
     openRename,
     openDelete,
     navigateToFolder,
     expandedFolders,
+    pinnedNotePaths,
     toggleFolderExpanded,
   };
 }
@@ -88,17 +87,20 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     createNote,
     openCreateFolder,
     pinNote,
+    unpinNote,
     prefetchNote,
     openRename,
     openDelete,
     navigateToFolder,
     expandedFolders,
+    pinnedNotePaths,
     toggleFolderExpanded,
   } = useFileTreeStore();
 
   const expanded = expandedFolders.includes(entry.path);
   const isDraggingThis = isDraggingId === entry.path;
   const isOverFolder = dropTarget === entry.path;
+  const isPinned = !entry.is_dir && pinnedNotePaths.includes(entry.path);
 
   const handleClick = () => {
     if (entry.is_dir) {
@@ -220,30 +222,21 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
-              <button
-                onClick={handleClick}
-                onMouseDown={handleMouseDown}
-                onMouseEnter={() => prefetchNote(entry.path)}
-                className={cn(
-                  "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
-                  isActive
-                    ? "bg-sidebar-accent text-foreground font-medium"
-                    : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
-                )}
-              >
-                <span className="truncate pr-1">{entry.name}</span>
-              </button>
-            </div>
-          </TooltipTrigger>
-          {entry.created_at && (
-            <TooltipContent>
-              Created {formatRelativeDate(entry.created_at)}
-            </TooltipContent>
-          )}
-        </Tooltip>
+        <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
+          <button
+            onClick={handleClick}
+            onMouseDown={handleMouseDown}
+            onMouseEnter={() => prefetchNote(entry.path)}
+            className={cn(
+              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
+              isActive
+                ? "bg-sidebar-accent text-foreground font-medium"
+                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
+            )}
+          >
+            <span className="truncate pr-1">{entry.name}</span>
+          </button>
+        </div>
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
@@ -256,10 +249,17 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           Duplicate
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => pinNote(entry.path)}>
-          <DrawingPinFilledIcon className="mr-2 h-4 w-4" />
-          Pin note
-        </ContextMenuItem>
+        {isPinned ? (
+          <ContextMenuItem onClick={() => unpinNote(entry.path)}>
+            <PinOffIcon className="mr-2 h-4 w-4" />
+            Unpin note
+          </ContextMenuItem>
+        ) : (
+          <ContextMenuItem onClick={() => pinNote(entry.path)}>
+            <DrawingPinFilledIcon className="mr-2 h-4 w-4" />
+            Pin note
+          </ContextMenuItem>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem
           variant="destructive"

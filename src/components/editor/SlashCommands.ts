@@ -32,8 +32,16 @@ export function getSlashCommands(query: string): SlashCommandItem[] {
   if (!query) {
     return slashCommandsList;
   }
+  const normalizedQuery = query.toLowerCase();
+  const expandedQueries = [normalizedQuery];
+
+  const headingMatch = normalizedQuery.match(/^h(\d+)$/);
+  if (headingMatch) {
+    expandedQueries.push(`heading ${headingMatch[1]}`);
+  }
+
   return slashCommandsList.filter((item) =>
-    item.label.toLowerCase().includes(query.toLowerCase())
+    expandedQueries.some((term) => item.label.toLowerCase().includes(term))
   );
 }
 

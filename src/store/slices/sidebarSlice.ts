@@ -15,6 +15,7 @@ export interface SidebarSlice {
   pinnedHeight: number;
   isSidebarLoaded: boolean;
   expandedFolders: string[];
+  pinnedNotePaths: string[];
   soundStates: Record<SoundId, SoundState>;
 
   loadSidebarState: () => Promise<void>;
@@ -22,6 +23,9 @@ export interface SidebarSlice {
   toggleTagsCollapsed: () => void;
   togglePinnedNotesCollapsed: () => void;
   toggleFolderExpanded: (path: string) => void;
+  setPinnedNotePaths: (paths: string[]) => void;
+  addPinnedNote: (path: string) => void;
+  removePinnedNote: (path: string) => void;
   setSidebarWidth: (width: number) => void;
   setTagsHeight: (height: number) => void;
   setPinnedHeight: (height: number) => void;
@@ -44,6 +48,7 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
   pinnedHeight: 150,
   isSidebarLoaded: true,
   expandedFolders: [],
+  pinnedNotePaths: [],
   soundStates: DEFAULT_SOUND_STATES,
 
   loadSidebarState: async () => {
@@ -68,6 +73,22 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
       ? current.filter((p) => p !== path)
       : [...current, path];
     set({ expandedFolders: next });
+  },
+
+  setPinnedNotePaths: (paths: string[]) => {
+    set({ pinnedNotePaths: paths });
+  },
+
+  addPinnedNote: (path: string) => {
+    const current = get().pinnedNotePaths;
+    if (!current.includes(path)) {
+      set({ pinnedNotePaths: [...current, path] });
+    }
+  },
+
+  removePinnedNote: (path: string) => {
+    const current = get().pinnedNotePaths;
+    set({ pinnedNotePaths: current.filter((p) => p !== path) });
   },
 
   setSidebarWidth: (width: number) => {

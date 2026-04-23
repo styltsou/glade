@@ -35,16 +35,10 @@ export function formatRelativeDate(iso: string): string {
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffMinutes < 60) {
-    if (diffMinutes < 1) return "Just now";
-    return `${diffMinutes}m ago`;
-  }
-  if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  }
-  if (diffDays <= 6) {
-    return `${diffDays}d ago`;
-  }
+  if (diffMinutes < 1) return "just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays <= 6) return `${diffDays}d ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 

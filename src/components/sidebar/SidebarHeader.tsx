@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/store";
-import { PanelLeft, Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -21,7 +21,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Vault } from "@/types";
 
 export function SidebarHeader() {
-  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
   const goHome = useStore((state) => state.goHome);
   const vaults = useStore((state) => state.vaults);
   const activeVault = useStore((state) => state.activeVault);
@@ -161,20 +160,6 @@ export function SidebarHeader() {
           </div>
         </DialogContent>
       </Dialog>
-      
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            className="h-10 w-10 flex items-center justify-center rounded-none text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
-            onClick={toggleSidebarCollapsed}
-          >
-            <PanelLeft className="h-4 w-4" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          <p>Collapse sidebar (Ctrl+B)</p>
-        </TooltipContent>
-      </Tooltip>
     </div>
   );
 }

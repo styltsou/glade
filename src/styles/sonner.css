@@ -1,0 +1,22 @@
+.toaster {
+  --normal-bg: hsl(var(--popover));
+  --normal-text: hsl(var(--popover-foreground));
+  --normal-border: hsl(var(--border));
+  --border-radius: var(--radius);
+}
+
+.toaster [data-close-button] {
+  background: transparent;
+}
+
+.toaster [data-close-button]:hover {
+  background: hsl(var(--accent) / 15%);
+}
+
+.toaster [data-description] {
+  color: hsl(var(--popover-foreground) / 70%);
+}
+
+.toaster [data-title] {
+  color: hsl(var(--popover-foreground));
+}

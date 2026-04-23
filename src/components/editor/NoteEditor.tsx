@@ -24,6 +24,7 @@ import {
 	Quote,
 	Code,
 	Type,
+	Underline,
 } from "lucide-react";
 import {
 	Popover,
@@ -37,17 +38,9 @@ import { MentionList, MentionListHandle } from "./MentionList";
 import {
 	SlashCommandMenu,
 	SlashCommandMenuHandle,
-	SlashCommandItem,
 } from "./extensions/SlashCommandMenu";
-import {
-	registerSuggestionCallbacks,
-	unregisterSuggestionCallbacks,
-	SuggestionItem,
-} from "./suggestion";
-import {
-	registerSlashCommandCallbacks,
-	unregisterSlashCommandCallbacks,
-} from "./SlashCommands";
+import { useSuggestionCallbacks } from "@/hooks/useSuggestionCallbacks";
+import { useSlashCommandCallbacks } from "@/hooks/useSlashCommandCallbacks";
 import { cn } from "@/lib/utils";
 import { formatRelativeDate } from "@/lib/dates";
 
@@ -67,7 +60,11 @@ interface NoteEditorProps {
 	onScroll: () => void;
 	findQuery?: string;
 	currentMatchIndex?: number;
-	searchOpts?: { caseSensitive?: boolean; matchWholeWord?: boolean; useRegex?: boolean };
+	searchOpts?: {
+		caseSensitive?: boolean;
+		matchWholeWord?: boolean;
+		useRegex?: boolean;
+	};
 	isEditMode?: boolean;
 	onExitEditMode?: () => void;
 }
@@ -176,32 +173,27 @@ export function NoteEditor({
 	isEditMode = false,
 	onExitEditMode,
 }: NoteEditorProps) {
-	const [suggestionItems, setSuggestionItems] = useState<SuggestionItem[]>([]);
-	const [suggestionPosition, setSuggestionPosition] = useState<{
-		top?: number;
-		bottom?: number;
-		left: number;
-	} | null>(null);
-	const [suggestionVisible, setSuggestionVisible] = useState(false);
-	const [slashItems, setSlashItems] = useState<SlashCommandItem[]>([]);
-	const [slashPosition, setSlashPosition] = useState<{
-		top?: number;
-		bottom?: number;
-		left: number;
-	} | null>(null);
-	const [slashVisible, setSlashVisible] = useState(false);
 	const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
 	const [blockSelectedIndex, setBlockSelectedIndex] = useState(0);
 	const [currentBlockType, setCurrentBlockType] = useState("paragraph");
 
+	const {
+		suggestionItems,
+		suggestionPosition,
+		suggestionVisible,
+		handleSuggestionCommand,
+		closeSuggestion,
+	} = useSuggestionCallbacks(editor);
+	const {
+		slashItems,
+		slashPosition,
+		slashVisible,
+		handleSlashCommand,
+		closeSlash,
+	} = useSlashCommandCallbacks(editor);
+
 	const mentionListRef = useRef<MentionListHandle>(null);
 	const slashMenuRef = useRef<SlashCommandMenuHandle>(null);
-	const suggestionCommandRef = useRef<((item: SuggestionItem) => void) | null>(
-		null,
-	);
-	const slashCommandRef = useRef<((item: SlashCommandItem) => void) | null>(
-		null,
-	);
 	const blockTriggerRef = useRef<HTMLButtonElement>(null);
 	const blockScrollRef = useRef<HTMLDivElement>(null);
 	const isBlockPopoverClosingRef = useRef(false);
@@ -279,140 +271,6 @@ export function NoteEditor({
 		};
 	}, [editor]);
 
-	const handleSuggestionCommand = useCallback((item: SuggestionItem) => {
-		if (suggestionCommandRef.current) {
-			suggestionCommandRef.current(item);
-		}
-		setSuggestionVisible(false);
-	}, []);
-
-	useEffect(() => {
-		if (!editor) return;
-
-		registerSuggestionCallbacks(
-			(props) => {
-				if (!props.clientRect) return;
-				const clientRect = props.clientRect();
-				if (!clientRect) return;
-
-				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
-
-				suggestionCommandRef.current = props.command;
-
-				requestAnimationFrame(() => {
-					setSuggestionItems(props.items);
-					setSuggestionPosition({
-						top: showAbove ? undefined : clientRect.bottom + 4,
-						bottom: showAbove
-							? window.innerHeight - clientRect.top + 4
-							: undefined,
-						left: clientRect.left,
-					});
-					setSuggestionVisible(true);
-				});
-			},
-			(props) => {
-				if (!props.clientRect) return;
-				const clientRect = props.clientRect();
-				if (!clientRect) return;
-
-				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
-
-				suggestionCommandRef.current = props.command;
-
-				requestAnimationFrame(() => {
-					setSuggestionItems(props.items);
-					setSuggestionPosition({
-						top: showAbove ? undefined : clientRect.bottom + 4,
-						bottom: showAbove
-							? window.innerHeight - clientRect.top + 4
-							: undefined,
-						left: clientRect.left,
-					});
-				});
-			},
-			() => {
-				requestAnimationFrame(() => {
-					setSuggestionVisible(false);
-					suggestionCommandRef.current = null;
-				});
-			},
-		);
-
-		return () => {
-			unregisterSuggestionCallbacks();
-			setSuggestionVisible(false);
-		};
-	}, [editor]);
-
-	// Slash command callbacks
-	useEffect(() => {
-		if (!editor) return;
-
-		registerSlashCommandCallbacks(
-			(props) => {
-				if (!props.clientRect) return;
-				const clientRect = props.clientRect();
-				if (!clientRect) return;
-
-				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
-
-				slashCommandRef.current = (item: SlashCommandItem) => {
-					props.command(item);
-				};
-
-				requestAnimationFrame(() => {
-					setSlashItems(props.items);
-					setSlashPosition({
-						top: showAbove ? undefined : clientRect.bottom + 4,
-						bottom: showAbove
-							? window.innerHeight - clientRect.top + 4
-							: undefined,
-						left: clientRect.left,
-					});
-					setSlashVisible(true);
-				});
-			},
-			(props) => {
-				if (!props.clientRect) return;
-				const clientRect = props.clientRect();
-				if (!clientRect) return;
-
-				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
-
-				slashCommandRef.current = (item: SlashCommandItem) => {
-					props.command(item);
-				};
-
-				requestAnimationFrame(() => {
-					setSlashItems(props.items);
-					setSlashPosition({
-						top: showAbove ? undefined : clientRect.bottom + 4,
-						bottom: showAbove
-							? window.innerHeight - clientRect.top + 4
-							: undefined,
-						left: clientRect.left,
-					});
-				});
-			},
-			() => {
-				requestAnimationFrame(() => {
-					setSlashVisible(false);
-					slashCommandRef.current = null;
-				});
-			},
-		);
-
-		return () => {
-			unregisterSlashCommandCallbacks();
-			setSlashVisible(false);
-		};
-	}, [editor]);
-
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
@@ -428,11 +286,6 @@ export function NoteEditor({
 			const isInsideEditor = editor && editor.view.dom.contains(target);
 			if (isInsideEditor) return;
 
-			// Exit edit mode when clicking outside the editor (e.g., sidebar)
-			if (isEditMode && onExitEditMode) {
-				onExitEditMode();
-			}
-
 			// Capture menu states BEFORE we change them
 			const wasAnyMenuOpen =
 				suggestionVisible ||
@@ -441,8 +294,8 @@ export function NoteEditor({
 				isBlockPopoverClosingRef.current;
 
 			// Handle dismissal of suggestion and slash menus
-			if (suggestionVisible) setSuggestionVisible(false);
-			if (slashVisible) setSlashVisible(false);
+			if (suggestionVisible) closeSuggestion();
+			if (slashVisible) closeSlash();
 
 			// If any menu was open, we only close them and return (don't clear selection yet)
 			if (wasAnyMenuOpen) return;
@@ -458,7 +311,7 @@ export function NoteEditor({
 
 		document.addEventListener("mousedown", handleClickOutside);
 		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [suggestionVisible, slashVisible, blockPopoverOpen, editor, isEditMode, onExitEditMode]);
+	}, [suggestionVisible, slashVisible, blockPopoverOpen, editor]);
 
 	// Handle keyboard navigation for suggestion menus
 	useEffect(() => {
@@ -466,19 +319,27 @@ export function NoteEditor({
 			const isMenuOpen = suggestionVisible || slashVisible;
 			if (!isMenuOpen) return;
 
-			if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+			if (
+				e.target instanceof HTMLInputElement ||
+				e.target instanceof HTMLTextAreaElement
+			) {
 				return;
 			}
 
 			if (e.key === "Escape") {
 				e.preventDefault();
 				e.stopPropagation();
-				if (suggestionVisible) setSuggestionVisible(false);
-				if (slashVisible) setSlashVisible(false);
+				if (suggestionVisible) closeSuggestion();
+				if (slashVisible) closeSlash();
 				return;
 			}
 
-			if (e.key === "Tab" || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Enter") {
+			if (
+				e.key === "Tab" ||
+				e.key === "ArrowUp" ||
+				e.key === "ArrowDown" ||
+				e.key === "Enter"
+			) {
 				e.preventDefault();
 				e.stopPropagation();
 
@@ -509,9 +370,9 @@ export function NoteEditor({
 		<div
 			ref={scrollRef as React.RefObject<HTMLDivElement>}
 			onScroll={onScroll}
-			className="flex-1 overflow-auto px-10 py-8"
+			className="flex-1 overflow-auto px-10 py-8 note-scroll"
 		>
-				<div className="max-w-[750px] mx-auto">
+			<div className="max-w-187.5 mx-auto">
 				{editor && (
 					<BubbleMenu editor={editor}>
 						<div
@@ -606,6 +467,23 @@ export function NoteEditor({
 							</Popover>
 
 							<BubbleButton
+								onClick={() => {
+									if (editor.isActive("link")) {
+										editor.chain().focus().unsetLink().run();
+									} else {
+										const url = window.prompt("Enter URL:");
+										if (url)
+											editor.chain().focus().setLink({ href: url }).run();
+									}
+								}}
+								isActive={editor.isActive("link")}
+							>
+								<Link2 className="h-4 w-4" />
+							</BubbleButton>
+
+							<div className="w-px h-5 bg-border mx-0.5" />
+
+							<BubbleButton
 								onClick={() => editor.chain().focus().toggleBold().run()}
 								isActive={editor.isActive("bold")}
 							>
@@ -624,18 +502,16 @@ export function NoteEditor({
 								<Strikethrough className="h-4 w-4" />
 							</BubbleButton>
 							<BubbleButton
-								onClick={() => {
-									if (editor.isActive("link")) {
-										editor.chain().focus().unsetLink().run();
-									} else {
-										const url = window.prompt("Enter URL:");
-										if (url)
-											editor.chain().focus().setLink({ href: url }).run();
-									}
-								}}
-								isActive={editor.isActive("link")}
+								onClick={() => editor.chain().focus().toggleUnderline().run()}
+								isActive={editor.isActive("underline")}
 							>
-								<Link2 className="h-4 w-4" />
+								<Underline className="h-4 w-4" />
+							</BubbleButton>
+							<BubbleButton
+								onClick={() => editor.chain().focus().toggleCode().run()}
+								isActive={editor.isActive("code")}
+							>
+								<Code className="h-4 w-4" />
 							</BubbleButton>
 						</div>
 					</BubbleMenu>
@@ -659,9 +535,9 @@ export function NoteEditor({
 				</div>
 
 				{isRawMode ? (
-					<RawEditor 
-						content={rawContent} 
-						onChange={onRawChange} 
+					<RawEditor
+						content={rawContent}
+						onChange={onRawChange}
 						findQuery={findQuery}
 						currentMatchIndex={currentMatchIndex}
 						searchOpts={searchOpts}
@@ -685,10 +561,7 @@ export function NoteEditor({
 						ref={slashMenuRef}
 						items={slashItems}
 						command={(item) => {
-							if (slashCommandRef.current) {
-								slashCommandRef.current(item);
-							}
-							setSlashVisible(false);
+							handleSlashCommand(item);
 						}}
 						position={slashPosition}
 					/>

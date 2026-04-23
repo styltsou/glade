@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fs;
-use chrono::Utc;
 use crate::error::AppError;
 use crate::types::TagCount;
 use crate::vault;
@@ -53,7 +52,6 @@ pub async fn update_tags(path: String, tags: Vec<String>) -> Result<(), AppError
     let (mut meta, body) = vault::parse_frontmatter(&content);
 
     meta.tags = tags;
-    meta.updated = Some(Utc::now().to_rfc3339());
 
     let frontmatter = vault::build_frontmatter(&meta);
     let full_content = format!("{}\n\n{}", frontmatter, body);

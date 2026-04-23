@@ -21,6 +21,8 @@ export interface NoteSlice {
   moveEntry: (fromPath: string, toPath: string) => Promise<void>;
   tocOpen: Record<string, boolean>;
   toggleToc: (path: string) => void;
+  tocInitialized: Record<string, boolean>;
+  markTocInitialized: (path: string) => void;
   tocWidth: number;
   setTocWidth: (width: number) => void;
   noteEditMode: Record<string, boolean>;
@@ -66,8 +68,6 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       if (get().activeNote?.path === path) {
         set({ activeNote: note, vaultError: null });
       }
-      
-      invoke("record_note_opened", { path }).catch(() => {});
     } catch (e) {
       if (!get().activeNote) {
         set({ vaultError: String(e) });
@@ -188,6 +188,8 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       const newEntries = addEntryToTree(get().entries, parentPath, newEntry);
       set({ entries: newEntries });
       get().loadFolderNotes();
+      
+      await get().selectNote(note.path);
     } catch (e) {
       set({ vaultError: String(e) });
     }
@@ -314,6 +316,17 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       tocOpen: {
         ...state.tocOpen,
         [path]: !state.tocOpen[path],
+      },
+    }));
+  },
+
+  tocInitialized: {},
+
+  markTocInitialized: (path: string) => {
+    set((state: StoreState) => ({
+      tocInitialized: {
+        ...state.tocInitialized,
+        [path]: true,
       },
     }));
   },

@@ -9,7 +9,7 @@ pub async fn search_notes(query: String, title_only: Option<bool>) -> Result<Vec
     let vault_path = vault::get_vault_path()?;
     let query_lower = query.to_lowercase();
     let terms: Vec<&str> = query_lower.split_whitespace().collect();
-    
+
     if terms.is_empty() {
         return Ok(Vec::new());
     }
@@ -17,7 +17,6 @@ pub async fn search_notes(query: String, title_only: Option<bool>) -> Result<Vec
     let mut scored_results = Vec::new();
     collect_notes_recursive(&vault_path, &vault_path, &terms, &query_lower, title_only.unwrap_or(false), &mut scored_results)?;
 
-    // Sort by score descending, then by modified date
     scored_results.sort_by(|(a_score, a_note), (b_score, b_note)| {
         b_score.cmp(a_score).then_with(|| b_note.updated.cmp(&a_note.updated))
     });
@@ -58,6 +57,11 @@ pub fn collect_notes_recursive(
             let title_lower = title.to_lowercase();
             let body_lower = body.to_lowercase();
             let tags_lower: Vec<String> = meta.tags.iter().map(|t| t.to_lowercase()).collect();
+
+            let modified = fs::metadata(&path)
+                .ok()
+                .and_then(|m| m.modified().ok())
+                .and_then(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339().into());
 
             // All terms must match somewhere in title, body, or tags
             let mut all_terms_match = true;
@@ -140,7 +144,7 @@ pub fn collect_notes_recursive(
                     title,
                     tags: meta.tags,
                     created: meta.created,
-                    updated: meta.updated,
+                    updated: modified,
                     preview,
                     body,
                 }));

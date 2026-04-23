@@ -32,6 +32,10 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     try {
       const pinnedNotes = await invoke<NoteCard[]>("get_pinned_notes");
       set({ pinnedNotes });
+      
+      // Sync pinnedNotePaths with actual pinned notes from disk
+      const pinnedPaths = pinnedNotes.map((n: NoteCard) => n.path);
+      get().setPinnedNotePaths?.(pinnedPaths);
     } catch (e) {
       console.error("Failed to load pinned notes:", e);
     }
@@ -89,6 +93,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
       await invoke("pin_note", { path });
       get().loadPinned();
       get().loadFolderNotes();
+      get().addPinnedNote?.(path);
     } catch (e) {
       console.error("Failed to pin note:", e);
       set({ pinnedNotes: previousPinned });
@@ -112,6 +117,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
       await invoke("unpin_note", { path });
       get().loadPinned();
       get().loadFolderNotes();
+      get().removePinnedNote?.(path);
     } catch (e) {
       console.error("Failed to unpin note:", e);
       set({ pinnedNotes: previousPinned });

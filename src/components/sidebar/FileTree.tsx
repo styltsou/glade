@@ -71,11 +71,14 @@ function DragGhost({ label, type, pos }: { label: string; type: string; pos: { x
         alignItems: "center",
         gap: 6,
         boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+        maxWidth: 280,
+        overflow: "hidden",
+        textOverflow: "ellipsis",
         whiteSpace: "nowrap",
       }}
     >
-      {type === "folder" ? <FolderOpen className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
-      {label}
+      {type === "folder" ? <FolderOpen className="h-3.5 w-3.5 shrink-0" /> : <FileText className="h-3.5 w-3.5 shrink-0" />}
+      <span className="truncate">{label}</span>
     </div>
   );
 }

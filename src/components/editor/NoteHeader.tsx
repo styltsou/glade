@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Clock, FileText, Code, Copy, Check, Download, BookOpen, Pencil, Eye } from "lucide-react";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FindBar } from "./FindBar";
 
@@ -176,8 +177,7 @@ export function NoteHeader({
         <Breadcrumbs path={parentPath} activeItem={noteTitle} />
       </div>
 
-      <div className="flex items-center h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground">
-
+      <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
         {saveStatus !== "idle" && (
           <span className="text-muted-foreground">
             {saveStatus === "saved" ? "Saved" : "Unsaved"}
@@ -207,35 +207,33 @@ export function NoteHeader({
           </span>
         )}
 
-        <div className="h-10 w-px bg-border" />
-
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               className={cn(
-                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
-                !hasHeadings ? "text-muted-foreground/50 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                !hasHeadings ? "text-muted-foreground/50 cursor-not-allowed" : "",
                 isTocOpen && hasHeadings && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
               )}
               onClick={onToggleToc}
               disabled={!hasHeadings}
             >
               <BookOpen className="h-4 w-4" />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Table of Contents (Ctrl+Shift+T)</p>
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-10 w-px bg-border" />
-
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               className={cn(
-                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
-                "text-muted-foreground hover:text-foreground hover:bg-accent",
+                "text-muted-foreground",
                 isRawMode && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
               )}
               onClick={() => onToggleRaw?.(!isRawMode)}
@@ -246,43 +244,41 @@ export function NoteHeader({
               ) : (
                 <Code className="h-4 w-4" />
               )}
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>{isRawMode ? "Switch to rich text" : "Switch to raw markdown"}</p>
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-10 w-px bg-border" />
-
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <Button
+              variant="ghost"
+              size="icon-sm"
               className={cn(
-                "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
-                "text-muted-foreground hover:text-foreground hover:bg-accent",
+                "text-muted-foreground",
                 copied && "bg-primary/10 text-primary"
               )}
               onClick={handleCopyMarkdown}
               disabled={!notePath}
             >
               {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Copy as Markdown</p>
           </TooltipContent>
         </Tooltip>
 
-        <div className="h-10 w-px bg-border" />
-
         <div className="relative">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 className={cn(
-                  "h-10 w-10 flex items-center justify-center rounded-none transition-colors cursor-pointer",
-                  "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  "text-muted-foreground",
                   exportMenuOpen && "bg-accent"
                 )}
                 disabled={!notePath}
@@ -290,7 +286,7 @@ export function NoteHeader({
                 id="export-button"
               >
                 <Download className="h-4 w-4" />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>Export</p>
@@ -311,12 +307,9 @@ export function NoteHeader({
               >
                 Export as PDF
               </button>
-            </div>
+</div>
           )}
         </div>
-
-        <div className="h-10 w-px bg-border" />
-
       </div>
 
       {notePath && noteTitle && (

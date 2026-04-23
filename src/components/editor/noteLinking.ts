@@ -35,7 +35,7 @@ export function unregisterSuggestionCallbacks() {
 export default {
   items: ({ query }: { query: string }) => {
     const { entries } = useStore.getState();
-    
+
     const allNotes: SuggestionItem[] = [];
     const flatten = (items: VaultEntry[], parentFolder?: string) => {
       if (!items) return;
@@ -53,7 +53,7 @@ export default {
         }
       });
     };
-    
+
     flatten(entries);
 
     if (!query) {

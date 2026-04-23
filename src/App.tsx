@@ -1,5 +1,7 @@
-import { Sidebar, SidebarCollapseToggle } from "@/components/Sidebar";
-import { Editor } from "@/components/Editor";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Sidebar } from "@/components/Sidebar";
+import { TitleBar } from "@/components/TitleBar";
+import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
 import { HomeView } from "@/components/HomeView";
 import { StatusBar } from "@/components/StatusBar";
 import { CommandPalette } from "@/components/CommandPalette";
@@ -14,8 +16,9 @@ import { SettingsPage } from "@/components/SettingsPage";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { useStore } from "@/store";
-import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+
+const Editor = lazy(() => import("@/components/Editor").then(m => ({ default: m.Editor })));
 
 function SharedDialogs() {
   const renameOpen = useStore((state) => state.renameOpen);
@@ -149,20 +152,22 @@ function App() {
   return (
     <TooltipProvider delayDuration={0} disableHoverableContent>
       <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
-        <div className="flex flex-1 overflow-hidden w-full relative">
+        <TitleBar />
+        <div className="flex flex-1 overflow-hidden w-full">
           {currentView !== "settings" && (
             <>
               <Sidebar />
-              {sidebarCollapsed && <SidebarCollapseToggle />}
             </>
           )}
-          <div className="flex-1 overflow-hidden flex flex-col relative">
+          <div className="flex-1 overflow-hidden flex flex-col">
               {currentView === "settings" ? (
                 <SettingsPage />
               ) : activeNote ? (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <Editor />
-                </div>
+                <Suspense fallback={<EditorSkeleton />}>
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <Editor />
+                  </div>
+                </Suspense>
               ) : (
                 <div className="flex-1 flex flex-col overflow-hidden">
                   <HomeView />

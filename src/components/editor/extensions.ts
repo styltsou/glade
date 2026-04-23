@@ -5,14 +5,14 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import BubbleMenu from "@tiptap/extension-bubble-menu";
 import Mention from "@tiptap/extension-mention";
+import Underline from "@tiptap/extension-underline";
 import { CustomTaskItem } from "./CustomTaskItem";
 import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
 import { all, createLowlight } from "lowlight";
 import { CustomCodeBlock } from "./CustomCodeBlock";
-import suggestion from "./suggestion";
+import suggestion from "./noteLinking";
 import { SlashCommands } from "./SlashCommands";
-import { SuggestionExtension } from "./SuggestionExtension";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -55,6 +55,7 @@ export const extensions = [
   }),
   TaskList,
   CustomTaskItem.configure({ nested: true }),
+  Underline,
   Image.configure({ inline: false }),
   BubbleMenu.configure({
     element: null,
@@ -71,7 +72,6 @@ export const extensions = [
     suggestion,
   }),
   SlashCommands,
-  SuggestionExtension,
   MermaidBlock,
   HorizontalRule,
 ];

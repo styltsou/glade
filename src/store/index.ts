@@ -44,6 +44,7 @@ export const useStore = create<StoreState>()(
         tagsHeight: state.tagsHeight,
         pinnedHeight: state.pinnedHeight,
         expandedFolders: state.expandedFolders,
+        pinnedNotePaths: state.pinnedNotePaths,
         soundStates: state.soundStates,
         currentView: state.currentView,
         settingsSection: state.settingsSection,

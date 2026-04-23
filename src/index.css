@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @import "@/styles/globals.css";
+@import "@/styles/sonner.css";
 @import "@/styles/editor.css";
 @import "@/styles/mermaid-block.css";
 @import "@/styles/themes/monochrome.css";

@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   useCallback,
   useEffect,
@@ -14,12 +15,12 @@ import { TableOfContents } from "@/components/editor/TableOfContents";
 import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/editor/SearchHighlight";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
+import { useSaveNote } from "@/hooks/useSaveNote";
 
 export function Editor() {
   const activeNote = useStore((state) => state.activeNote);
   const saveNote = useStore((state) => state.saveNote);
   const createNote = useStore((state) => state.createNote);
-  const onNoteOpened = useStore((state) => state.onNoteOpened);
   const selectNote = useStore((state) => state.selectNote);
   const noteScrollPositions = useStore((state) => state.noteScrollPositions);
   const updateNoteScrollPosition = useStore(
@@ -27,6 +28,9 @@ export function Editor() {
   );
   const tocOpen = useStore((state) => state.tocOpen);
   const toggleToc = useStore((state) => state.toggleToc);
+  const tocInitialized = useStore((state) => state.tocInitialized);
+  const markTocInitialized = useStore((state) => state.markTocInitialized);
+  const tocWidth = useStore((state) => state.tocWidth);
   const noteEditMode = useStore((state) => state.noteEditMode);
   const setNoteEditMode = useStore((state) => state.setNoteEditMode);
   const isRawModeMap = useStore((state) => state.isRawMode);
@@ -42,9 +46,6 @@ export function Editor() {
   }, [activeNote, setNoteEditMode]);
 
   const [rawContent, setRawContent] = useState("");
-  const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">(
-    "idle",
-  );
   const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
   const mermaidFullscreenOpen = useStore((state) => state.mermaidFullscreenOpen);
   const [findVisible, setFindVisible] = useState(false);
@@ -59,12 +60,7 @@ export function Editor() {
   const findInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const wasEditorFocusedRef = useRef(false);
-  const saveStatusRef = useRef<"unsaved" | "saved" | "idle">("idle");
 
-  const setSaveStatusWithRef = useCallback((status: "unsaved" | "saved" | "idle") => {
-    saveStatusRef.current = status;
-    setSaveStatus(status);
-  }, []);
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +73,15 @@ export function Editor() {
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
   const lastFocusedPositionRef = useRef<number | null>(null);
+
+  const { saveStatus, setSaveStatusWithRef, saveNow } = useSaveNote({
+    activeNote,
+    saveNote,
+    latestContentRef,
+    lastSavedContentRef,
+    pendingSaveRef,
+    savedTimeoutRef,
+  });
 
   const editor = useEditor({
     extensions: [
@@ -140,43 +145,6 @@ export function Editor() {
       }
     },
   });
-
-  const saveNow = useCallback(async () => {
-    if (!activeNote) return;
-    if (latestContentRef.current === lastSavedContentRef.current) return;
-
-    const content = latestContentRef.current;
-    lastSavedContentRef.current = content;
-    pendingSaveRef.current = (async () => {
-      try {
-        await saveNote(activeNote.path, content);
-        setSaveStatusWithRef("saved");
-        // Show "Saved" briefly, then transition to idle (hide label)
-        if (savedTimeoutRef.current) clearTimeout(savedTimeoutRef.current);
-        savedTimeoutRef.current = setTimeout(() => {
-          setSaveStatusWithRef("idle");
-        }, 2000);
-      } catch {
-        setSaveStatusWithRef("unsaved");
-      } finally {
-        pendingSaveRef.current = null;
-      }
-    })();
-
-    return pendingSaveRef.current;
-  }, [activeNote, saveNote, setSaveStatusWithRef]);
-
-  // Keyboard shortcut for Ctrl+S / Cmd+S
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        saveNow();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [saveNow]);
 
   const handleFindClose = useCallback(() => {
     setFindVisible(false);
@@ -396,21 +364,6 @@ export function Editor() {
     };
   }, []);
 
-  // Update recents list when note is opened
-  useEffect(() => {
-    if (activeNote) {
-      onNoteOpened({
-        id: activeNote.id,
-        path: activeNote.path,
-        title: activeNote.title,
-        tags: activeNote.tags,
-        preview: activeNote.preview,
-        modified: new Date().toISOString(),
-        pinned: false,
-      });
-    }
-  }, [activeNote?.path, onNoteOpened]);
-
   // Toggle raw mode using store action
   const handleToggleRawMode = useCallback(async () => {
     if (!editor || !activeNote) return;
@@ -509,6 +462,14 @@ export function Editor() {
   }
 
   const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
+  const shouldAnimateToc = activeNote && isTocOpen && !tocInitialized[activeNote.path];
+
+  useEffect(() => {
+    if (activeNote && isTocOpen && !tocInitialized[activeNote.path]) {
+      markTocInitialized(activeNote.path);
+    }
+  }, [activeNote, isTocOpen, tocInitialized, markTocInitialized]);
+
   const handleToggleToc = useCallback(() => {
     if (activeNote) {
       toggleToc(activeNote.path);
@@ -729,14 +690,24 @@ export function Editor() {
           isEditMode={isEditMode}
           onExitEditMode={handleExitEditMode}
         />
-        {isTocOpen && (
-          <TableOfContents
-            editor={editor}
-            isOpen={isTocOpen}
-            onClose={handleToggleToc}
-            headings={tocHeadings}
-          />
-        )}
+        <AnimatePresence>
+          {isTocOpen && (
+            <motion.div
+              initial={shouldAnimateToc ? { width: 0, opacity: 0 } : false}
+              animate={{ width: tocWidth, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.1, ease: "easeOut" }}
+              className="shrink-0"
+            >
+              <TableOfContents
+                editor={editor}
+                isOpen={isTocOpen}
+                onClose={handleToggleToc}
+                headings={tocHeadings}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

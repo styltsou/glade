@@ -16,6 +16,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
+      closeButton
       icons={{
         success: <CheckCircledIcon className="size-4" />,
         info: <InfoCircledIcon className="size-4" />,
@@ -23,14 +24,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: <CrossCircledIcon className="size-4" />,
         loading: <UpdateIcon className="size-4 animate-spin" />,
       }}
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
       {...props}
     />
   )

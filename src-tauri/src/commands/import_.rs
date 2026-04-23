@@ -260,7 +260,7 @@ fn generate_title_from_filename(filename: &str) -> String {
     }
 }
 
-fn process_import_content(content: &str, filename: &str) -> String {
+fn process_import_content(content: &str, filename: &str, source_file_path: Option<&Path>) -> String {
     let (mut meta, body) = vault::parse_frontmatter(content);
 
     if meta.title.is_none() {
@@ -275,8 +275,17 @@ fn process_import_content(content: &str, filename: &str) -> String {
     }
 
     if meta.created.is_none() {
-        meta.created = Some(chrono::Utc::now().to_rfc3339());
+        if let Some(path) = source_file_path {
+            if let Ok(metadata) = fs::metadata(path) {
+                if let Ok(ctime) = metadata.created() {
+                    let datetime: chrono::DateTime<chrono::Utc> = ctime.into();
+                    meta.created = Some(datetime.to_rfc3339());
+                }
+            }
+        }
     }
+
+    meta.updated = None;
 
     let frontmatter = vault::build_frontmatter(&meta);
 
@@ -366,7 +375,7 @@ pub fn import_files(
             }
             Some("replace") => {
                 let content = fs::read_to_string(&source_file)?;
-                let processed = process_import_content(&content, &file.name);
+                let processed = process_import_content(&content, &file.name, Some(&source_file));
                 fs::write(&dest_file, processed)?;
             }
             Some("keep_both") => {
@@ -378,7 +387,7 @@ pub fn import_files(
                         .unwrap_or(&file.relative_path),
                 );
                 let content = fs::read_to_string(&source_file)?;
-                let processed = process_import_content(&content, &file.name);
+                let processed = process_import_content(&content, &file.name, Some(&source_file));
                 fs::write(&unique_path, processed)?;
             }
             _ => {
@@ -391,11 +400,11 @@ pub fn import_files(
                             .unwrap_or(&file.relative_path),
                     );
                     let content = fs::read_to_string(&source_file)?;
-                    let processed = process_import_content(&content, &file.name);
+                    let processed = process_import_content(&content, &file.name, Some(&source_file));
                     fs::write(&unique_path, processed)?;
                 } else {
                     let content = fs::read_to_string(&source_file)?;
-                    let processed = process_import_content(&content, &file.name);
+                    let processed = process_import_content(&content, &file.name, Some(&source_file));
                     eprintln!("Writing file to: {:?}", dest_file);
                     fs::write(&dest_file, processed)?;
                 }

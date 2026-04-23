@@ -24,7 +24,7 @@ pub async fn read_note(path: String) -> Result<NoteData, AppError> {
         meta.id = Some(uuid::Uuid::new_v4().to_string());
         id_assigned = true;
     }
-    
+
     let note_id = meta.id.clone().unwrap();
 
     if id_assigned {
@@ -41,19 +41,24 @@ pub async fn read_note(path: String) -> Result<NoteData, AppError> {
     let title = meta.title.filter(|t| !t.is_empty()).unwrap_or(filename);
     let preview = vault::make_preview(&body);
 
+    let modified = fs::metadata(&full_path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339().into());
+
     Ok(NoteData {
         id: note_id,
         path,
         title,
         tags: meta.tags,
         created: meta.created,
-        updated: meta.updated,
+        updated: modified,
         body,
         preview,
     })
 }
 
-/// Write content to a note, updating the `updated` timestamp in frontmatter.
+/// Write content to a note. Modified time comes from filesystem, not frontmatter.
 #[tauri::command]
 pub async fn write_note(path: String, content: String) -> Result<(), AppError> {
     let vault_path = vault::get_vault_path()?;
@@ -67,16 +72,21 @@ pub async fn write_note(path: String, content: String) -> Result<(), AppError> {
     };
 
     let (mut meta, _) = vault::parse_frontmatter(&existing);
-    
+
     // Preserve or generate ID
     if meta.id.is_none() {
         meta.id = Some(uuid::Uuid::new_v4().to_string());
     }
-    
-    meta.updated = Some(Utc::now().to_rfc3339());
+
+    // Don't store updated in frontmatter - filesystem mtime is the source of truth
+    meta.updated = None;
 
     let frontmatter = vault::build_frontmatter(&meta);
-    let full_content = format!("{}\n\n{}", frontmatter, content);
+    let full_content = if frontmatter.lines().count() > 2 {
+        format!("{}\n\n{}", frontmatter, content)
+    } else {
+        content
+    };
 
     // Ensure parent directory exists
     if let Some(parent) = full_path.parent() {
@@ -94,11 +104,17 @@ fn find_unique_title(dir: &std::path::Path, base_title: &str, is_copy: bool) -> 
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|e| e.to_str()).map_or(false, |e| e == "md") {
-                if let Ok(content) = fs::read_to_string(&path) {
+                let title = if let Ok(content) = fs::read_to_string(&path) {
                     let (meta, _) = vault::parse_frontmatter(&content);
-                    if let Some(title) = meta.title {
-                        titles_in_dir.insert(title);
-                    }
+                    meta.title.clone()
+                } else {
+                    None
+                };
+                
+                if let Some(t) = title {
+                    titles_in_dir.insert(t);
+                } else if let Some(stem) = path.file_stem() {
+                    titles_in_dir.insert(stem.to_string_lossy().to_string());
                 }
             }
         }
@@ -109,15 +125,20 @@ fn find_unique_title(dir: &std::path::Path, base_title: &str, is_copy: bool) -> 
     }
     
     let without_copy = if is_copy {
-        base_title.strip_suffix(" (copy)").map(|s| s.trim()).unwrap_or(base_title).to_string()
+        let re = regex::Regex::new(r"\s*\(copy(?:\s+\d+)?\)$").unwrap();
+        re.replace(base_title, "").to_string()
     } else {
         base_title.to_string()
     };
     
-    let mut counter = if is_copy { 2 } else { 2 };
+    let mut counter = 1;
     loop {
         let candidate = if is_copy {
-            format!("{} (copy) {}", without_copy, counter)
+            if counter == 1 {
+                format!("{} (copy)", without_copy)
+            } else {
+                format!("{} (copy {})", without_copy, counter)
+            }
         } else {
             format!("{} {}", without_copy, counter)
         };
@@ -225,7 +246,6 @@ pub async fn rename_note(path: String, new_title: String) -> Result<(), AppError
     let parent = full_path.parent().unwrap_or(&vault_path);
     let unique_title = find_unique_title(parent, &new_title, false)?;
     meta.title = Some(unique_title);
-    meta.updated = Some(Utc::now().to_rfc3339());
 
     let frontmatter = vault::build_frontmatter(&meta);
     let full_content = format!("{}\n\n{}", frontmatter, body);
@@ -256,32 +276,19 @@ pub async fn duplicate_note(path: String) -> Result<NoteData, AppError> {
     
     let parent = full_path.parent().unwrap_or(&vault_path);
     let unique_title = find_unique_title(parent, &curr_title, true)?;
-    meta.title = Some(unique_title);
+    meta.title = Some(unique_title.clone());
     
-    let stem = full_path.file_stem().unwrap_or_default().to_string_lossy().to_string();
-    let ext = full_path.extension().unwrap_or_default().to_string_lossy().to_string();
-    
-    let mut new_filename = format!("{} copy.{}", stem, ext);
-    if ext.is_empty() {
-        new_filename = format!("{} copy", stem);
-    }
+    let base_slug = slugify(&unique_title);
+    let mut new_filename = format!("{}.md", base_slug);
     
     let mut counter = 1;
     while parent.join(&new_filename).exists() {
-        if ext.is_empty() {
-            new_filename = format!("{} copy {}", stem, counter);
-        } else {
-            new_filename = format!("{} copy {}.{}", stem, counter, ext);
-        }
+        new_filename = format!("{} {}.md", base_slug, counter);
         counter += 1;
     }
     
     let new_full_path = parent.join(&new_filename);
-    
-    let now = Utc::now().to_rfc3339();
-    meta.created = Some(now.clone());
-    meta.updated = Some(now.clone());
-    
+
     let frontmatter = vault::build_frontmatter(&meta);
     let full_content = format!("{}\n\n{}", frontmatter, body);
     fs::write(&new_full_path, &full_content)?;

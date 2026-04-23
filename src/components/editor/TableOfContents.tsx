@@ -137,7 +137,7 @@ export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfCo
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="flex-1 overflow-auto p-2">
+        <div className="flex-1 overflow-auto p-2 scrollbar-thin">
           <TocList
             entries={headings}
             onHeadingClick={handleHeadingClick}

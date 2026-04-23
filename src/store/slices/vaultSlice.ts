@@ -63,14 +63,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (
   noteScrollPositions: {},
 
   loadVault: async () => {
-    const { entries: currentEntries, isVaultLoaded } = get();
-    // Only show loading skeleton on the very first load.
-    // Re-loads (e.g. useEffect re-triggers after vault switch) reload silently.
-    if (currentEntries.length === 0 && !isVaultLoaded) {
-      set({ isVaultLoading: true, vaultError: null });
-    } else {
-      set({ vaultError: null });
-    }
+    set({ isVaultLoading: true, vaultError: null });
 
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");
