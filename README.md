@@ -111,6 +111,14 @@ Glade leverages the power of **Tauri v2** to combine a performant Rust backend w
 
 - **Rust**: [Install Rust](https://www.rust-lang.org/tools/install)
 - **Node.js / Bun**: [Install Bun](https://bun.sh/) (recommended) or Node.js
+
+### Install a local build (Linux, no sudo)
+
+```bash
+bun run install:local
+```
+
+Builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
 - **Git**: Ensure Git is installed and configured on your system.
 
 ### Installation & Run
