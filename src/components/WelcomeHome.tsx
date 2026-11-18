@@ -15,11 +15,17 @@ export function useHomeList(active: boolean, afterOpen?: () => void) {
   const openPath = useStore((s) => s.openPath);
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
+  // While the pointer drives the list, hover styling comes from CSS alone, so it
+  // clears when the pointer leaves; only keyboard navigation draws a "selected" row.
+  const [pointer, setPointer] = useState(false);
 
   const filtered = useMemo(() => filterHome(home, query), [home, query]);
   const flat = useMemo(() => flattenHome(filtered), [filtered]);
 
-  useEffect(() => setIndex(0), [query]);
+  useEffect(() => {
+    setIndex(0);
+    setPointer(false);
+  }, [query]);
   useEffect(() => {
     if (active) setQuery("");
   }, [active]);
@@ -33,9 +39,11 @@ export function useHomeList(active: boolean, afterOpen?: () => void) {
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      setPointer(false);
       setIndex((i) => Math.min(i + 1, flat.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
+      setPointer(false);
       setIndex((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter" && flat[index]) {
       e.preventDefault();
@@ -47,18 +55,23 @@ export function useHomeList(active: boolean, afterOpen?: () => void) {
     document.querySelector('[data-selected="true"]')?.scrollIntoView({ block: "nearest" });
   }, [index, filtered]);
 
-  return { query, setQuery, index, setIndex, filtered, flat, open, onKeyDown };
+  const hover = (i: number) => {
+    setIndex(i);
+    setPointer(true);
+  };
+
+  return { query, setQuery, index, setIndex: hover, selected: pointer ? -1 : index, filtered, flat, open, onKeyDown };
 }
 
 export function HomeLists({ list }: { list: ReturnType<typeof useHomeList> }) {
-  const { filtered, index, setIndex, open, flat, query } = list;
+  const { filtered, selected, setIndex, open, flat, query } = list;
   const pinnedN = filtered.pinned_folders.length;
   const foldersN = filtered.recent_folders.length;
   return (
     <>
-      <HomeSection title="Pinned folders" group="pinned" entries={filtered.pinned_folders} offset={0} selectedIndex={index} onOpen={open} onHover={setIndex} />
-      <HomeSection title="Recent folders" group="folders" entries={filtered.recent_folders} offset={pinnedN} selectedIndex={index} onOpen={open} onHover={setIndex} />
-      <HomeSection title="Recent files" group="files" entries={filtered.recent_files} offset={pinnedN + foldersN} selectedIndex={index} onOpen={open} onHover={setIndex} />
+      <HomeSection title="Pinned folders" group="pinned" entries={filtered.pinned_folders} offset={0} selectedIndex={selected} onOpen={open} onHover={setIndex} />
+      <HomeSection title="Recent folders" group="folders" entries={filtered.recent_folders} offset={pinnedN} selectedIndex={selected} onOpen={open} onHover={setIndex} />
+      <HomeSection title="Recent files" group="files" entries={filtered.recent_files} offset={pinnedN + foldersN} selectedIndex={selected} onOpen={open} onHover={setIndex} />
       {flat.length === 0 && query && (
         <p className="px-3 py-6 text-center text-sm text-muted-foreground">Nothing matches “{query}”.</p>
       )}
@@ -95,12 +108,12 @@ export function WelcomeHome() {
           </button>
         )}
 
-        <div className="rise mb-7">
+        <div className="mb-7">
           <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-foreground">Glade</h1>
           <p className="mt-1 text-sm text-muted-foreground">Open a folder or a file, or pick up where you left off.</p>
         </div>
 
-        <div className="rise relative mb-8" style={{ "--i": 1 } as React.CSSProperties}>
+        <div className="relative mb-8">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             ref={inputRef}
@@ -108,24 +121,24 @@ export function WelcomeHome() {
             value={list.query}
             onChange={(e) => list.setQuery(e.target.value)}
             placeholder="Filter folders and files…"
-            className="h-11 w-full rounded-xl border border-border/80 bg-card/60 pl-10 pr-4 text-sm shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus:border-ring/60 focus:ring-2 focus:ring-ring/20"
+            className="h-11 w-full rounded-lg border border-border/80 bg-card/60 pl-10 pr-4 text-sm shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus:border-ring/60 focus:ring-2 focus:ring-ring/20"
           />
         </div>
 
         {empty ? (
-          <p className="rise mb-8 px-1 text-sm text-muted-foreground" style={{ "--i": 2 } as React.CSSProperties}>
+          <p className="mb-8 px-1 text-sm text-muted-foreground">
             Nothing here yet. Folders and files you open will be listed here.
           </p>
         ) : (
-          <div className="rise" style={{ "--i": 2 } as React.CSSProperties}>
+          <div>
             <HomeLists list={list} />
           </div>
         )}
 
-        <div className="rise grid grid-cols-2 gap-2 pt-2" style={{ "--i": 3 } as React.CSSProperties}>
+        <div className="grid grid-cols-2 gap-2 pt-2">
           <button
             onClick={pickFolder}
-            className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
+            className="press flex items-center gap-3 rounded-lg border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
           >
             <FolderOpen className="size-4 text-muted-foreground" />
             <span className="flex-1">Open folder</span>
@@ -133,7 +146,7 @@ export function WelcomeHome() {
           </button>
           <button
             onClick={pickFile}
-            className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
+            className="press flex items-center gap-3 rounded-lg border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
           >
             <FileText className="size-4 text-muted-foreground" />
             <span className="flex-1">Open file</span>

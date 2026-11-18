@@ -291,16 +291,16 @@ export function HomeView() {
 
                 {!currentFolder && (
                   <div className="pt-4 grid grid-cols-2 gap-4 w-full">
-                    <div className="p-4 rounded-xl border border-border bg-card/50 space-y-1">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase">
+                    <div className="p-4 rounded-lg border border-border bg-card/50 space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">
                         Organize
                       </div>
                       <p className="text-xs text-muted-foreground/80">
                         Use folders and #tags to keep things tidy.
                       </p>
                     </div>
-                    <div className="p-4 rounded-xl border border-border bg-card/50 space-y-1">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase">
+                    <div className="p-4 rounded-lg border border-border bg-card/50 space-y-1">
+                      <div className="text-xs font-medium text-muted-foreground">
                         Search
                       </div>
                       <p className="text-xs text-muted-foreground/80">
@@ -334,7 +334,7 @@ function findEntryByPath(
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] mb-4">
+    <h2 className="text-xs font-medium text-muted-foreground mb-4">
       {label}
     </h2>
   );

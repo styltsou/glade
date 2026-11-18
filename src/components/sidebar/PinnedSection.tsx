@@ -74,14 +74,14 @@ export function PinnedSection() {
       <div className="flex items-center">
         <button
           onClick={() => togglePinnedNotesCollapsed()}
-          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
+          className="flex-1 flex items-center gap-1.5 group text-left transition-colors hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
         >
           {pinnedNotesCollapsed ? (
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           )}
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] group-hover:text-foreground">
+          <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
             Pinned
           </span>
         </button>
@@ -89,7 +89,7 @@ export function PinnedSection() {
 
       <div
         className={cn(
-          "grid transition-all duration-100 ease-in-out",
+          "grid transition-[grid-template-rows,opacity] duration-100 ease-in-out",
           !pinnedNotesCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >

@@ -36,7 +36,7 @@ export function Backlinks() {
   if (items.length === 0) return null;
   return (
     <div className="mt-10 border-t border-border pt-4">
-      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h3 className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
         <Link2 className="size-3.5" /> Linked from ({items.length})
       </h3>
       <ul className="space-y-1">

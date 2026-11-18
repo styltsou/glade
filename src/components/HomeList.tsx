@@ -42,7 +42,7 @@ function Row({ entry, group, selected, onOpen, onHover }: RowProps) {
           onClick={() => onOpen(entry)}
           onMouseMove={onHover}
           className={cn(
-            "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
+            "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
             selected
               ? "bg-foreground/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.05)]"
               : "hover:bg-foreground/[0.05]",
@@ -108,7 +108,7 @@ export function HomeSection({ title, group, entries, offset, selectedIndex, onOp
   if (entries.length === 0) return null;
   return (
     <section className="mb-6">
-      <h2 className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</h2>
+      <h2 className="mb-1.5 px-2.5 text-xs font-medium text-muted-foreground">{title}</h2>
       {entries.map((entry, i) => (
         <Row
           key={entry.path}

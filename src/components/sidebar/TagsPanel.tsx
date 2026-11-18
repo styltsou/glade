@@ -68,14 +68,14 @@ export function TagsPanel() {
       <div className="flex items-center">
         <button 
           onClick={() => toggleTagsCollapsed()}
-          className="flex-1 flex items-center gap-1.5 group text-left transition-all hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
+          className="flex-1 flex items-center gap-1.5 group text-left transition-colors hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
         >
           {tagsCollapsed  ? (
             <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           )}
-          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] group-hover:text-foreground">
+          <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
             Tags
           </span>
         </button>
@@ -94,7 +94,7 @@ export function TagsPanel() {
       
       <div 
         className={cn(
-          "grid transition-all duration-100 ease-in-out",
+          "grid transition-[grid-template-rows,opacity] duration-100 ease-in-out",
           !tagsCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
@@ -116,7 +116,7 @@ export function TagsPanel() {
                   <button
                     key={tag.name}
                     onClick={() => toggleTagFilter(tag.name)}
-                    className={`group flex items-center justify-between w-full rounded-md px-2 py-1.5 text-sm transition-all cursor-pointer font-medium ${
+                    className={`group flex items-center justify-between w-full rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer font-medium ${
                       activeTagFilters.includes(tag.name)
                         ? "bg-sidebar-accent text-foreground"
                         : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
