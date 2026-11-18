@@ -13,7 +13,7 @@ import { TagsPanel } from "@/components/sidebar/TagsPanel";
 export function Sidebar() {
   const loadVault = useStore((state) => state.loadVault);
   const loadTags = useStore((state) => state.loadTags);
-  const activeVault = useStore((state) => state.activeVault);
+  const rootPath = useStore((state) => state.target?.path);
   const loadHome = useStore((state) => state.loadAll);
   const loadSidebarState = useStore((state) => state.loadSidebarState);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
@@ -29,11 +29,11 @@ export function Sidebar() {
   }, [loadVault, loadTags, loadSidebarState]);
 
   useEffect(() => {
-    if (activeVault) {
+    if (rootPath) {
       loadVault();
       loadHome();
     }
-  }, [activeVault, loadVault, loadHome]);
+  }, [rootPath, loadVault, loadHome]);
 
   // Keyboard shortcut Ctrl+B
   useEffect(() => {

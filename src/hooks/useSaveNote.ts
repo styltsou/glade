@@ -8,6 +8,8 @@ interface UseSaveNoteOptions {
 	lastSavedContentRef: MutableRefObject<string>;
 	pendingSaveRef: MutableRefObject<Promise<void> | null>;
 	savedTimeoutRef?: MutableRefObject<ReturnType<typeof setTimeout> | null>;
+	/** While true (external edit conflict), nothing is written. */
+	blockedRef?: MutableRefObject<boolean>;
 }
 
 export function useSaveNote({
@@ -17,6 +19,7 @@ export function useSaveNote({
 	lastSavedContentRef,
 	pendingSaveRef,
 	savedTimeoutRef,
+	blockedRef,
 }: UseSaveNoteOptions) {
 	const [saveStatus, setSaveStatus] = useState<"unsaved" | "saved" | "idle">("idle");
 
@@ -31,6 +34,7 @@ export function useSaveNote({
 
 	const saveNow = useCallback(async () => {
 		if (!activeNote) return;
+		if (blockedRef?.current) return;
 		if (latestContentRef.current === lastSavedContentRef.current) return;
 
 		const content = latestContentRef.current;

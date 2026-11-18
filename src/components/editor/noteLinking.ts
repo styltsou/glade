@@ -1,6 +1,8 @@
 import type { SuggestionProps as TipTapSuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
 import type { VaultEntry } from '@/types';
 import { useStore } from '@/store';
+import { invoke } from '@tauri-apps/api/core';
+import { relativeLink } from '@/lib/links';
 
 export interface SuggestionItem {
   id: string;
@@ -33,8 +35,32 @@ export function unregisterSuggestionCallbacks() {
 }
 
 export default {
-  items: ({ query }: { query: string }) => {
-    const { entries } = useStore.getState();
+  // Inserts a standard relative markdown link, e.g. [API](../reference/api.md).
+  command: ({ editor, range, props }: { editor: any; range: { from: number; to: number }; props: { id: string | null; label?: string | null } }) => {
+    const from = useStore.getState().activeNote?.path;
+    if (!from || !props.id) return;
+    const href = relativeLink(from, props.id);
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(range, [
+        { type: 'text', text: props.label ?? props.id, marks: [{ type: 'link', attrs: { href } }] },
+        { type: 'text', text: ' ' },
+      ])
+      .run();
+  },
+
+  items: async ({ query }: { query: string }) => {
+    const { entries, target, activeNote } = useStore.getState();
+
+    // A loose file has no folder to search: offer the files next to it.
+    if (target?.kind === 'file' && activeNote) {
+      const siblings = await invoke<{ name: string; path: string }[]>('list_dir_markdown', { file: activeNote.path });
+      return siblings
+        .filter((s) => !query || s.name.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 10)
+        .map((s) => ({ id: s.path, label: s.name }));
+    }
 
     const allNotes: SuggestionItem[] = [];
     const flatten = (items: VaultEntry[], parentFolder?: string) => {

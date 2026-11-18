@@ -4,7 +4,6 @@ import {
   Plus as PlusIcon,
   FolderPlus as FolderPlusIcon,
   Trash2 as TrashIcon,
-  Upload as UploadIcon,
   BookOpen as BookOpenIcon,
   Copy as CopyIcon,
   Search as SearchIcon,
@@ -85,7 +84,11 @@ export function CommandPalette() {
   const clearSearch = useStore((state) => state.clearSearch);
 
   const openSettingsPage = useStore((state) => state.openSettingsPage);
-  const openImport = useStore((state) => state.openImport);
+  const pickFolder = useStore((state) => state.pickFolder);
+  const pickFile = useStore((state) => state.pickFile);
+  const showHome = useStore((state) => state.showHome);
+  const setAddPropertyOpen = useStore((state) => state.setAddPropertyOpen);
+  const closeTarget = useStore((state) => state.closeTarget);
   const toggleToc = useStore((state) => state.toggleToc);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
   const toggleAppearance = useStore((state) => state.toggleAppearance);
@@ -187,17 +190,26 @@ export function CommandPalette() {
         case "toggle-sidebar":
           toggleSidebarCollapsed();
           break;
-        case "manage-vaults":
-          openSettingsPage("vaults");
+        case "open-folder":
+          pickFolder();
+          break;
+        case "open-file":
+          pickFile();
+          break;
+        case "add-property":
+          setAddPropertyOpen(true);
+          break;
+        case "go-home":
+          showHome();
+          break;
+        case "close-folder":
+          closeTarget();
           break;
         case "appearance":
           openSettingsPage("appearance");
           break;
         case "toggle-appearance":
           toggleAppearance();
-          break;
-        case "import-files":
-          openImport();
           break;
         case "toggle-read-edit-mode":
           if (activeNote) {
@@ -225,7 +237,11 @@ export function CommandPalette() {
       currentFolder,
       deleteEntry,
       openSettingsPage,
-      openImport,
+      pickFolder,
+      pickFile,
+      showHome,
+      setAddPropertyOpen,
+      closeTarget,
       selectNote,
       handleOpenChange,
       toggleToc,
@@ -334,13 +350,6 @@ export function CommandPalette() {
         hidden: !!activeNote || !currentFolder,
       },
       {
-        id: "import-files",
-        title: "Import Files",
-        icon: <UploadIcon />,
-        type: "action",
-        action: "import-files",
-      },
-      {
         id: "toggle-sidebar",
         title: "Toggle Sidebar",
         icon: <SidebarIcon />,
@@ -349,11 +358,43 @@ export function CommandPalette() {
         action: "toggle-sidebar",
       },
       {
-        id: "manage-vaults",
-        title: "Manage Vaults",
+        id: "open-folder",
+        title: "Open Folder…",
+        icon: <FolderCogIcon />,
+        shortcut: "⇧⌘O",
+        type: "action",
+        action: "open-folder",
+      },
+      {
+        id: "open-file",
+        title: "Open File…",
+        icon: <FolderCogIcon />,
+        shortcut: "⌥⌘O",
+        type: "action",
+        action: "open-file",
+      },
+      {
+        id: "add-property",
+        title: "Add Property…",
         icon: <FolderCogIcon />,
         type: "action",
-        action: "manage-vaults",
+        action: "add-property",
+        hidden: !activeNote,
+      },
+      {
+        id: "go-home",
+        title: "Go to Home",
+        icon: <FolderCogIcon />,
+        shortcut: "⇧⌘H",
+        type: "action",
+        action: "go-home",
+      },
+      {
+        id: "close-folder",
+        title: "Close Folder",
+        icon: <FolderCogIcon />,
+        type: "action",
+        action: "close-folder",
       },
       {
         id: "appearance",

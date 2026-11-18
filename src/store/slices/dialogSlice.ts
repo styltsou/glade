@@ -6,9 +6,9 @@ export interface DialogSlice {
   setCurrentView: (view: "home" | "settings") => void;
 
   // Settings page
-  settingsSection: "vaults" | "appearance" | "about";
-  setSettingsSection: (section: "vaults" | "appearance" | "about") => void;
-  openSettingsPage: (section?: "vaults" | "appearance" | "about") => void;
+  settingsSection: "appearance" | "about";
+  setSettingsSection: (section: "appearance" | "about") => void;
+  openSettingsPage: (section?: "appearance" | "about") => void;
   closeSettingsPage: () => void;
 
   // Rename dialog
@@ -38,17 +38,7 @@ export interface DialogSlice {
   openSettings: () => void;
   closeSettings: () => void;
 
-  // Import dialog
-  importOpen: boolean;
-  importPath: string | null;
-  openImport: (path?: string) => void;
-  closeImport: () => void;
 
-  // Open with Glade dialog
-  openWithOpen: boolean;
-  openWithPath: string | null;
-  openOpenWith: (path: string) => void;
-  closeOpenWith: () => void;
 }
 
 import type { StoreState } from "../index";
@@ -83,24 +73,16 @@ export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = 
   openSettings: () => set({ settingsOpen: true }),
   closeSettings: () => set({ settingsOpen: false }),
 
-  importOpen: false,
-  importPath: null,
-  openImport: (path) => set({ importOpen: true, importPath: path || null }),
-  closeImport: () => set({ importOpen: false, importPath: null }),
 
-  openWithOpen: false,
-  openWithPath: null,
-  openOpenWith: (path) => set({ openWithOpen: true, openWithPath: path }),
-  closeOpenWith: () => set({ openWithOpen: false, openWithPath: null }),
 
   currentView: "home",
   setCurrentView: (view) => set({ currentView: view }),
 
-  settingsSection: "vaults",
+  settingsSection: "appearance",
   setSettingsSection: (section) => set({ settingsSection: section }),
   openSettingsPage: (section) => set({ 
     currentView: "settings", 
-    settingsSection: section || "vaults",
+    settingsSection: section || "appearance",
     settingsOpen: false 
   }),
   closeSettingsPage: () => set({ currentView: "home" }),

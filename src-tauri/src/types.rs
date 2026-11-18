@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 pub const MAX_RECENTS: usize = 6;
+/// Cap for the recent folders / recent files lists shown on Home.
+pub const MAX_RECENT_ITEMS: usize = 30;
 pub const PREVIEW_LENGTH: usize = 120;
 
 /// A vault directory under ~/.glade/vaults/
@@ -54,29 +56,22 @@ pub struct NoteData {
     pub body: String,
     /// Short preview of the body (first ~100 chars)
     pub preview: String,
+    /// Frontmatter as shown in the Properties panel
+    #[serde(default)]
+    pub properties: crate::frontmatter::Properties,
 }
 
-fn is_false(v: &bool) -> bool {
-    !*v
-}
-
-/// Frontmatter metadata parsed from a note.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+/// Metadata read from a note. Read-only: Glade never serializes this back
+/// into files.
+#[derive(Debug, Clone, Default)]
 pub struct NoteMeta {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Displayed title: `title` key, else first H1 (None when neither exists).
     pub title: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tags: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// `created`/`date` frontmatter value, if the file already has one.
     pub created: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    /// `updated`/`lastmod` frontmatter value, if the file already has one.
     pub updated: Option<String>,
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub pinned: bool,
-    #[serde(flatten)]
-    pub extra: std::collections::HashMap<String, serde_json::Value>,
 }
 
 /// A lightweight card representation used in the home view.
@@ -151,6 +146,26 @@ pub struct AppConfig {
     pub recents: Vec<String>,
     #[serde(default)]
     pub sidebar: SidebarState,
+    /// Bumped by one-time migrations (0 = never migrated).
+    #[serde(default)]
+    pub schema_version: u32,
+    /// Absolute paths, most recent first.
+    #[serde(default)]
+    pub recent_folders: Vec<String>,
+    #[serde(default)]
+    pub recent_files: Vec<String>,
+    #[serde(default)]
+    pub pinned_folders: Vec<String>,
+    /// Roots that were open when the app last quit (restored on launch).
+    #[serde(default)]
+    pub session_roots: Vec<String>,
+    /// Migrated folders whose notes still hold keys Glade used to write
+    /// (`id`, `pinned`); the user is offered a one-time cleanup.
+    #[serde(default)]
+    pub legacy_cleanup_roots: Vec<String>,
+    /// Whether the Properties panel is collapsed (applies to every note).
+    #[serde(default)]
+    pub properties_collapsed: bool,
 }
 
 /// Tag with its usage count across all notes.

@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use std::fs;
 use crate::error::AppError;
 use crate::types::TagCount;
+use crate::frontmatter;
 use crate::vault;
 
 /// List all unique tags across all notes with their counts (uses cache when available).
 #[tauri::command]
-pub async fn list_tags() -> Result<Vec<TagCount>, AppError> {
-    let vault_path = vault::get_vault_path()?;
+pub async fn list_tags(window: tauri::Window) -> Result<Vec<TagCount>, AppError> {
+    let vault_path = crate::workspace::root_for(&window)?;
     
     // Check cache first
     let cached = vault::get_tags_cache(&vault_path);
@@ -18,7 +19,7 @@ pub async fn list_tags() -> Result<Vec<TagCount>, AppError> {
     // Scan and cache
     let mut tag_map: HashMap<String, u32> = HashMap::new();
 
-    vault::walk_notes(&vault_path, &vault_path, |_path, _relative, meta, _body| {
+    vault::walk_notes(&vault_path, |_path, _relative, meta, _body| {
         for tag in &meta.tags {
             *tag_map.entry(tag.clone()).or_insert(0) += 1;
         }
@@ -40,22 +41,20 @@ pub async fn list_tags() -> Result<Vec<TagCount>, AppError> {
 
 /// Update the tags for a specific note.
 #[tauri::command]
-pub async fn update_tags(path: String, tags: Vec<String>) -> Result<(), AppError> {
-    let vault_path = vault::get_vault_path()?;
-    let full_path = vault_path.join(&path);
+pub async fn update_tags(window: tauri::Window, path: String, tags: Vec<String>) -> Result<(), AppError> {
+    let vault_path = crate::workspace::root_for(&window)?;
+    let full_path = crate::workspace::resolve_markdown(&vault_path, &path)?;
 
     if !full_path.exists() {
         return Err(AppError::NotFound(format!("Note not found: {}", path)));
     }
 
     let content = fs::read_to_string(&full_path)?;
-    let (mut meta, body) = vault::parse_frontmatter(&content);
-
-    meta.tags = tags;
-
-    let frontmatter = vault::build_frontmatter(&meta);
-    let full_content = format!("{}\n\n{}", frontmatter, body);
-    fs::write(&full_path, full_content)?;
+    let updated = frontmatter::set_tags(&content, &tags)
+        .map_err(|e| AppError::InvalidPath(format!("Cannot update tags: {}", e)))?;
+    if updated != content {
+        crate::watch::write_file(&full_path, updated)?;
+    }
 
     // Invalidate tags cache since tags changed
     vault::invalidate_vault_cache();

@@ -403,3 +403,22 @@
   background-color: hsl(var(--primary) / 25%);
   border-color: hsl(var(--primary) / 50%);
 }
+
+/* Links to files outside the open folder, broken links, reveal-only links */
+.tiptap-editor .link-outside::after {
+  content: " ↗";
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.tiptap-editor .link-missing {
+  color: hsl(var(--destructive));
+  text-decoration: underline dashed;
+  text-underline-offset: 3px;
+}
+
+.tiptap-editor .link-file::after {
+  content: " ⧉";
+  font-size: 0.8em;
+  opacity: 0.6;
+}

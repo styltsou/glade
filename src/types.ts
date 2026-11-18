@@ -46,7 +46,31 @@ export interface NoteData {
   body: string;
   /** Short preview of the body */
   preview: string;
+  /** Frontmatter as shown in the Properties panel */
+  properties?: Properties;
 }
+
+/** One top-level frontmatter key. */
+export interface PropertyEntry {
+  key: string;
+  value: unknown;
+  /** Original text of this key's lines */
+  raw: string;
+  /** False for nested/multi-line/anchored values (read-only in the panel) */
+  editable: boolean;
+}
+
+export interface Properties {
+  /** "none" = no frontmatter block; "invalid" = unparseable, shown as text */
+  status: "none" | "invalid" | "ok";
+  /** Text between the fences, for "Edit as text" */
+  yaml: string;
+  entries: PropertyEntry[];
+}
+
+export type PropertyValue =
+  | { kind: "scalar"; value: string }
+  | { kind: "list"; value: string[] };
 
 /** Tag with its usage count. */
 export interface TagCount {
@@ -72,4 +96,25 @@ export interface NoteSearchResult {
   path: string;
   preview?: string;
   tags: string[];
+}
+
+/** What a window shows: an opened folder or a single loose file (null = Home). */
+export interface Target {
+  kind: "folder" | "file";
+  /** Absolute path */
+  path: string;
+}
+
+/** One row on the Home screen. */
+export interface HomeEntry {
+  path: string;
+  name: string;
+  /** False when the path no longer exists on disk. */
+  exists: boolean;
+}
+
+export interface HomeData {
+  pinned_folders: HomeEntry[];
+  recent_folders: HomeEntry[];
+  recent_files: HomeEntry[];
 }

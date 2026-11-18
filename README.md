@@ -6,13 +6,14 @@
 > [!NOTE]
 > **No pre-built binary yet.** Run from source: see [Getting Started](#getting-started) below.
 
-A local-first, markdown note-taking desktop application built with [Tauri v2](https://tauri.app/), [React](https://react.dev/), and [Rust](https://www.rust-lang.org/).
+A local-first markdown viewer and editor for the files you already have, built with [Tauri v2](https://tauri.app/), [React](https://react.dev/), and [Rust](https://www.rust-lang.org/).
 
 ## Overview
 
-Glade is designed for developers and technical users who want to own their notes as plain files and edit them in a distraction-free rich text environment.
+Glade opens markdown where it already lives — in a notes folder, inside a codebase, anywhere on disk — and gives you a clean way to read and edit it. Your files stay yours: Glade keeps its own bookkeeping (recent folders, pins, window state) in its app data directory and never writes anything into your folders except the `.md` files you edit.
 
-- **Local-first**: Your notes are plain `.md` files stored in `~/.glade/`. No proprietary format, no lock-in.
+- **Open anything**: Open a folder, or a single `.md` file. `glade .`, `glade notes/plan.md`, drag and drop, or "Open with Glade".
+- **Files stay clean**: Saving only changes what you edited — untouched blocks, frontmatter keys, comments and formatting are written back byte for byte. No ids, timestamps or other app-specific keys are added to your notes.
 - **Git-ready**: Notes are plain files — a `.git` repo and remote sync are on the roadmap.
 - **Markdown-native**: Write raw markdown or use the rich text toolbar — both produce the same clean output.
 
@@ -37,21 +38,25 @@ Glade is designed for developers and technical users who want to own their notes
 - **Find & Replace** — `Cmd/Ctrl+F` with support for case-sensitive, whole-word, and regex matching.
 - **Command Palette** — `Cmd/Ctrl+P` for keyboard-driven navigation and actions.
 - **@-Mentions** — Type `@` to search and link any note; click mentions in read mode to navigate.
-- **Breadcrumbs** — `Vault > Folder > Note` path at the top of the editor.
+- **Breadcrumbs** — `Folder > Note` path at the top of the editor; loose files show their real path with "Open containing folder".
+- **Home** — A keyboard-first start screen listing pinned folders, recent folders and recent files (`Cmd/Ctrl+Shift+H`); `Cmd/Ctrl+O` switches between them.
+- **Links** — `@` inserts standard relative markdown links (`[API](../reference/api.md)`) that work on GitHub too. Links to files outside the open folder are marked ↗ and open as loose files; broken links offer to create the file; renaming or moving a note offers to update links to it.
+- **Properties** — Frontmatter is shown above the title (collapsible). Edits change only the lines you touch.
+- **Live files** — Changes made by other programs (git, editors, sync tools) show up automatically; unsaved edits get a "Keep mine / Load theirs" choice instead of being overwritten.
 
 ### 🗂️ Organization
 
 - **Tagging System** — YAML frontmatter-based tags with auto-complete, popularity ranking, and click-to-filter (AND-combinable).
 - **Pinned Notes** — Pin important notes to a dedicated section at the top of the sidebar.
-- **Multi-Vault Support** — Create, rename, delete, and switch between multiple vaults.
+- **Pinned Folders** — Pin folders to keep them on the Home screen; every opened folder gets the same features, pinned or not.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
 - **Editable Titles** — Click the note title to rename inline.
 
 ### 💾 Storage & Portability
 
-- **Local-First** — Notes stored as plain `.md` files in `~/.glade/`. No proprietary format, no lock-in.
-- **Import** — Import `.md` files and folders from your filesystem with conflict detection (skip / replace / keep both) and broken-link analysis.
+- **Local-First** — Your notes are plain `.md` files wherever you keep them. No proprietary format, no lock-in.
+- **Safe deletes** — Deleting a note moves it to the system trash.
 - **Export** — Export notes to PDF, Markdown, or PNG (for diagrams). Option to strip YAML frontmatter. Copy clean Markdown to clipboard.
 
 ### 🎨 Appearance
@@ -91,8 +96,8 @@ Glade is designed for developers and technical users who want to own their notes
 Glade leverages the power of **Tauri v2** to combine a performant Rust backend with a flexible React frontend.
 
 - **Frontend**: Built with React 18, Tailwind CSS v4, and Shadcn/ui for a premium, responsive interface.
-- **Backend**: Rust handles the heavy lifting—filesystem operations, import scanning, and full-text search indexing.
-- **Local-First**: Notes are stored as standard `.md` files in `~/.glade/`. You own your data.
+- **Backend**: Rust handles the heavy lifting—filesystem operations, `.gitignore`-aware scanning, file watching, link resolution, and full-text search.
+- **Local-First**: Notes are standard `.md` files wherever you keep them. App state lives in Glade's own config directory (`~/.config/glade` on Linux), keyed by folder path.
 - **Git (planned)**: Automatic versioning and remote sync via Git is on the roadmap.
 
 ---

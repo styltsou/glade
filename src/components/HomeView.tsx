@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/store";
+import { baseName } from "@/lib/paths";
 import type { VaultEntry } from "@/types";
 
 function NoteCardSkeleton() {
@@ -43,7 +44,7 @@ function FolderCardSkeleton() {
 
 export function HomeView() {
   const entries = useStore((state) => state.entries);
-  const activeVault = useStore((state) => state.activeVault);
+  const rootName = useStore((state) => (state.target ? baseName(state.target.path) : "Home"));
   const folderNotes = useStore((state) => state.folderNotes);
   const isHomeLoading = useStore((state) => state.isHomeLoading);
   const isFolderNotesLoading = useStore((state) => state.isFolderNotesLoading);
@@ -140,7 +141,7 @@ export function HomeView() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">
-                {currentEntry ? currentEntry.name : activeVault?.name || "Home"}
+                {currentEntry ? currentEntry.name : rootName}
               </h1>
               {currentEntry && (
                 <p className="text-sm text-muted-foreground mt-1">

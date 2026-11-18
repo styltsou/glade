@@ -4,12 +4,12 @@ use std::sync::RwLock;
 
 use chrono::Utc;
 
-use crate::config;
 use crate::error::AppError;
+use crate::frontmatter;
 use crate::types::{NoteCard, NoteMeta, TagCount, VaultEntry, PREVIEW_LENGTH};
+use crate::workspace_state;
 
 static VAULT_TREE_CACHE: RwLock<Option<(PathBuf, Vec<VaultEntry>)>> = RwLock::new(None);
-static PINNED_NOTES_CACHE: RwLock<Vec<NoteCard>> = RwLock::new(Vec::new());
 static TAGS_CACHE: RwLock<Option<(PathBuf, Vec<TagCount>)>> = RwLock::new(None);
 
 fn get_home_dir() -> Option<PathBuf> {
@@ -41,31 +41,6 @@ pub fn get_vaults_root() -> Result<PathBuf, AppError> {
     Ok(root)
 }
 
-pub fn get_vault_dir(slug: &str) -> Result<PathBuf, AppError> {
-    let vault_dir = get_vaults_root()?.join(slug);
-    if !vault_dir.exists() {
-        fs::create_dir_all(&vault_dir)?;
-    }
-    Ok(vault_dir)
-}
-
-pub fn get_active_vault_dir() -> Result<PathBuf, AppError> {
-    let config = config::load_config()?;
-    let active_id = config
-        .active_vault_id
-        .ok_or_else(|| AppError::InvalidPath("No active vault set".into()))?;
-    let vault = config
-        .vaults
-        .iter()
-        .find(|v| v.id == active_id)
-        .ok_or_else(|| AppError::InvalidPath("Active vault not found".into()))?;
-    get_vault_dir(&vault.slug)
-}
-
-pub fn get_vault_path() -> Result<PathBuf, AppError> {
-    get_active_vault_dir()
-}
-
 /// Build a recursive tree of `VaultEntry` from the vault directory.
 /// `vault_root` is always the top-level vault path so that all `path` values
 /// returned by this function are relative to the vault root, never to a
@@ -82,156 +57,181 @@ pub fn build_vault_tree(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> 
     drop(cached);
 
     // Build and cache
-    let entries = build_vault_tree_inner(vault_root, vault_root)?;
+    let entries = build_vault_tree_inner(vault_root)?;
     *VAULT_TREE_CACHE.write().unwrap() = Some((vault_root.to_path_buf(), entries.clone()));
 
     Ok(entries)
 }
 
-fn build_vault_tree_inner(vault_root: &Path, dir: &Path) -> Result<Vec<VaultEntry>, AppError> {
-    let mut entries = Vec::new();
+/// Directory names never indexed, whatever `.gitignore` says.
+const ALWAYS_SKIPPED: [&str; 3] = [".git", "node_modules", "target"];
+/// Safety cap so opening something like `~` stays responsive.
+pub const MAX_MARKDOWN_FILES: usize = 20_000;
 
-    let mut children: Vec<_> = fs::read_dir(dir)?.filter_map(|e| e.ok()).collect();
-    children.sort_by_key(|e| e.file_name());
+pub fn is_markdown(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map_or(false, |e| matches!(e.to_ascii_lowercase().as_str(), "md" | "mdx" | "markdown"))
+}
 
-    for entry in children {
-        let name = entry.file_name().to_string_lossy().to_string();
+/// Result of scanning a root: markdown files plus the folders worth showing.
+pub struct Scan {
+    /// Markdown files, relative to the root, sorted.
+    pub files: Vec<PathBuf>,
+    /// Folders to show, relative to the root: those with markdown below them,
+    /// plus empty folders (so a freshly created folder doesn't vanish).
+    pub dirs: Vec<PathBuf>,
+}
 
-        // Skip hidden files/directories (like .git)
-        if name.starts_with('.') {
+/// Walk a root honoring `.gitignore` rules and the always-skipped directories.
+pub fn scan_root(root: &Path) -> Result<Scan, AppError> {
+    use std::collections::HashSet;
+
+    let walker = ignore::WalkBuilder::new(root)
+        .hidden(true)
+        .require_git(false)
+        .filter_entry(|e| {
+            !(e.file_type().map_or(false, |t| t.is_dir())
+                && ALWAYS_SKIPPED.iter().any(|n| e.file_name() == *n))
+        })
+        .build();
+
+    let mut files: Vec<PathBuf> = Vec::new();
+    let mut all_dirs: HashSet<PathBuf> = HashSet::new();
+    let mut has_child: HashSet<PathBuf> = HashSet::new();
+
+    for entry in walker.flatten() {
+        let Ok(rel) = entry.path().strip_prefix(root) else { continue };
+        if rel.as_os_str().is_empty() {
             continue;
         }
-
-        let path = entry.path();
-        // Always strip the vault root so the path is vault-relative.
-        let relative = path
-            .strip_prefix(vault_root)
-            .unwrap_or(&path)
-            .to_string_lossy()
-            .to_string();
-
-        if entry.metadata()?.is_dir() {
-            let sub_children = build_vault_tree_inner(vault_root, &path)?;
-            entries.push(VaultEntry {
-                id: relative.clone(),
-                name,
-                path: relative,
-                is_dir: true,
-                children: sub_children,
-                modified: None,
-                created_at: None,
-                tags: vec![],
-            });
-        } else if name.ends_with(".md") {
-            let metadata = entry.metadata()?;
-            let content = fs::read_to_string(&path).unwrap_or_default();
-            let (meta, _) = parse_frontmatter(&content);
-            let stem = path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| name.clone());
-            let display_name = meta.title.filter(|t| !t.is_empty()).unwrap_or(stem);
-
-            let modified = metadata.modified().ok().and_then(|t| {
-                let datetime: chrono::DateTime<Utc> = t.into();
-                Some(datetime.to_rfc3339())
-            });
-
-            entries.push(VaultEntry {
-                id: meta.id.unwrap_or_else(|| relative.clone()),
-                name: display_name,
-                path: relative,
-                is_dir: false,
-                children: vec![],
-                modified,
-                created_at: meta.created,
-                tags: meta.tags,
-            });
+        if let Some(parent) = rel.parent() {
+            has_child.insert(parent.to_path_buf());
+        }
+        if entry.file_type().map_or(false, |t| t.is_dir()) {
+            all_dirs.insert(rel.to_path_buf());
+        } else if is_markdown(rel) && files.len() < MAX_MARKDOWN_FILES {
+            files.push(rel.to_path_buf());
         }
     }
 
-    Ok(entries)
+    let mut shown: HashSet<PathBuf> = HashSet::new();
+    for f in &files {
+        let mut cur = f.parent();
+        while let Some(d) = cur {
+            if d.as_os_str().is_empty() {
+                break;
+            }
+            shown.insert(d.to_path_buf());
+            cur = d.parent();
+        }
+    }
+    for d in &all_dirs {
+        if !has_child.contains(d) {
+            // Empty folder: keep visible, along with its ancestors.
+            let mut cur = Some(d.as_path());
+            while let Some(a) = cur {
+                if a.as_os_str().is_empty() {
+                    break;
+                }
+                shown.insert(a.to_path_buf());
+                cur = a.parent();
+            }
+        }
+    }
+
+    files.sort();
+    let mut dirs: Vec<PathBuf> = shown.into_iter().collect();
+    dirs.sort();
+    Ok(Scan { files, dirs })
 }
 
-/// Parse YAML frontmatter from markdown content.
-/// Returns (frontmatter, body) where frontmatter is the parsed metadata.
+fn build_vault_tree_inner(vault_root: &Path) -> Result<Vec<VaultEntry>, AppError> {
+    use std::collections::HashMap;
+
+    let scan = scan_root(vault_root)?;
+    let mut children: HashMap<PathBuf, Vec<(PathBuf, bool)>> = HashMap::new();
+    for d in &scan.dirs {
+        children.entry(d.parent().unwrap_or(Path::new("")).to_path_buf()).or_default().push((d.clone(), true));
+    }
+    for f in &scan.files {
+        children.entry(f.parent().unwrap_or(Path::new("")).to_path_buf()).or_default().push((f.clone(), false));
+    }
+
+    fn build(root: &Path, dir: &Path, children: &HashMap<PathBuf, Vec<(PathBuf, bool)>>) -> Vec<VaultEntry> {
+        let mut items = children.get(dir).cloned().unwrap_or_default();
+        items.sort_by_key(|(p, _)| p.file_name().map(|n| n.to_os_string()));
+        let mut out = Vec::new();
+        for (rel, is_dir) in items {
+            let relative = rel.to_string_lossy().to_string();
+            let name = rel
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            if is_dir {
+                out.push(VaultEntry {
+                    id: relative.clone(),
+                    name,
+                    path: relative,
+                    is_dir: true,
+                    children: build(root, &rel, children),
+                    modified: None,
+                    created_at: None,
+                    tags: vec![],
+                });
+            } else {
+                let full = root.join(&rel);
+                let content = fs::read_to_string(&full).unwrap_or_default();
+                let (meta, _) = parse_frontmatter(&content);
+                let stem = full
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| name.clone());
+                let (created, modified) = fs_times(&full);
+                out.push(VaultEntry {
+                    id: relative.clone(),
+                    name: meta.title.filter(|t| !t.is_empty()).unwrap_or(stem),
+                    path: relative,
+                    is_dir: false,
+                    children: vec![],
+                    modified,
+                    created_at: created,
+                    tags: meta.tags,
+                });
+            }
+        }
+        out
+    }
+
+    Ok(build(vault_root, Path::new(""), &children))
+}
+
+/// Read a note's metadata and body. The body is everything after the
+/// frontmatter block, verbatim. Nothing here is ever written back.
 pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
-    let trimmed = content.trim_start();
-    if !trimmed.starts_with("---") {
-        return (NoteMeta::default(), content.to_string());
-    }
-
-    // Find the closing ---
-    let after_open = &trimmed[3..];
-    if let Some(close_pos) = after_open.find("\n---") {
-        let yaml_str = after_open[..close_pos].trim();
-        let body = after_open[close_pos + 4..].trim_start().to_string();
-
-        let mut meta: NoteMeta = serde_yaml::from_str(yaml_str).unwrap_or_default();
-
-        // Remap common alias keys for creating dates
-        if meta.created.is_none() {
-            if let Some(date) = meta
-                .extra
-                .remove("date")
-                .or_else(|| meta.extra.remove("created_at"))
-            {
-                if let Some(d) = date.as_str() {
-                    meta.created = Some(d.to_string());
-                }
-            }
-        }
-
-        // Remap common alias keys for updating dates
-        if meta.updated.is_none() {
-            if let Some(date) = meta
-                .extra
-                .remove("lastmod")
-                .or_else(|| meta.extra.remove("updated_at"))
-            {
-                if let Some(d) = date.as_str() {
-                    meta.updated = Some(d.to_string());
-                }
-            }
-        }
-
-        // Remap alternative tag arrays or comma-delimited strings
-        if meta.tags.is_empty() {
-            if let Some(t) = meta
-                .extra
-                .remove("tags")
-                .or_else(|| meta.extra.remove("tag"))
-            {
-                if let Some(arr) = t.as_array() {
-                    meta.tags = arr
-                        .iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect();
-                } else if let Some(s) = t.as_str() {
-                    meta.tags = s
-                        .split(',')
-                        .map(|x| x.trim().to_string())
-                        .filter(|x| !x.is_empty())
-                        .collect();
-                }
-            }
-        }
-
-        (meta, body)
-    } else {
-        (NoteMeta::default(), content.to_string())
-    }
+    let title = frontmatter::derive_title(content, "");
+    let meta = NoteMeta {
+        title: if title.is_empty() { None } else { Some(title) },
+        tags: frontmatter::get_tags(content),
+        created: frontmatter::get_scalar_string(content, &["created", "date", "created_at"]),
+        updated: frontmatter::get_scalar_string(content, &["updated", "lastmod", "updated_at"]),
+    };
+    (meta, frontmatter::body_of(content).to_string())
 }
 
-/// Build a YAML frontmatter string from metadata.
-pub fn build_frontmatter(meta: &NoteMeta) -> String {
-    let yaml = serde_yaml::to_string(meta).unwrap_or_default();
-    let yaml_trimmed = yaml.trim_start_matches("---\n").trim_end();
+fn to_rfc3339(t: std::time::SystemTime) -> String {
+    chrono::DateTime::<Utc>::from(t).to_rfc3339()
+}
 
-    if yaml_trimmed.is_empty() || yaml_trimmed == "{}" {
-        return "---\n---".to_string();
-    }
-    format!("---\n{}\n---", yaml_trimmed)
+/// Filesystem (created, modified) times as ISO strings. `created` falls back to
+/// modified where the platform has no birth time.
+pub fn fs_times(path: &Path) -> (Option<String>, Option<String>) {
+    let Ok(meta) = fs::metadata(path) else {
+        return (None, None);
+    };
+    let modified = meta.modified().ok();
+    let created = meta.created().ok().or(modified);
+    (created.map(to_rfc3339), modified.map(to_rfc3339))
 }
 
 /// Generate a preview string from the body (first ~120 chars, single line).
@@ -253,54 +253,28 @@ pub fn make_preview(body: &str) -> String {
     }
 }
 
-/// Walk all .md files in a vault, calling a callback for each.
+/// Walk all markdown files under `root`, calling a callback for each.
 /// Callback receives: (full_path, relative_path, note_meta, body)
 /// Callback returns: Some(T) to include in results, None to skip
 pub fn walk_notes<T>(
     root: &Path,
-    dir: &Path,
     mut callback: impl FnMut(&Path, &str, &NoteMeta, &str) -> Option<T>,
 ) -> Result<Vec<T>, AppError> {
     let mut results = Vec::new();
-    let mut stack = vec![dir.to_path_buf()];
-
-    while let Some(current_dir) = stack.pop() {
-        let entries: Vec<_> = fs::read_dir(&current_dir)?.filter_map(|e| e.ok()).collect();
-
-        for entry in entries {
-            let path = entry.path();
-            let name = entry.file_name().to_string_lossy().to_string();
-
-            if name.starts_with('.') {
-                continue;
-            }
-
-            if path.is_dir() {
-                stack.push(path);
-            } else if name.ends_with(".md") {
-                let relative = path
-                    .strip_prefix(root)
-                    .unwrap_or(&path)
-                    .to_string_lossy()
-                    .to_string();
-
-                let content = fs::read_to_string(&path).unwrap_or_default();
-                let (meta, body) = parse_frontmatter(&content);
-
-                if let Some(result) = callback(&path, &relative, &meta, &body) {
-                    results.push(result);
-                }
-            }
+    for rel in scan_root(root)?.files {
+        let path = root.join(&rel);
+        let content = fs::read_to_string(&path).unwrap_or_default();
+        let (meta, body) = parse_frontmatter(&content);
+        if let Some(result) = callback(&path, &rel.to_string_lossy(), &meta, &body) {
+            results.push(result);
         }
     }
-
     Ok(results)
 }
 
 /// Invalidate the vault tree cache. Call this after any mutation (create, delete, rename).
 pub fn invalidate_vault_cache() {
     *VAULT_TREE_CACHE.write().unwrap() = None;
-    *PINNED_NOTES_CACHE.write().unwrap() = Vec::new();
     *TAGS_CACHE.write().unwrap() = None;
 }
 
@@ -320,67 +294,128 @@ pub fn set_tags_cache(vault_path: &Path, tags: Vec<crate::types::TagCount>) {
     *TAGS_CACHE.write().unwrap() = Some((vault_path.to_path_buf(), tags));
 }
 
-/// Get cached pinned notes, or scan if not cached.
-pub fn get_pinned_notes_cached(vault_root: &Path) -> Result<Vec<NoteCard>, AppError> {
-    // Check cache first
-    let cached = PINNED_NOTES_CACHE.read().unwrap();
-    if !cached.is_empty() {
-        return Ok(cached.clone());
-    }
-    drop(cached);
+/// Build a card for one note file. `relative` is the path under `root`.
+pub fn note_card(root: &Path, relative: &str, pinned: bool) -> Option<NoteCard> {
+    let full = root.join(relative);
+    let content = fs::read_to_string(&full).ok()?;
+    let (meta, body) = parse_frontmatter(&content);
+    let stem = full
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_default();
+    let (_, modified) = fs_times(&full);
+    Some(NoteCard {
+        id: relative.to_string(),
+        path: relative.to_string(),
+        title: meta.title.filter(|t| !t.is_empty()).unwrap_or(stem),
+        tags: meta.tags,
+        modified,
+        preview: make_preview(&body),
+        pinned,
+    })
+}
 
-    // Scan and cache using walk_notes
-    let cards: Vec<NoteCard> = walk_notes(vault_root, vault_root, |path, relative, meta, body| {
-        if !meta.pinned {
-            return None;
-        }
-
-        let filename = path
-            .file_stem()
-            .map(|s| s.to_string_lossy().to_string())
-            .unwrap_or_default();
-        let title = meta
-            .title
-            .clone()
-            .filter(|t| !t.is_empty())
-            .unwrap_or(filename);
-        let fs_meta = match fs::metadata(path) {
-            Ok(m) => m,
-            Err(_) => return None,
-        };
-        let modified = fs_meta.modified().ok().and_then(|t| {
-            let dt: chrono::DateTime<Utc> = t.into();
-            Some(dt.to_rfc3339())
-        });
-
-        Some(NoteCard {
-            id: meta.id.clone().unwrap_or_else(|| relative.to_string()),
-            path: relative.to_string(),
-            title,
-            tags: meta.tags.clone(),
-            modified,
-            preview: make_preview(body),
-            pinned: meta.pinned,
-        })
-    })?;
-
-    let mut cards = cards;
+/// Pinned notes of a folder, from app state (never from file contents).
+pub fn pinned_cards(root: &Path) -> Result<Vec<NoteCard>, AppError> {
+    let state = workspace_state::load(root)?;
+    let mut cards: Vec<NoteCard> = state
+        .pinned
+        .iter()
+        .filter_map(|p| note_card(root, p, true))
+        .collect();
     cards.sort_by(|a, b| b.modified.cmp(&a.modified));
-
-    *PINNED_NOTES_CACHE.write().unwrap() = cards.clone();
     Ok(cards)
 }
 
-/// Update pinned cache after pin/unpin operations.
-pub fn update_pinned_cache(path: &str, pinned: bool, note_card: Option<NoteCard>) {
-    let mut cache = PINNED_NOTES_CACHE.write().unwrap();
-    if pinned {
-        if let Some(card) = note_card {
-            cache.retain(|c| c.path != path);
-            cache.push(card);
-            cache.sort_by(|a, b| b.modified.cmp(&a.modified));
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn touch(root: &Path, rel: &str) {
+        let p = root.join(rel);
+        fs::create_dir_all(p.parent().unwrap()).unwrap();
+        fs::write(p, "x").unwrap();
+    }
+
+    fn names(paths: &[PathBuf]) -> Vec<String> {
+        paths.iter().map(|p| p.to_string_lossy().to_string()).collect()
+    }
+
+    #[test]
+    fn respects_gitignore_without_a_git_repo() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        touch(r, ".gitignore");
+        fs::write(r.join(".gitignore"), "dist/\n").unwrap();
+        touch(r, "dist/notes.md");
+        touch(r, "keep.md");
+        let scan = scan_root(r).unwrap();
+        assert_eq!(names(&scan.files), ["keep.md"]);
+    }
+
+    #[test]
+    fn always_skips_node_modules_target_and_git() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        touch(r, "node_modules/pkg/README.md");
+        touch(r, "target/doc/a.md");
+        touch(r, ".git/info/b.md");
+        touch(r, "docs/real.md");
+        let scan = scan_root(r).unwrap();
+        assert_eq!(names(&scan.files), ["docs/real.md"]);
+    }
+
+    #[test]
+    fn tree_shows_only_folders_with_markdown_but_keeps_empty_folders() {
+        let dir = tempfile::tempdir().unwrap();
+        let r = dir.path();
+        touch(r, "src/main.ts");
+        touch(r, "src/a/b/notes.md");
+        touch(r, "other/only.ts");
+        fs::create_dir_all(r.join("fresh")).unwrap();
+        touch(r, "readme.txt");
+
+        let scan = scan_root(r).unwrap();
+        assert_eq!(names(&scan.files), ["src/a/b/notes.md"]);
+        assert_eq!(names(&scan.dirs), ["fresh", "src", "src/a", "src/a/b"]);
+
+        let tree = build_vault_tree_inner(r).unwrap();
+        let top: Vec<_> = tree.iter().map(|e| e.name.as_str()).collect();
+        assert_eq!(top, ["fresh", "src"]);
+        let leaf = &tree[1].children[0].children[0].children[0];
+        assert_eq!(leaf.path, "src/a/b/notes.md");
+        assert!(!leaf.is_dir);
+    }
+
+    #[test]
+    fn markdown_extensions() {
+        assert!(is_markdown(Path::new("a.md")));
+        assert!(is_markdown(Path::new("a.MDX")));
+        assert!(is_markdown(Path::new("a.markdown")));
+        assert!(!is_markdown(Path::new("a.txt")));
+    }
+
+    /// Manual benchmark: `cargo test --release perf_5k -- --ignored --nocapture`.
+    #[test]
+    #[ignore]
+    fn perf_5k_notes() {
+        let dir = tempfile::tempdir().unwrap();
+        for d in 0..50 {
+            let sub = dir.path().join(format!("dir{d}"));
+            fs::create_dir_all(&sub).unwrap();
+            for n in 0..100 {
+                fs::write(
+                    sub.join(format!("note{n}.md")),
+                    format!("---\ntitle: Note {d}-{n}\ntags: [a, b]\n---\n# Heading\n\n{}\n", "lorem ipsum ".repeat(40)),
+                )
+                .unwrap();
+            }
         }
-    } else {
-        cache.retain(|c| c.path != path);
+        let t = std::time::Instant::now();
+        let tree = build_vault_tree_inner(dir.path()).unwrap();
+        println!("tree of {} folders built in {:?}", tree.len(), t.elapsed());
+        let t = std::time::Instant::now();
+        let scan = scan_root(dir.path()).unwrap();
+        println!("scan of {} files in {:?}", scan.files.len(), t.elapsed());
     }
 }

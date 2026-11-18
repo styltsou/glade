@@ -1,165 +1,73 @@
-import { useEffect, useState } from "react";
+import { ChevronDown, Home, Pin, PinOff, FolderSearch, FolderOpen, X } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { useStore } from "@/store";
-import { Plus, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { baseName } from "@/lib/paths";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectSeparator,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Vault } from "@/types";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
+/** Top of the sidebar: app mark (back to Home) and the open folder's menu. */
 export function SidebarHeader() {
-  const goHome = useStore((state) => state.goHome);
-  const vaults = useStore((state) => state.vaults);
-  const activeVault = useStore((state) => state.activeVault);
-  const setActiveVault = useStore((state) => state.setActiveVault);
-  const createVault = useStore((state) => state.createVault);
-  
-  const [newVaultName, setNewVaultName] = useState("");
-  const [error, setError] = useState("");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isSelectOpen, setIsSelectOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const target = useStore((s) => s.target);
+  const home = useStore((s) => s.home);
+  const showHome = useStore((s) => s.showHome);
+  const openSwitcher = useStore((s) => s.openSwitcher);
+  const pickFolder = useStore((s) => s.pickFolder);
+  const pinFolder = useStore((s) => s.pinFolder);
+  const unpinFolder = useStore((s) => s.unpinFolder);
+  const closeTarget = useStore((s) => s.closeTarget);
 
-  useEffect(() => {
-    if (isCreateDialogOpen) {
-      const timer = setTimeout(() => {
-        const input = document.getElementById("vault-name");
-        if (input) {
-          input.focus();
-          if (input instanceof HTMLInputElement) {
-            input.select();
-          }
-        }
-      }, 150);
-      return () => clearTimeout(timer);
-    }
-  }, [isCreateDialogOpen]);
-
-  useEffect(() => {
-    if (isCreateDialogOpen) {
-      setIsCreating(false);
-      setError("");
-    }
-  }, [isCreateDialogOpen]);
-
-  const handleSelectVault = async (vaultId: string) => {
-    if (vaultId !== activeVault?.id) {
-      await setActiveVault(vaultId);
-      goHome();
-    }
-  };
-
-  const handleCreateVault = async () => {
-    if (!newVaultName.trim()) return;
-    
-    setIsCreating(true);
-    setError("");
-
-    const slug = newVaultName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-    
-    if (vaults.some((v: Vault) => v.slug === slug)) {
-      setError("A vault with this name already exists");
-      setIsCreating(false);
-      return;
-    }
-    
-    try {
-      await createVault(newVaultName.trim(), slug);
-      goHome();
-      setNewVaultName("");
-      setError("");
-      setIsCreateDialogOpen(false);
-    } catch (e) {
-      setError(String(e));
-      setIsCreating(false);
-    }
-  };
+  if (!target) return null;
+  const pinned = !!home?.pinned_folders.some((f) => f.path === target.path);
 
   return (
     <div className="flex items-center h-10 shrink-0 border-b border-border">
-      <Select value={activeVault?.id} onValueChange={handleSelectVault} open={isSelectOpen} onOpenChange={setIsSelectOpen}>
-        <SelectTrigger 
-          style={{ background: isSelectOpen ? 'hsl(0 0% 91%)' : 'transparent', transition: 'background 150ms ease-out' }}
-          className={cn(
-            "flex-1 !h-10 !font-medium !border-0 !border-r !focus:ring-0 !focus:ring-offset-0 !rounded-none !text-foreground [&>svg]:!text-foreground [&>svg]:transition-transform [&>svg]:duration-150 [&>svg]:ease-out",
-            isSelectOpen && "[&>svg]:rotate-180",
-            "cursor-pointer"
+      <button
+        onClick={showHome}
+        title="Home (Ctrl+Shift+H)"
+        className="flex h-10 w-10 shrink-0 items-center justify-center border-r border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+      >
+        <Home className="size-4" />
+      </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="flex h-10 flex-1 items-center gap-2 px-3 text-sm font-medium outline-none hover:bg-accent data-[state=open]:bg-accent">
+          <span className="truncate">{baseName(target.path)}</span>
+          <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-52">
+          <DropdownMenuItem onSelect={openSwitcher}>
+            <FolderOpen className="size-4" /> Open recent…
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={pickFolder}>
+            <FolderOpen className="size-4" /> Open folder…
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          {pinned ? (
+            <DropdownMenuItem onSelect={() => unpinFolder(target.path)}>
+              <PinOff className="size-4" /> Unpin folder
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem onSelect={() => pinFolder(target.path)}>
+              <Pin className="size-4" /> Pin folder
+            </DropdownMenuItem>
           )}
-        >
-          <SelectValue placeholder="Select Vault" />
-        </SelectTrigger>
-        <SelectContent position="popper" className="max-h-[70vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
-          {vaults.map((vault: Vault) => (
-            <SelectItem key={vault.id} value={vault.id}>
-              <span>{vault.name}</span>
-            </SelectItem>
-          ))}
-          <SelectSeparator />
-          <div 
-            className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent focus:bg-accent focus:text-accent-foreground cursor-pointer rounded-sm"
-            onClick={() => {
-              setIsSelectOpen(false);
-              setIsCreateDialogOpen(true);
+          <DropdownMenuItem
+            onSelect={() => {
+              invoke("plugin:opener|reveal_item_in_dir", { paths: [target.path] }).catch(() => {});
             }}
           >
-            <Plus className="size-4" />
-            <span>Create New Vault</span>
-          </div>
-        </SelectContent>
-      </Select>
-
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
-          <div className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold">Create New Vault</h2>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="vault-name">Vault Name</Label>
-              <Input
-                id="vault-name"
-                value={newVaultName}
-                onChange={(e) => {
-                  setNewVaultName(e.target.value);
-                  setError("");
-                }}
-                placeholder="My Notes"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleCreateVault();
-                  }
-                }}
-              />
-              {error && <p className="text-sm text-destructive">{error}</p>}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateVault} disabled={!newVaultName.trim() || isCreating}>
-                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+            <FolderSearch className="size-4" /> Reveal in file manager
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onSelect={closeTarget}>
+            <X className="size-4" /> Close folder
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }

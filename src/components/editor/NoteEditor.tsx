@@ -34,6 +34,8 @@ import {
 import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
+import { PropertiesPanel } from "./PropertiesPanel";
+import { Backlinks } from "./Backlinks";
 import { MentionList, MentionListHandle } from "./MentionList";
 import {
 	SlashCommandMenu,
@@ -171,7 +173,6 @@ export function NoteEditor({
 	currentMatchIndex,
 	searchOpts,
 	isEditMode = false,
-	onExitEditMode,
 }: NoteEditorProps) {
 	const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
 	const [blockSelectedIndex, setBlockSelectedIndex] = useState(0);
@@ -517,6 +518,8 @@ export function NoteEditor({
 					</BubbleMenu>
 				)}
 
+				<PropertiesPanel />
+
 				<EditableTitle
 					title={activeNote.title}
 					path={activeNote.path}
@@ -546,6 +549,8 @@ export function NoteEditor({
 				) : (
 					<EditorContent editor={editor} />
 				)}
+
+				<Backlinks />
 
 				{suggestionVisible && suggestionPosition && (
 					<MentionList

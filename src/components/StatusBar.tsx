@@ -242,7 +242,7 @@ export function StatusBar() {
             <TooltipTrigger asChild>
             <button 
               className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              onClick={() => openSettingsPage("vaults")}
+              onClick={() => openSettingsPage("appearance")}
             >
               <MixerHorizontalIcon className="w-4 h-4" />
             </button>

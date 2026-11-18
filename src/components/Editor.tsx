@@ -16,6 +16,9 @@ import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/edito
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 import { useSaveNote } from "@/hooks/useSaveNote";
+import { useMarkdownFidelity } from "@/hooks/useMarkdownFidelity";
+import { ConflictBanner } from "@/components/editor/ConflictBanner";
+import { isAbsolutePath } from "@/lib/links";
 
 export function Editor() {
   const activeNote = useStore((state) => state.activeNote);
@@ -73,6 +76,14 @@ export function Editor() {
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
   const lastFocusedPositionRef = useRef<number | null>(null);
+  const { snapshot: snapshotFidelity, getMarkdown } = useMarkdownFidelity();
+
+  // A change made by another program while we hold unsaved edits.
+  const [conflict, setConflict] = useState<null | { kind: "modified" | "removed" }>(null);
+  const conflictRef = useRef(false);
+  conflictRef.current = conflict !== null;
+  const externalEvent = useStore((state) => state.externalEvent);
+  const reloadNote = useStore((state) => state.reloadNote);
 
   const { saveStatus, setSaveStatusWithRef, saveNow } = useSaveNote({
     activeNote,
@@ -81,6 +92,7 @@ export function Editor() {
     lastSavedContentRef,
     pendingSaveRef,
     savedTimeoutRef,
+    blockedRef: conflictRef,
   });
 
   const editor = useEditor({
@@ -128,7 +140,7 @@ export function Editor() {
         return;
       }
 
-      const markdown = (editor.storage as any).markdown.getMarkdown();
+      const markdown = getMarkdown(editor);
 
       // Skip if content hasn't actually changed
       if (markdown === latestContentRef.current) return;
@@ -277,7 +289,7 @@ export function Editor() {
         }
       }
 
-      const currentMarkdown = (editor.storage as any).markdown.getMarkdown();
+      const currentMarkdown = getMarkdown(editor);
 
       // Only update content if it actually changed
       if (pathChanged || currentMarkdown !== activeNote.body) {
@@ -288,6 +300,7 @@ export function Editor() {
         skipUpdateRef.current = true;
         // Use setContent with emitUpdate: false to avoid focusing
         editor.commands.setContent(activeNote.body || "", { emitUpdate: false });
+        snapshotFidelity(editor, activeNote.body || "");
         setRawContent(activeNote.body || "");
 
         // Manually trigger TOC update since emitUpdate: false skips the event
@@ -373,6 +386,7 @@ export function Editor() {
       skipUpdateRef.current = true;
       latestContentRef.current = rawContent;
       editor.commands.setContent(rawContent, { emitUpdate: false });
+      snapshotFidelity(editor, rawContent);
       toggleRawModeFromStore(activeNote.path);
       if (rawContent !== lastSavedContentRef.current) {
         setSaveStatusWithRef("unsaved");
@@ -387,7 +401,7 @@ export function Editor() {
         const stripped = raw.replace(/^---[\s\S]*?---\s*\n?/, "");
         setRawContent(stripped);
       } catch {
-        const md = (editor.storage as any).markdown.getMarkdown();
+        const md = getMarkdown(editor);
         setRawContent(md);
       }
       toggleRawModeFromStore(activeNote.path);
@@ -622,6 +636,49 @@ export function Editor() {
     }
   }, [editor, findQuery, currentMatchIndex, isRawMode, caseSensitive, matchWholeWord, useRegex]);
 
+  // Another program changed (or removed) the open file.
+  useEffect(() => {
+    if (!externalEvent || !activeNote || !editor) return;
+    const root = useStore.getState().target;
+    const abs = isAbsolutePath(activeNote.path) ? activeNote.path : `${root?.path ?? ""}/${activeNote.path}`;
+    if (externalEvent.path !== abs) return;
+    if (externalEvent.kind === "removed") {
+      setConflict({ kind: "removed" });
+      return;
+    }
+    const dirty = latestContentRef.current !== lastSavedContentRef.current;
+    if (dirty) setConflict({ kind: "modified" });
+    else reloadNote(activeNote.path); // nothing unsaved: show the new content silently
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalEvent]);
+
+  useEffect(() => {
+    setConflict(null);
+  }, [activeNote?.path]);
+
+  const handleKeepMine = useCallback(async () => {
+    if (!editor || !activeNote) return;
+    const markdown = getMarkdown(editor);
+    latestContentRef.current = markdown;
+    lastSavedContentRef.current = markdown;
+    setConflict(null);
+    await saveNote(activeNote.path, markdown, true);
+  }, [editor, activeNote, getMarkdown, saveNote]);
+
+  const handleLoadTheirs = useCallback(async () => {
+    if (!activeNote) return;
+    // Discard local edits: mark clean so nothing is written back on reload.
+    lastSavedContentRef.current = latestContentRef.current;
+    setConflict(null);
+    await reloadNote(activeNote.path);
+  }, [activeNote, reloadNote]);
+
+  const handleCloseDeleted = useCallback(() => {
+    setConflict(null);
+    lastSavedContentRef.current = latestContentRef.current;
+    useStore.setState({ activeNote: null });
+  }, []);
+
   return (
     <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
       {!mermaidFullscreenOpen && (
@@ -672,6 +729,15 @@ export function Editor() {
         useRegex={useRegex}
         onToggleUseRegex={() => setUseRegex((v) => !v)}
       />
+      )}
+
+      {conflict && (
+        <ConflictBanner
+          kind={conflict.kind}
+          onKeepMine={handleKeepMine}
+          onLoadTheirs={handleLoadTheirs}
+          onClose={handleCloseDeleted}
+        />
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
