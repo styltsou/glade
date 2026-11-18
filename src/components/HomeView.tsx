@@ -194,13 +194,13 @@ export function HomeView() {
             <section>
               <SectionHeader label="Folders" />
               {shouldShowFolderSkeletons ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
                   {[...Array(4)].map((_, i) => (
                     <FolderCardSkeleton key={i} />
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
                   {subFolders.map((folder) => (
                     <FolderCard key={folder.path} folder={folder} />
                   ))}
@@ -214,7 +214,7 @@ export function HomeView() {
             <section>
               <SectionHeader label="Notes" />
               {shouldShowNoteSkeletons ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                   {[
                     ...Array(
                       Math.min(6, !isVaultLoading ? expectedNoteCount : 6),
@@ -224,7 +224,7 @@ export function HomeView() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                   {[...folderNotes]
                     .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.title.localeCompare(b.title))
                     .map((card) => (

@@ -20,7 +20,7 @@ export function PaneArea() {
   // Report where each pane is, so its tabs in the title bar sit right above it.
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container || state.groups.length < 2) return;
     const measure = () => {
       const panes = [...container.querySelectorAll<HTMLElement>(":scope > [data-pane]")];
       setPaneBoxes(panes.map((el) => {

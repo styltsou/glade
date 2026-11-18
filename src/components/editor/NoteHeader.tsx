@@ -1,9 +1,8 @@
-import { useState, useCallback, useRef, useEffect, useId } from "react";
+import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, FileText, Code, Copy, Check, Download, BookOpen, Pencil, Eye } from "lucide-react";
-import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
+import { Clock, FileText, Code, Copy, Check, BookOpen, Pencil, Eye } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -87,33 +86,7 @@ export function NoteHeader({
   const segments = notePath.split("/");
   const parentPath = segments.slice(0, -1).join("/") || null;
   
-  const [exportOpen, setExportOpen] = useState(false);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
   const [copied, setCopied] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const exportButtonId = useId();
-  const exportMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const button = document.getElementById(exportButtonId);
-      if (exportMenuRef.current && button && !button.contains(e.target as Node) && !exportMenuRef.current.contains(e.target as Node)) {
-        setExportMenuOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setExportMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [exportMenuOpen]);
 
   const handleCopyMarkdown = useCallback(async () => {
     if (!notePath) return;
@@ -134,11 +107,6 @@ export function NoteHeader({
     }
   }, [notePath, noteTitle]);
 
-  const handleExport = useCallback((format: ExportFormat) => {
-    setExportMenuOpen(false);
-    setExportFormat(format);
-    setExportOpen(true);
-  }, []);
 
   return (
     <div className="flex items-center justify-between h-10 shrink-0 select-none border-b border-border/60 relative">
@@ -273,56 +241,8 @@ export function NoteHeader({
           </TooltipContent>
         </Tooltip>
 
-        <div className="relative">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className={cn(
-                  "text-muted-foreground",
-                  exportMenuOpen && "bg-accent"
-                )}
-                disabled={!notePath}
-                onClick={() => setExportMenuOpen((v) => !v)}
-                id={exportButtonId}
-              >
-                <Download className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Export</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {exportMenuOpen && (
-            <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-lg bg-popover p-1 text-popover-foreground shadow-[var(--elev-pop)] origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
-              <button
-                className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                onClick={() => handleExport("markdown")}
-              >
-                Export
-              </button>
-              <button
-                className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
-                onClick={() => handleExport("pdf")}
-              >
-                Export as PDF
-              </button>
-</div>
-          )}
-        </div>
       </div>
 
-      {notePath && noteTitle && (
-        <ExportDialog
-          open={exportOpen}
-          onOpenChange={setExportOpen}
-          notePath={notePath}
-          noteTitle={noteTitle}
-          initialFormat={exportFormat}
-        />
-      )}
     </div>
   );
 }

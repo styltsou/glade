@@ -58,7 +58,6 @@ Developers, technical writers and people who keep markdown in folders (repos, Ob
 
 ### Appearance and extras
 - Themes: Claude, Everforest, Rose Pine, Monochrome, each light and dark, or follow the system.
-- Ambient sounds (rain, white noise, people) in the window bar.
 - Safe deletes (system trash), export to PDF / Markdown / PNG for diagrams.
 
 ## 5. Out of scope

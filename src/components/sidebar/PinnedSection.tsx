@@ -81,7 +81,7 @@ export function PinnedSection() {
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           )}
-          <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground">
+          <span className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground">
             Pinned
           </span>
         </button>
@@ -168,7 +168,7 @@ function PinnedItem({
           <button
             onClick={onClick}
             className={cn(
-              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer",
+              "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm text-left transition-colors cursor-pointer",
               active
                 ? "bg-sidebar-accent text-foreground font-medium"
                 : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"

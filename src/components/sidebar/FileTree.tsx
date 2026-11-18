@@ -256,7 +256,7 @@ export function FileTree() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-2 pl-4 py-2 shrink-0">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-[13px] font-medium text-muted-foreground">
           Notes
         </span>
         <div className="flex items-center gap-0.5">
@@ -265,7 +265,7 @@ export function FileTree() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                    className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                     onClick={() => openCreateFolder()}
                   >
                     <Folder className="h-4 w-4" />
@@ -278,7 +278,7 @@ export function FileTree() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
+                    className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                     onClick={() => createNote()}
                   >
                     <PlusIcon className="h-4 w-4" />

@@ -10,7 +10,7 @@
 - [x] Block handles, table controls, preview rail, collapsing breadcrumbs
 - [x] Pinned notes and folders, tags, full-text search, command palette
 - [x] Export to PDF / Markdown / PNG
-- [x] Light/dark themes, ambient sounds, local Linux install with launcher icon
+- [x] Light/dark themes, local Linux install with launcher icon
 
 ## Next
 

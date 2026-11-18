@@ -4,6 +4,7 @@ import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
 import { focusedGroup } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ExportDialog } from "@/components/editor/ExportDialog";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
@@ -51,9 +52,15 @@ function SharedDialogs() {
   const renameNote = useStore((state) => state.renameNote);
   const renameFolder = useStore((state) => state.renameFolder);
   const deleteEntry = useStore((state) => state.deleteEntry);
+  const exportOpen = useStore((state) => state.exportOpen);
+  const setExportOpen = useStore((state) => state.setExportOpen);
+  const activeNote = useStore((state) => state.activeNote);
 
   return (
     <>
+      {activeNote && (
+        <ExportDialog open={exportOpen} onOpenChange={setExportOpen} notePath={activeNote.path} noteTitle={activeNote.title} />
+      )}
       <RenameDialog
         isOpen={renameOpen}
         onOpenChange={(open) => { if (!open) closeRename(); }}

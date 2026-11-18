@@ -5,7 +5,6 @@ import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-r
 import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
-import { AmbientSounds } from "@/components/AmbientSounds";
 
 const appWindow = getCurrentWindow();
 
@@ -56,11 +55,11 @@ export function TitleBar() {
   }, [isMaximized]);
 
   const iconButton =
-    "press flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground active:bg-foreground/[0.12]";
+    "press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground active:bg-foreground/[0.12]";
 
   return (
     <div
-      className="relative flex h-9 shrink-0 items-center border-b border-border/70 bg-background select-none"
+      className="relative flex h-10 shrink-0 items-center border-b border-border/70 bg-background select-none"
       onMouseDown={handleDragStart}
     >
       <motion.div
@@ -81,13 +80,12 @@ export function TitleBar() {
           <PanelLeftClose className="h-4 w-4" />
         )}
       </button>}
-      <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-7 min-w-0 flex-1 px-2 text-xs" : "h-7 max-w-32 flex-none px-2 text-xs"} />
+      <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
       </motion.div>
-      {target && !homeOpen && currentView !== "settings" ? <TabStrip trailingInset={128} /> : <div className="h-full flex-1" />}
+      {target && !homeOpen && currentView !== "settings" ? <TabStrip trailingInset={112} /> : <div className="h-full flex-1" />}
       <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
 
-      <AmbientSounds />
 
       {/* Window controls */}
       <div className="flex shrink-0 items-center gap-0.5">
@@ -104,7 +102,7 @@ export function TitleBar() {
         <button
           onClick={handleClose}
           title="Close"
-          className="press flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          className="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
         >
           <X className="h-4 w-4" />
         </button>

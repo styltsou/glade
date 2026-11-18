@@ -49,6 +49,9 @@ export interface NoteSlice {
   toggleProperties: () => void;
   addPropertyOpen: boolean;
   setAddPropertyOpen: (open: boolean) => void;
+  /** The export dialog for the active note (opened from the command palette). */
+  exportOpen: boolean;
+  setExportOpen: (open: boolean) => void;
   editFrontmatterOpen: boolean;
   setEditFrontmatterOpen: (open: boolean) => void;
   /** Re-read a note's frontmatter-derived fields without touching its body. */
@@ -462,6 +465,8 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
   toggleProperties: () => set((s: StoreState) => ({ propertiesCollapsed: !s.propertiesCollapsed })),
   addPropertyOpen: false,
   setAddPropertyOpen: (open: boolean) => set({ addPropertyOpen: open }),
+  exportOpen: false,
+  setExportOpen: (open: boolean) => set({ exportOpen: open }),
   editFrontmatterOpen: false,
   setEditFrontmatterOpen: (open: boolean) => set({ editFrontmatterOpen: open }),
 

@@ -8,6 +8,7 @@ import {
   Columns2 as Columns2Icon,
   Copy as CopyIcon,
   CornerDownLeft as CornerDownLeftIcon,
+  Download as DownloadIcon,
   Delete as DeleteKeyIcon,
   Eye as EyeIcon,
   FilePlus as FilePlusIcon,
@@ -53,6 +54,7 @@ type CommandId =
   | Exclude<GlobalCommand, "toggle-command-palette">
   | "duplicate-note"
   | "add-property"
+  | "export-note"
   | "close-folder"
   | "toggle-appearance"
   | "change-theme";
@@ -74,6 +76,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "new-folder", label: "New folder", icon: FolderPlusIcon },
       { id: "duplicate-note", label: "Duplicate note", icon: CopyIcon },
       { id: "add-property", label: "Add property", icon: ListPlusIcon },
+      { id: "export-note", label: "Export note", icon: DownloadIcon },
     ],
   },
   {
@@ -131,6 +134,7 @@ function isAvailable(id: CommandId): boolean {
       return inFolder;
     case "duplicate-note":
     case "add-property":
+    case "export-note":
     case "toggle-toc":
     case "toggle-edit-mode":
     case "toggle-raw-mode":
@@ -198,6 +202,9 @@ function runCommand(id: CommandId): boolean {
       break;
     case "add-property":
       s.setAddPropertyOpen(true);
+      break;
+    case "export-note":
+      s.setExportOpen(true);
       break;
     case "delete":
       if (note) s.openDelete(note.path, note.title);
@@ -404,16 +411,16 @@ export function CommandPalette() {
             setSelectedCommand(value);
           }}
         >
-          <div className="flex h-12 items-center gap-2 border-b border-border/50 px-3">
+          <div className="flex h-14 items-center gap-2.5 border-b border-border/50 px-4">
             {mode === "commands" ? (
               <span
                 aria-label="Actions mode. Press Backspace with an empty query to search notes."
-                className="inline-flex h-6 shrink-0 items-center rounded-md border border-border/70 bg-muted/70 px-2 text-xs font-medium text-foreground"
+                className="inline-flex h-7 shrink-0 items-center rounded-md border border-border/70 bg-muted/70 px-2.5 text-[13px] font-medium text-foreground"
               >
                 Actions
               </span>
             ) : (
-              <SearchIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <SearchIcon aria-hidden className="size-[18px] shrink-0 text-muted-foreground" />
             )}
             <CommandPrimitive.Input
               autoFocus
@@ -424,7 +431,7 @@ export function CommandPalette() {
                 if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
               }}
               placeholder={mode === "search" ? "Search notes…" : "Search actions…"}
-              className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
               onKeyDown={(event) => {
                 if (mode !== "search" || event.key !== "Enter") return;
                 const how = event.altKey ? "side" : event.metaKey || event.ctrlKey ? "tab" : null;
@@ -439,10 +446,10 @@ export function CommandPalette() {
             <Kbd>Esc</Kbd>
           </div>
 
-          <CommandPrimitive.List className="max-h-[min(26rem,55vh)] scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5 [&::-webkit-scrollbar]:hidden">
+          <CommandPrimitive.List className="max-h-[min(30rem,58vh)] scroll-py-2 overflow-y-auto overscroll-contain p-2 [&::-webkit-scrollbar]:hidden">
             {mode === "search" ? (
               noteRows.length === 0 ? (
-                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                <p className="px-3 py-10 text-center text-[14px] text-muted-foreground">
                   {query.trim() ? "No notes match." : "No notes in this folder yet."}
                 </p>
               ) : (
@@ -455,23 +462,20 @@ export function CommandPalette() {
                         value={note.path}
                         data-path={note.path}
                         onSelect={() => openNoteFrom(note.path, "active")}
-                        className={cn(itemClass, "gap-3 py-2")}
+                        className={cn(itemClass, "gap-4 py-2")}
                       >
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                          <FileTextIcon className="size-4" />
-                        </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium">
+                          <span className="block truncate text-[14px] font-medium">
                             <HighlightedText text={note.title} query={query} />
                           </span>
                           {query.trim() && note.preview ? (
-                            <span className="block truncate text-xs text-muted-foreground">
+                            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
                               <HighlightedText text={note.preview} query={query} />
                             </span>
                           ) : null}
                         </span>
                         {folder ? (
-                          <span className="ml-auto max-w-40 shrink-0 truncate text-right text-[11px] text-muted-foreground/75">{folder}</span>
+                          <span className="ml-auto max-w-48 shrink-0 truncate text-right text-[13px] text-muted-foreground/75">{folder}</span>
                         ) : null}
                       </CommandPrimitive.Item>
                     );
@@ -480,10 +484,10 @@ export function CommandPalette() {
               )
             ) : (
               <>
-                <CommandPrimitive.Empty className="py-8 text-center text-sm text-muted-foreground">No actions found.</CommandPrimitive.Empty>
+                <CommandPrimitive.Empty className="py-10 text-center text-[14px] text-muted-foreground">No actions found.</CommandPrimitive.Empty>
                 {availableGroups.map((group, index) => (
                   <div key={group.heading}>
-                    {index > 0 ? <CommandPrimitive.Separator className="mx-1 my-1 h-px bg-border/60" /> : null}
+                    {index > 0 ? <CommandPrimitive.Separator className="mx-2 my-1.5 h-px bg-border/60" /> : null}
                     <CommandPrimitive.Group heading={group.heading} className={groupClass}>
                       {group.items.map((item) => {
                         const Icon = liveIcon(item);
@@ -499,7 +503,7 @@ export function CommandPalette() {
                             }}
                             className={cn(itemClass, item.id === "delete" && "text-destructive data-[selected=true]:text-destructive")}
                           >
-                            <Icon className="size-4 shrink-0" />
+                            <Icon className="size-[18px] shrink-0 text-muted-foreground [[data-selected=true]_&]:text-foreground" />
                             <span className="truncate">{liveLabel(item)}</span>
                             {binding ? <KbdGroup keys={shortcutKeys(binding)} className="ml-auto" /> : null}
                           </CommandPrimitive.Item>
@@ -513,7 +517,7 @@ export function CommandPalette() {
           </CommandPrimitive.List>
         </CommandPrimitive>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 px-3 py-2 text-[11px] leading-4 text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border/50 px-4 py-2.5 text-xs leading-5 text-muted-foreground">
           {mode === "search" ? (
             <span className="inline-flex items-center gap-1">
               <Kbd>Tab</Kbd>
@@ -560,7 +564,7 @@ export function CommandPalette() {
 }
 
 const groupClass =
-  "text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
+  "text-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
 const itemClass =
-  "relative flex cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground outline-hidden select-none data-[selected=true]:bg-foreground/[0.08] [&_svg]:pointer-events-none";
+  "relative flex min-h-10 cursor-default items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-foreground outline-hidden select-none data-[selected=true]:bg-foreground/[0.08] [&_svg]:pointer-events-none";

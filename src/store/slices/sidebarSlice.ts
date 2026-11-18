@@ -1,10 +1,4 @@
 import { StateCreator } from "zustand";
-import type { SoundId } from "@/lib/sounds";
-
-export interface SoundState {
-  enabled: boolean;
-  volume: number;
-}
 
 export interface SidebarSlice {
   sidebarCollapsed: boolean;
@@ -14,7 +8,6 @@ export interface SidebarSlice {
   isSidebarLoaded: boolean;
   expandedFolders: string[];
   pinnedNotePaths: string[];
-  soundStates: Record<SoundId, SoundState>;
 
   loadSidebarState: () => Promise<void>;
   toggleSidebarCollapsed: () => void;
@@ -25,15 +18,8 @@ export interface SidebarSlice {
   removePinnedNote: (path: string) => void;
   setSidebarWidth: (width: number) => void;
   setPinnedHeight: (height: number) => void;
-  setSoundStates: (states: Record<SoundId, SoundState>) => void;
 }
 import type { StoreState } from "../index";
-
-const DEFAULT_SOUND_STATES: Record<SoundId, SoundState> = {
-  rain: { enabled: false, volume: 0.7 },
-  whiteNoise: { enabled: false, volume: 0.7 },
-  people: { enabled: false, volume: 0.7 },
-};
 
 export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> = (set, get) => ({
   sidebarCollapsed: false,
@@ -43,7 +29,6 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
   isSidebarLoaded: true,
   expandedFolders: [],
   pinnedNotePaths: [],
-  soundStates: DEFAULT_SOUND_STATES,
 
   loadSidebarState: async () => {
     set({ isSidebarLoaded: true });
@@ -87,9 +72,5 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
 
   setPinnedHeight: (height: number) => {
     set({ pinnedHeight: height });
-  },
-
-  setSoundStates: (states: Record<SoundId, SoundState>) => {
-    set({ soundStates: states });
   },
 });

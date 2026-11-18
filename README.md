@@ -73,10 +73,6 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 - Zero-latency navigation with background note prefetching on hover, in-memory caching, scroll position restoration, and optimistic UI updates (rename, move, pin, tag changes apply instantly with rollback on error).
 
-### 🎵 Extras
-
-- **Ambient Sounds** — Built-in rain, white noise, and people sounds with individual volume controls and a master toggle in the window bar’s headphones menu.
-
 ## Keyboard Shortcuts
 
 | Shortcut | Action |

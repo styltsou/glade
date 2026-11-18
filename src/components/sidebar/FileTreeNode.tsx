@@ -144,13 +144,13 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}
                 className={cn(
-                  "flex items-center gap-1.5 w-full rounded-lg px-2 py-1.5 text-[13px] font-medium tracking-[-0.005em] transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
+                  "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
                 )}
               >
                 {expanded ? (
-                  <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                 ) : (
-                  <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <Folder className="size-4 shrink-0 text-muted-foreground" />
                 )}
                 <span className="truncate pr-1">{entry.name}</span>
               </button>
@@ -190,7 +190,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         {/* Expanding a folder is frequent, so it is instant. */}
         {expanded && children.length > 0 && (
             <div>
-              <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
+              <div className="ml-[17px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
                 <div className="absolute top-0 bottom-1 left-0 w-px bg-border/60" />
                 
                 <div className="flex flex-col gap-0.5">
@@ -224,7 +224,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             onMouseDown={handleMouseDown}
             onMouseEnter={() => prefetchNote(entry.path)}
             className={cn(
-              "flex items-center w-full rounded-lg py-1.5 px-2 text-[13px] tracking-[-0.005em] text-left transition-colors cursor-pointer",
+              "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm tracking-[-0.005em] text-left transition-colors cursor-pointer",
               isActive
                 ? "bg-foreground/[0.09] text-foreground font-medium shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
                 : "text-muted-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
