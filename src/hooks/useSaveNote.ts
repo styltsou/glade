@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, useEffect, MutableRefObject } from "reac
 import type { NoteData } from "@/types";
 
 interface UseSaveNoteOptions {
+	focused?: boolean;
 	activeNote: NoteData | null;
 	saveNote: (path: string, content: string) => Promise<void>;
 	latestContentRef: MutableRefObject<string>;
@@ -13,6 +14,7 @@ interface UseSaveNoteOptions {
 }
 
 export function useSaveNote({
+	focused = true,
 	activeNote,
 	saveNote,
 	latestContentRef,
@@ -59,6 +61,7 @@ export function useSaveNote({
 
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
+			if (!focused) return;
 			if ((e.metaKey || e.ctrlKey) && e.key === "s") {
 				e.preventDefault();
 				saveNow();
@@ -66,7 +69,7 @@ export function useSaveNote({
 		};
 		window.addEventListener("keydown", handler);
 		return () => window.removeEventListener("keydown", handler);
-	}, [saveNow]);
+	}, [saveNow, focused]);
 
 	useEffect(() => {
 		return () => {

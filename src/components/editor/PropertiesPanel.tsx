@@ -124,7 +124,7 @@ export function PropertiesPanel() {
   if (!properties || properties.status === "none") return null;
 
   return (
-    <div className="mb-5 rounded-xl border border-border/70 bg-card/40 text-sm">
+    <div className="mb-5 rounded-lg border border-border/70 bg-card/40 text-sm">
       <div className="flex items-center gap-1 px-2 py-1.5">
         <button onClick={toggle} className="flex flex-1 items-center gap-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
           <ChevronRight className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")} />

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { TitleBar } from "@/components/TitleBar";
-import { StatusBar } from "@/components/StatusBar";
+import { WindowResizeHandles } from "@/components/WindowResizeHandles";
+import { activeGroup, activeTab } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
@@ -241,26 +242,25 @@ function App() {
         }
         if (key === "w" && !e.shiftKey) {
           e.preventDefault();
-          st.closeTab(st.tabsState.activeId);
+          st.closeTab(activeTab(st.tabsState).id);
           return;
         }
         if (e.key === "\\") {
           e.preventDefault();
-          const tab = st.tabsState.tabs.find((t) => t.id === st.tabsState.activeId);
-          if (tab && tab.panes.length > 1) st.closePane(tab.focused);
+          if (st.tabsState.groups.length > 1) st.closePane(st.tabsState.focused);
           else st.splitActive();
           return;
         }
         if (e.key === "Tab") {
           e.preventDefault();
-          const { tabs, activeId } = st.tabsState;
+          const { tabs, activeId } = activeGroup(st.tabsState);
           const i = tabs.findIndex((t) => t.id === activeId);
           const next = tabs[(i + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
           st.activateTab(next.id);
           return;
         }
         if (/^[1-9]$/.test(e.key) && !e.shiftKey) {
-          const tab = st.tabsState.tabs[Number(e.key) - 1];
+          const tab = activeGroup(st.tabsState).tabs[Number(e.key) - 1];
           if (tab) {
             e.preventDefault();
             st.activateTab(tab.id);
@@ -294,6 +294,7 @@ function App() {
     return (
       <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
+        <WindowResizeHandles />
       </main>
     );
   }
@@ -304,7 +305,7 @@ function App() {
         <TitleBar />
         <div className="flex flex-1 overflow-hidden w-full">
           {currentView !== "settings" && !showWelcome && target?.kind === "folder" && <Sidebar />}
-          <div key={showWelcome ? "home" : currentView === "settings" ? "settings" : "doc"} className="view-in flex-1 overflow-hidden flex flex-col">
+          <div key={showWelcome ? "home" : currentView === "settings" ? "settings" : "doc"} className="flex-1 overflow-hidden flex flex-col">
               {currentView === "settings" ? (
                 <SettingsPage />
               ) : showWelcome ? (
@@ -319,10 +320,10 @@ function App() {
               )}
           </div>
         </div>
-        <StatusBar />
         {currentView !== "settings" && target && <CommandPalette />}
         <SharedDialogs />
         <Toaster />
+        <WindowResizeHandles />
       </main>
     </TooltipProvider>
   );

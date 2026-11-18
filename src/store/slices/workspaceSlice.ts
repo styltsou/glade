@@ -83,6 +83,9 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         tabs: (string | null)[][];
         active_tab: number;
         focused_pane: number;
+        tab_layout_version?: number;
+        active_tabs?: number[];
+        split_ratio?: number;
       }>("get_workspace_ui");
       // The window may have moved on to another folder while this loaded.
       if (get().target?.path !== root) return;
@@ -94,10 +97,10 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       });
       const idToPath = get().idToPath;
       const restored = T.fromSaved(
-        { tabs: ui.tabs ?? [], active: ui.active_tab ?? 0, focused: ui.focused_pane ?? 0 },
+        { tabs: ui.tabs ?? [], active: ui.active_tab ?? 0, focused: ui.focused_pane ?? 0, version: ui.tab_layout_version, activeTabs: ui.active_tabs, ratio: ui.split_ratio },
         (p) => !!idToPath[p],
       );
-      if (restored && !T.focusedPath(get().tabsState)) {
+      if (restored && !T.focusedPath(get().tabsState) && get().tabsState.groups.length === 1 && get().tabsState.groups[0].tabs.length === 1) {
         set({ tabsState: restored });
         await get().syncFocusedNote();
       } else if (ui.last_file && idToPath[ui.last_file] && !get().activeNote) {
@@ -115,10 +118,13 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith("/") && !/^[A-Za-z]:[\\/]/.test(k)));
     const last = activeNote && !activeNote.path.startsWith("/") ? activeNote.path : null;
     const saved = T.toSaved(get().tabsState);
-    const relativeTabs = saved.tabs.map((panes) => panes.map((p) => (p && !p.startsWith("/") ? p : null)));
+    const relativeGroups = saved.groups.map((tabs) => tabs.map((p) => (p && !p.startsWith("/") ? p : null)));
     await invoke("save_workspace_ui", {
       ui: {
         tabs: relativeTabs,
+        tab_layout_version: saved.version,
+        active_tabs: saved.activeTabs,
+        split_ratio: saved.ratio,
         active_tab: saved.active,
         focused_pane: saved.focused,
         expanded_folders: expandedFolders,

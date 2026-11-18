@@ -65,7 +65,7 @@ pub struct NoteData {
 /// into files.
 #[derive(Debug, Clone, Default)]
 pub struct NoteMeta {
-    /// Displayed title: `title` key, else first H1 (None when neither exists).
+    /// Displayed title: first H1 (None when absent; callers use the filename).
     pub title: Option<String>,
     pub tags: Vec<String>,
     /// `created`/`date` frontmatter value, if the file already has one.

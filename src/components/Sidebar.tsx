@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
-import { motion } from "motion/react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
@@ -77,11 +76,9 @@ export function Sidebar() {
 
   return (
     <div className="relative h-full flex shrink-0">
-      <motion.aside
-        initial={false}
-        animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-        className="flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden"
+      <aside
+        style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        className="flex flex-col h-full rounded-r-lg bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden"
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
@@ -92,13 +89,13 @@ export function Sidebar() {
           </div>
           <TagsPanel />
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Resize handle */}
       {!sidebarCollapsed && (
         <div
           onMouseDown={handleMouseDown}
-          className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20"
+          className="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20"
         />
       )}
     </div>
@@ -116,7 +113,7 @@ export function SidebarCollapseToggle() {
       <TooltipTrigger asChild>
         <button
           onClick={toggleSidebarCollapsed}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-all cursor-pointer"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors duration-100 cursor-pointer"
         >
           <PanelLeft className="h-4 w-4" />
         </button>

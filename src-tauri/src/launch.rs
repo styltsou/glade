@@ -42,6 +42,7 @@ fn create_window(app: &AppHandle, label: &str) -> Result<(), AppError> {
         .visible(false) // shown by the frontend once its first screen is ready
         .inner_size(1400.0, 900.0)
         .min_inner_size(800.0, 500.0)
+        .resizable(true)
         .decorations(false)
         .transparent(true)
         .shadow(false)

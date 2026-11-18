@@ -130,7 +130,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     return (
       <div
         data-folder-id={entry.path}
-        className="relative transition-all duration-100 rounded-md folder-drop-zone"
+        className="relative transition-colors duration-100 rounded-md folder-drop-zone"
         style={{
           background: isOverFolder ? "hsl(var(--primary) / 0.1)" : "transparent",
           outline: isOverFolder ? "1px solid hsl(var(--primary))" : "1px solid transparent",

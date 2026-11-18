@@ -232,8 +232,8 @@ pub async fn create_note(window: tauri::Window, folder: Option<String>) -> Resul
     Ok(note_data(relative_of(&vault_path, &full_path), &full_path, ""))
 }
 
-/// Rename a note by editing its title where it lives: the `title` key, the
-/// first H1, or - when neither exists - the file name. Returns the note's
+/// Rename a note by editing its title where it lives: the
+/// first H1, or the file name when there is no H1. Returns the note's
 /// (possibly new) path relative to `root`.
 pub fn rename_at(root: &Path, path: &str, new_title: &str) -> Result<String, AppError> {
     let full_path = crate::workspace::resolve_markdown(root, path)?;
@@ -279,7 +279,7 @@ pub async fn rename_note(window: tauri::Window, path: String, new_title: String)
 }
 
 /// Duplicate a note. The copy is byte-identical except that a title stored in
-/// the file (`title` key or H1) gets " (copy)" appended.
+/// the file (H1) gets " (copy)" appended.
 #[tauri::command]
 pub async fn duplicate_note(window: tauri::Window, path: String) -> Result<NoteData, AppError> {
     let vault_path = crate::workspace::root_for(&window)?;
@@ -437,9 +437,9 @@ changed
         std::env::set_var("GLADE_CONFIG_DIR", cfg.path());
         let root = dir.path();
 
-        fs::write(root.join("a.md"), "---\ntitle: Old\nx: 1\n---\nbody\n").unwrap();
+        fs::write(root.join("a.md"), "---\ntitle: Metadata\nx: 1\n---\n# Old\n\nbody\n").unwrap();
         assert_eq!(rename_at(root, "a.md", "New").unwrap(), "a.md");
-        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "---\ntitle: New\nx: 1\n---\nbody\n");
+        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "---\ntitle: Metadata\nx: 1\n---\n# New\n\nbody\n");
 
         fs::write(root.join("b.md"), "# Old\n\ntext\n").unwrap();
         assert_eq!(rename_at(root, "b.md", "New").unwrap(), "b.md");

@@ -1,3 +1,4 @@
+import { activeTab } from "@/lib/tabs";
 import {
   FolderCog as FolderCogIcon,
   Palette as PaletteIcon,
@@ -206,7 +207,7 @@ export function CommandPalette() {
           newTab();
           break;
         case "close-tab":
-          closeTab(useStore.getState().tabsState.activeId);
+          closeTab(activeTab(useStore.getState().tabsState).id);
           break;
         case "split-right":
           splitActive();

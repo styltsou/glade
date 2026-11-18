@@ -144,6 +144,8 @@ export function serializeWithFidelity(
 	isEmpty: (node: object) => boolean = () => false,
 ): string {
 	const { source, originals, originalList } = fidelity;
+	const eol = [source.leading, ...source.blocks, ...source.gaps, source.trailing]
+		.some((text) => text.includes("\r\n")) ? "\r\n" : "\n";
 	const { core: nodes, empties: rawEmpties } = splitTrailingEmpties(allNodes, isEmpty);
 	const empties = Math.max(0, rawEmpties - fidelity.baselineOf(nodes));
 
@@ -167,7 +169,7 @@ export function serializeWithFidelity(
 			out += j === 0 ? source.leading : "";
 		} else {
 			const prev = idx[k - 1];
-			out += prev !== undefined && j !== undefined && j === prev + 1 ? source.gaps[prev] : "\n\n";
+			out += prev !== undefined && j !== undefined && j === prev + 1 ? source.gaps[prev] : eol + eol;
 		}
 		out += j !== undefined ? source.blocks[j] : serializeNode(node);
 	});
@@ -178,7 +180,6 @@ export function serializeWithFidelity(
 		if (endsAtOriginalEnd && empties === fidelity.extraTrailing) {
 			out += source.trailing; // nothing changed at the end: keep it byte for byte
 		} else {
-			const eol = source.trailing.includes("\r\n") ? "\r\n" : "\n";
 			out += eol.repeat(empties + 1);
 		}
 	}

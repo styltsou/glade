@@ -2,12 +2,18 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
+import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
+import { AmbientSounds } from "@/components/AmbientSounds";
 
 const appWindow = getCurrentWindow();
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
+  const target = useStore((state) => state.target);
+  const homeOpen = useStore((state) => state.homeOpen);
+  const currentView = useStore((state) => state.currentView);
+  const sidebarWidth = useStore((s) => s.sidebarWidth);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
 
@@ -26,15 +32,18 @@ export function TitleBar() {
     };
   }, []);
 
+  const folderOpen = target?.kind === "folder" && !homeOpen && currentView !== "settings";
+  const sidebarVisible = folderOpen && !sidebarCollapsed;
+
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
   const handleClose = () => appWindow.close();
   const handleDragStart = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    if (target.closest("button")) return;
-    // Tabs are interactive; the empty space after them drags the window.
-    if (target.closest("[data-no-drag]") && !target.closest("[data-drag-spacer]")) return;
-    appWindow.startDragging();
+    if (e.button !== 0 || target.closest("button, [data-no-drag]")) return;
+    e.preventDefault();
+    if (e.detail === 2) appWindow.toggleMaximize();
+    else appWindow.startDragging();
   };
 
   useEffect(() => {
@@ -46,11 +55,12 @@ export function TitleBar() {
 
   return (
     <div
-      className="relative flex h-9 shrink-0 items-center bg-background px-1.5 select-none"
+      className="relative flex h-9 shrink-0 items-center border-b border-border/70 bg-background pl-1.5 select-none"
       onMouseDown={handleDragStart}
     >
+      <div className={sidebarVisible ? "flex h-full shrink-0 items-center" : "absolute left-1.5 top-0 z-10 flex h-full items-center bg-background"} style={sidebarVisible ? { width: sidebarWidth - 6 } : undefined}>
       {/* Sidebar toggle */}
-      <button
+      {folderOpen && <button
         onClick={toggleSidebarCollapsed}
         title="Toggle sidebar (Ctrl+B)"
         className={iconButton}
@@ -60,9 +70,14 @@ export function TitleBar() {
         ) : (
           <PanelLeftClose className="h-4 w-4" />
         )}
-      </button>
+      </button>}
+      {!sidebarVisible && <WorkspaceMenu folder={folderOpen} className="h-7 max-w-32 flex-none px-2 text-xs" />}
 
-      <TabStrip />
+      </div>
+      {target && !homeOpen && currentView !== "settings" ? <TabStrip leadingInset={sidebarVisible ? 0 : folderOpen ? 176 : 112} trailingInset={128} /> : <div className="h-full flex-1" />}
+      <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
+
+      <AmbientSounds />
 
       {/* Window controls */}
       <div className="flex shrink-0 items-center gap-0.5">
@@ -83,6 +98,7 @@ export function TitleBar() {
         >
           <X className="h-4 w-4" />
         </button>
+      </div>
       </div>
     </div>
   );

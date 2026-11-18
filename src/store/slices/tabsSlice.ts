@@ -6,25 +6,31 @@ import type { StoreState } from "../index";
 
 export interface TabsSlice {
   tabsState: T.TabsState;
+  /** Where the pane area sits in the window, so title-bar tabs line up with panes. */
+  paneAreaBox: { left: number; width: number } | null;
+  setPaneAreaBox: (box: { left: number; width: number } | null) => void;
 
-  /** Open a note: in the focused pane, a new tab, or beside the current one. */
+  /** Open a note: in the active tab, a new tab, or in the pane to the side. */
   openNote: (path: string, mode?: "active" | "tab" | "side", partial?: Partial<NoteData>) => Promise<void>;
-  /** Make `activeNote` follow the focused pane. */
+  /** Make `activeNote` (and the folder overview) follow the focused pane's active tab. */
   syncFocusedNote: () => Promise<void>;
   /** Put a note in the cache without making it the active one (for other panes). */
   fetchNote: (path: string) => Promise<void>;
-  /** Show the folder overview (no note) in the focused pane. */
+  /** Show a folder overview in the active tab (null = the root). */
+  openFolderTab: (folder: string | null) => void;
+  /** Turn the active tab into the blank "new tab" page. */
   setFocusedPathNull: () => void;
 
   newTab: () => void;
-  activateTab: (id: string) => void;
-  closeTab: (id: string) => void;
+  activateTab: (group: number, id: string) => void;
+  closeTab: (group: number, id: string) => void;
+  closeActiveTab: () => void;
+  closePathTab: (path: string) => void;
   splitActive: () => void;
-  closePane: (index: number) => void;
-  focusPane: (index: number) => void;
-  setTabRatio: (id: string, ratio: number) => void;
-  reorderTabs: (from: number, to: number) => void;
-  /** Rename/move/delete bookkeeping. */
+  moveTabToOtherGroup: (group: number, id: string) => void;
+  focusGroup: (index: number) => void;
+  setTabRatio: (ratio: number) => void;
+  reorderTabs: (group: number, from: number, to: number) => void;
   tabsRenamePath: (from: string, to: string) => void;
   tabsRemovePath: (path: string) => void;
   resetTabs: (state?: T.TabsState) => void;
@@ -38,6 +44,12 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
 
   return {
     tabsState: T.initialTabs(),
+    paneAreaBox: null,
+    setPaneAreaBox: (box) => {
+      const cur = get().paneAreaBox;
+      if (cur?.left === box?.left && cur?.width === box?.width) return;
+      set({ paneAreaBox: box });
+    },
 
     openNote: async (path, mode = "active", partial) => {
       const state = get().tabsState;
@@ -48,14 +60,16 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
     },
 
     syncFocusedNote: async () => {
-      const path = T.focusedPath(get().tabsState);
-      if (!path) {
-        set({ activeNote: null });
+      const tab = T.activeTab(get().tabsState);
+      if (!tab.path) {
+        // A folder overview follows its tab; the blank page has no folder.
+        set({ activeNote: null, currentFolder: typeof tab.folder === "string" ? tab.folder : null });
+        if (tab.folder !== undefined) void get().loadFolderNotes(typeof tab.folder === "string" ? tab.folder : null);
         return;
       }
-      const cached = get().noteCache[path];
+      const cached = get().noteCache[tab.path];
       set({ activeNote: cached ?? null, currentFolder: null });
-      await get().loadNote(path);
+      await get().loadNote(tab.path);
     },
 
     fetchNote: async (path) => {
@@ -68,24 +82,38 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
       }
     },
 
+    openFolderTab: (folder) => {
+      set({
+        tabsState: T.openFolder(get().tabsState, folder),
+        activeNote: null,
+        currentFolder: folder,
+        folderNotes: [],
+      });
+      void get().loadFolderNotes(folder);
+    },
+
     setFocusedPathNull: () => {
       set({ tabsState: T.openInActive(get().tabsState, null), activeNote: null });
     },
 
     newTab: () => {
-      const next = T.openInNewTab(get().tabsState, null);
-      set({ tabsState: next, activeNote: null });
+      set({ tabsState: T.newTab(get().tabsState), activeNote: null, currentFolder: null });
     },
-    activateTab: (id) => apply(T.activateTab(get().tabsState, id)),
-    closeTab: (id) => apply(T.closeTab(get().tabsState, id)),
-    splitActive: () => apply(T.split(get().tabsState)),
-    closePane: (index) => apply(T.closePane(get().tabsState, index)),
-    focusPane: (index) => {
-      const next = T.focusPane(get().tabsState, index);
+    activateTab: (group, id) => apply(T.activateTab(get().tabsState, group, id)),
+    closeTab: (group, id) => apply(T.closeTab(get().tabsState, group, id)),
+    closeActiveTab: () => {
+      const s = get().tabsState;
+      apply(T.closeTab(s, s.focused, T.focusedGroup(s).activeId));
+    },
+    closePathTab: (path) => apply(T.closePathTab(get().tabsState, path)),
+    splitActive: () => apply(T.splitActive(get().tabsState)),
+    moveTabToOtherGroup: (group, id) => apply(T.moveTabToOtherGroup(get().tabsState, group, id)),
+    focusGroup: (index) => {
+      const next = T.focusGroup(get().tabsState, index);
       if (next !== get().tabsState) apply(next);
     },
-    setTabRatio: (id, ratio) => set({ tabsState: T.setRatio(get().tabsState, id, ratio) }),
-    reorderTabs: (from, to) => set({ tabsState: T.reorder(get().tabsState, from, to) }),
+    setTabRatio: (ratio) => set({ tabsState: T.setRatio(get().tabsState, ratio) }),
+    reorderTabs: (group, from, to) => set({ tabsState: T.reorder(get().tabsState, group, from, to) }),
 
     tabsRenamePath: (from, to) => set({ tabsState: T.renamePath(get().tabsState, from, to) }),
     tabsRemovePath: (path) => apply(T.removePath(get().tabsState, path)),

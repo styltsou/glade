@@ -51,7 +51,7 @@ function CommandDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("overflow-hidden p-0 rounded-xl data-[state=open]:animate-none data-[state=closed]:animate-none", className)}
+        className={cn("overflow-hidden p-0 rounded-lg data-[state=open]:animate-none data-[state=closed]:animate-none", className)}
         showCloseButton={showCloseButton}
       >
         <DialogHeader className="sr-only">

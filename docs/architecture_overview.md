@@ -52,3 +52,13 @@ graph TD
 3. The backend re-attaches the file's existing frontmatter text verbatim, and skips the write if the result is byte-identical.
 4. If the file changed on disk since Glade last read it, the write is refused (`Conflict`) and the editor offers "Keep mine" / "Load theirs".
 5. The write is recorded by content hash so the watcher does not report it as an external change.
+
+### Note titles
+
+The first document-level H1 supplies the note title. Without an H1, Glade uses the filename stem; a frontmatter `title` remains ordinary metadata. Code blocks and quoted headings do not supply titles.
+
+Rich and raw editing show the title in the title field and omit that one heading from the body. The editor preserves the original heading in Markdown saves, including its formatting on untouched titles. Renaming through the title field saves pending body edits first, then updates the H1 or renames the file when there is no H1. Additional H1 headings stay in the body.
+
+### Pane tab groups
+
+Each split pane owns its open tabs and selected file. Its compact tabs stay in the window bar, and the divider uses the same ratio as the editor panes. Window buttons remain global. Keyboard navigation and note commands target the focused pane. Version 2 workspace state saves each group's tabs, selection, focus, and divider ratio; older shared-tab/split-pair sessions migrate on load.

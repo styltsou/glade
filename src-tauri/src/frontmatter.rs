@@ -620,60 +620,54 @@ pub fn set_tags(content: &str, tags: &[String]) -> Result<String, FmError> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TitleSource {
-    Key,
     Heading,
     Filename,
 }
 
 fn first_h1(body: &str) -> Option<(usize, usize, String)> {
-    // Returns (line start, line end excluding eol, title text).
-    let mut pos = 0;
-    let mut fence: Option<String> = None;
-    while pos < body.len() {
-        let rest = &body[pos..];
-        let len = rest.find('\n').map(|i| i + 1).unwrap_or(rest.len());
-        let line = rest[..len].trim_end_matches(['\n', '\r']);
-        let t = line.trim_start();
-        if let Some(f) = &fence {
-            if t.starts_with(f.as_str()) {
-                fence = None;
+    use pulldown_cmark::{Event, HeadingLevel, Parser, Tag, TagEnd};
+    let mut depth = 0usize;
+    let mut heading = None;
+    let mut text = String::new();
+    for (event, range) in Parser::new(body).into_offset_iter() {
+        match event {
+            Event::Start(Tag::Heading { level: HeadingLevel::H1, .. }) if depth == 0 => {
+                heading = Some(range);
+                text.clear();
+                depth += 1;
             }
-        } else if t.starts_with("```") || t.starts_with("~~~") {
-            fence = Some(t[..3].to_string());
-        } else if line.starts_with("# ") || line.trim_end() == "#" {
-            let text = line[1..].trim().trim_end_matches('#').trim_end().to_string();
-            if !text.is_empty() {
-                return Some((pos, pos + line.len(), text));
+            Event::Start(_) => depth += 1,
+            Event::End(tag) => {
+                depth = depth.saturating_sub(1);
+                if tag == TagEnd::Heading(HeadingLevel::H1) && depth == 0 {
+                    if let Some(range) = heading.take() {
+                        let title = text.trim();
+                        if !title.is_empty() {
+                            let raw = body[range.clone()].trim_end_matches(['\n', '\r']);
+                            return Some((range.start, range.start + raw.len(), title.to_string()));
+                        }
+                    }
+                }
             }
+            Event::Text(value) | Event::Code(value) if heading.is_some() => text.push_str(&value),
+            Event::SoftBreak | Event::HardBreak if heading.is_some() => text.push(' '),
+            _ => {}
         }
-        pos += len;
     }
     None
 }
 
-fn title_key(content: &str) -> Option<String> {
-    let parts = split(content)?;
-    let map = parse_mapping(parts.yaml).ok()?;
-    match map.get("title") {
-        Some(Value::String(s)) if !s.trim().is_empty() => Some(s.clone()),
-        _ => None,
-    }
-}
-
 pub fn title_source(content: &str) -> TitleSource {
-    if title_key(content).is_some() {
-        TitleSource::Key
-    } else if first_h1(body_of(content)).is_some() {
+    if first_h1(body_of(content)).is_some() {
         TitleSource::Heading
     } else {
         TitleSource::Filename
     }
 }
 
-/// Displayed title: `title` key, else first `# H1`, else the file name.
+/// Displayed title: first H1, else the file name.
 pub fn derive_title(content: &str, filename_stem: &str) -> String {
-    title_key(content)
-        .or_else(|| first_h1(body_of(content)).map(|(_, _, t)| t))
+    first_h1(body_of(content)).map(|(_, _, t)| t)
         .unwrap_or_else(|| filename_stem.to_string())
 }
 
@@ -681,7 +675,6 @@ pub fn derive_title(content: &str, filename_stem: &str) -> String {
 /// the file name (caller must rename the file instead).
 pub fn set_title(content: &str, new_title: &str) -> Option<Result<String, FmError>> {
     match title_source(content) {
-        TitleSource::Key => Some(set_key(content, "title", &NewValue::Scalar(new_title.to_string()))),
         TitleSource::Heading => {
             let body = body_of(content);
             let body_off = content.len() - body.len();
@@ -851,9 +844,12 @@ mod tests {
 
     #[test]
     fn title_fallbacks() {
-        assert_eq!(derive_title("---\ntitle: Key\n---\n# H\n", "file"), "Key");
+        assert_eq!(derive_title("---\ntitle: Key\n---\n# H\n", "file"), "H");
         assert_eq!(derive_title("# Getting set up\n\ntext", "setup"), "Getting set up");
         assert_eq!(derive_title("text only", "setup"), "setup");
+        assert_eq!(derive_title("---\ntitle: Metadata\n---\ntext", "setup"), "setup");
+        assert_eq!(derive_title("A *formatted* `title`\n=====\n\nbody", "setup"), "A formatted title");
+        assert_eq!(derive_title("> # Quote\n\n    # Code\n\n   # Real title\n", "file"), "Real title");
         assert_eq!(derive_title("```\n# not a title\n```\n", "f"), "f");
         assert_eq!(derive_title("---\ntitle: \"\"\n---\n# H\n", "f"), "H");
     }
@@ -861,9 +857,11 @@ mod tests {
     #[test]
     fn title_edit_by_source() {
         let c = "---\ntitle: Old\nx: 1\n---\n# Heading\n";
-        assert_eq!(set_title(c, "New").unwrap().unwrap(), "---\ntitle: New\nx: 1\n---\n# Heading\n");
+        assert_eq!(set_title(c, "New").unwrap().unwrap(), "---\ntitle: Old\nx: 1\n---\n# New\n");
         let h = "intro\n\n# Old head\n\nbody\n";
         assert_eq!(set_title(h, "New").unwrap().unwrap(), "intro\n\n# New\n\nbody\n");
+        assert_eq!(set_title("Title\n=====\r\n\r\nbody\r\n", "New").unwrap().unwrap(), "# New\r\n\r\nbody\r\n");
+        assert!(set_title("---\ntitle: Metadata\n---\nno heading", "x").is_none());
         assert!(set_title("no heading", "x").is_none());
         assert_eq!(title_source("no heading"), TitleSource::Filename);
     }

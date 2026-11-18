@@ -1,4 +1,3 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -17,6 +16,7 @@ import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/edito
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 import { useSaveNote } from "@/hooks/useSaveNote";
+import { splitNoteTitle, restoreNoteTitle, type NoteTitle } from "@/lib/noteTitle";
 import { useMarkdownFidelity } from "@/hooks/useMarkdownFidelity";
 import { createBlockDragHandleExtension } from "@/components/editor/blocks/blockDragHandle";
 import { BlockHandles } from "@/components/editor/blocks/BlockHandles";
@@ -73,6 +73,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   }, [activeNote, setNoteEditMode]);
 
   const [rawContent, setRawContent] = useState("");
+  const rawTitleRef = useRef<NoteTitle>(splitNoteTitle(""));
   const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
   const mermaidFullscreenOpen = useStore((state) => state.mermaidFullscreenOpen);
   const [findVisible, setFindVisible] = useState(false);
@@ -110,6 +111,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const reloadNote = useStore((state) => state.reloadNote);
 
   const { saveStatus, setSaveStatusWithRef, saveNow } = useSaveNote({
+    focused,
     activeNote,
     saveNote,
     latestContentRef,
@@ -203,6 +205,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   // Keyboard shortcuts for Ctrl+F / Cmd+F and Ctrl+H / Cmd+H
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (!focused) return;
       const isModPressed = e.metaKey || e.ctrlKey;
       if (isModPressed && e.key === "f") {
         e.preventDefault();
@@ -258,7 +261,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [editor, findVisible, handleFindClose, activeNote, isEditMode, setNoteEditMode]);
+  }, [editor, findVisible, handleFindClose, activeNote, isEditMode, setNoteEditMode, focused]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current || !activeNote?.path) return;
@@ -328,9 +331,11 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         // Skip the first onUpdate (fires during setContent)
         skipUpdateRef.current = true;
         // Use setContent with emitUpdate: false to avoid focusing
-        editor.commands.setContent(activeNote.body || "", { emitUpdate: false });
+        const title = splitNoteTitle(activeNote.body || "");
+        editor.commands.setContent(title.body, { emitUpdate: false });
         snapshotFidelity(editor, activeNote.body || "");
-        setRawContent(activeNote.body || "");
+        rawTitleRef.current = title;
+        setRawContent(title.body);
 
         // Manually trigger TOC update since emitUpdate: false skips the event
         setTimeout(() => {
@@ -425,26 +430,20 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     if (currentlyRaw) {
       isLoadingRef.current = true;
       skipUpdateRef.current = true;
-      latestContentRef.current = rawContent;
-      editor.commands.setContent(rawContent, { emitUpdate: false });
-      snapshotFidelity(editor, rawContent);
+      const source = restoreNoteTitle(rawTitleRef.current, rawContent);
+      latestContentRef.current = source;
+      editor.commands.setContent(splitNoteTitle(source).body, { emitUpdate: false });
+      snapshotFidelity(editor, source);
       toggleRawModeFromStore(activeNote.path);
-      if (rawContent !== lastSavedContentRef.current) {
+      if (source !== lastSavedContentRef.current) {
         setSaveStatusWithRef("unsaved");
         await saveNow();
       }
       setTimeout(() => { isLoadingRef.current = false; }, 100);
     } else {
-      try {
-        const raw = await invoke<string>("read_note_raw", {
-          path: activeNote.path,
-        });
-        const stripped = raw.replace(/^---[\s\S]*?---\s*\n?/, "");
-        setRawContent(stripped);
-      } catch {
-        const md = getMarkdown(editor);
-        setRawContent(md);
-      }
+      const title = splitNoteTitle(getMarkdown(editor));
+      rawTitleRef.current = title;
+      setRawContent(title.body);
       toggleRawModeFromStore(activeNote.path);
     }
   }, [editor, isRawModeMap, rawContent, activeNote, saveNow, toggleRawModeFromStore]);
@@ -452,7 +451,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
-      latestContentRef.current = value;
+      latestContentRef.current = restoreNoteTitle(rawTitleRef.current, value);
       if (activeNote && latestContentRef.current !== lastSavedContentRef.current) {
         if (savedTimeoutRef.current) {
           clearTimeout(savedTimeoutRef.current);
@@ -521,7 +520,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     setCurrentMatchIndex(0);
     if (query) {
       if (isRawMode) {
-        const matches = findMatchesRaw(latestContentRef.current, query, searchOpts);
+        const matches = findMatchesRaw(rawContent, query, searchOpts);
         setTotalMatches(matches.length);
       } else if (editor) {
         const matches = findMatches(editor.state.doc, query, searchOpts);
@@ -530,7 +529,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     } else {
       setTotalMatches(0);
     }
-  }, [editor, isRawMode, caseSensitive, matchWholeWord, useRegex]);
+  }, [editor, isRawMode, rawContent, caseSensitive, matchWholeWord, useRegex]);
 
   const handleNavigateNext = useCallback(() => {
     if (totalMatches === 0) return;
@@ -572,7 +571,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     if (totalMatches === 0 || !replaceQuery && replaceQuery !== "") return;
 
     if (isRawMode) {
-      const content = latestContentRef.current;
+      const content = rawContent;
       const matches = findMatchesRaw(content, findQuery, searchOpts);
       const match = matches[currentMatchIndex];
       if (!match) return;
@@ -598,13 +597,13 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         setCurrentMatchIndex(Math.min(currentMatchIndex, Math.max(0, newMatches.length - 1)));
       }, 0);
     }
-  }, [editor, isRawMode, findQuery, replaceQuery, currentMatchIndex, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
+  }, [editor, isRawMode, rawContent, findQuery, replaceQuery, currentMatchIndex, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
 
   const handleReplaceAll = useCallback(() => {
     if (totalMatches === 0) return;
 
     if (isRawMode) {
-      const content = latestContentRef.current;
+      const content = rawContent;
       const matches = findMatchesRaw(content, findQuery, searchOpts);
       let newContent = content;
       for (let i = matches.length - 1; i >= 0; i--) {
@@ -626,7 +625,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       setTotalMatches(0);
       setCurrentMatchIndex(0);
     }
-  }, [editor, isRawMode, findQuery, replaceQuery, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
+  }, [editor, isRawMode, rawContent, findQuery, replaceQuery, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
 
   // Update search highlight decorations when query or match index changes
   useEffect(() => {
@@ -725,7 +724,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       className={cn(
         "@container/pane flex flex-col flex-1 h-full min-w-0 bg-background overflow-hidden relative",
         split && "transition-[box-shadow] duration-150",
-        split && focused && "shadow-[inset_0_2px_0_hsl(var(--primary)/0.55)]",
+
       )}
     >
       {!mermaidFullscreenOpen && (
@@ -799,6 +798,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           isRawMode={isRawMode}
           rawContent={rawContent}
           onRawChange={onRawChange}
+          beforeRename={saveNow}
           scrollRef={scrollRef}
           onScroll={handleScroll}
           findQuery={findQuery}

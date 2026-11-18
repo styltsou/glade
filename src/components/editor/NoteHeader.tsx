@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useId } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -91,12 +91,13 @@ export function NoteHeader({
   const [exportFormat, setExportFormat] = useState<ExportFormat>("markdown");
   const [copied, setCopied] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportButtonId = useId();
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!exportMenuOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
-      const button = document.getElementById('export-button');
+      const button = document.getElementById(exportButtonId);
       if (exportMenuRef.current && button && !button.contains(e.target as Node) && !exportMenuRef.current.contains(e.target as Node)) {
         setExportMenuOpen(false);
       }
@@ -187,7 +188,7 @@ export function NoteHeader({
 
         <div
           className={cn(
-            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium mx-2 transition-colors duration-200",
+            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium mx-2 transition-colors duration-100",
             isEditMode
               ? "bg-primary/10 text-primary"
               : "bg-secondary text-secondary-foreground"
@@ -284,7 +285,7 @@ export function NoteHeader({
                 )}
                 disabled={!notePath}
                 onClick={() => setExportMenuOpen((v) => !v)}
-                id="export-button"
+                id={exportButtonId}
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -295,7 +296,7 @@ export function NoteHeader({
           </Tooltip>
 
           {exportMenuOpen && (
-            <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-xl bg-popover p-1 text-popover-foreground shadow-[var(--elev-pop)] origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
+            <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-lg bg-popover p-1 text-popover-foreground shadow-[var(--elev-pop)] origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
               <button
                 className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                 onClick={() => handleExport("markdown")}

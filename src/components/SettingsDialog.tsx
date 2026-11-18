@@ -105,7 +105,7 @@ function ThemeCard({
       onClick={onClick}
       className={`
         group relative flex flex-col items-center gap-2.5 rounded-lg border-2 p-4
-        transition-all duration-150 cursor-pointer
+        transition-colors duration-100 cursor-pointer
         ${
           isActive
             ? "border-primary bg-accent"

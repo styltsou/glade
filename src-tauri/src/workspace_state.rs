@@ -31,13 +31,19 @@ pub struct WorkspaceState {
     /// Per-note scroll position.
     #[serde(default)]
     pub scroll: std::collections::HashMap<String, f64>,
-    /// Open tabs: each is one or two panes (a split), each pane a note path or none.
+    /// Version 2 stores one tab list per pane; older versions stored split pairs.
     #[serde(default)]
     pub tabs: Vec<Vec<Option<String>>>,
     #[serde(default)]
     pub active_tab: usize,
     #[serde(default)]
     pub focused_pane: usize,
+    #[serde(default)]
+    pub tab_layout_version: u8,
+    #[serde(default)]
+    pub active_tabs: Vec<usize>,
+    #[serde(default)]
+    pub split_ratio: f64,
 }
 
 /// The parts of a folder's state the UI owns and saves as a whole. Pins are
@@ -58,6 +64,12 @@ pub struct UiState {
     pub active_tab: usize,
     #[serde(default)]
     pub focused_pane: usize,
+    #[serde(default)]
+    pub tab_layout_version: u8,
+    #[serde(default)]
+    pub active_tabs: Vec<usize>,
+    #[serde(default)]
+    pub split_ratio: f64,
 }
 
 impl WorkspaceState {
@@ -70,6 +82,9 @@ impl WorkspaceState {
             tabs: self.tabs.clone(),
             active_tab: self.active_tab,
             focused_pane: self.focused_pane,
+            tab_layout_version: self.tab_layout_version,
+            active_tabs: self.active_tabs.clone(),
+            split_ratio: self.split_ratio,
         }
     }
 
@@ -81,6 +96,9 @@ impl WorkspaceState {
         self.tabs = ui.tabs;
         self.active_tab = ui.active_tab;
         self.focused_pane = ui.focused_pane;
+        self.tab_layout_version = ui.tab_layout_version;
+        self.active_tabs = ui.active_tabs;
+        self.split_ratio = ui.split_ratio;
     }
 }
 
@@ -255,6 +273,9 @@ mod tests {
             tabs: vec![vec![Some("docs/a.md".into()), None], vec![Some("b.md".into())]],
             active_tab: 1,
             focused_pane: 0,
+            tab_layout_version: 2,
+            active_tabs: vec![0, 0],
+            split_ratio: 0.5,
         });
         save_in(base.path(), root.path(), &st).unwrap();
 
@@ -266,6 +287,9 @@ mod tests {
         assert_eq!(back.ui().tabs.len(), 2);
         assert_eq!(back.ui().tabs[0][0].as_deref(), Some("docs/a.md"));
         assert_eq!(back.ui().active_tab, 1);
+        assert_eq!(back.ui().tab_layout_version, 2);
+        assert_eq!(back.ui().active_tabs, vec![0, 0]);
+        assert_eq!(back.ui().split_ratio, 0.5);
         // Older state files without these fields still load.
         let old = r#"{"root":"/x","pinned":["p.md"]}"#;
         let parsed: WorkspaceState = serde_json::from_str(old).unwrap();

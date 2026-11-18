@@ -3,15 +3,17 @@ import { useStore } from "@/store";
 import { formatTooltipDate } from "@/lib/dates";
 
 interface EditableTitleProps {
+  beforeRename?: () => Promise<void>;
   title: string;
   path: string;
   created?: string | null;
 }
 
-export function EditableTitle({ title, path, created }: EditableTitleProps) {
+export function EditableTitle({ title, path, created, beforeRename }: EditableTitleProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const savingTitleRef = useRef(false);
   const renameNote = useStore((state) => state.renameNote);
 
   const handleStartEditing = () => {
@@ -21,11 +23,19 @@ export function EditableTitle({ title, path, created }: EditableTitleProps) {
   };
 
   const handleSaveTitle = async () => {
-    const trimmed = tempTitle.trim();
-    if (trimmed && trimmed !== title) {
-      await renameNote(path, trimmed);
+    if (savingTitleRef.current) return;
+    savingTitleRef.current = true;
+    try {
+      const trimmed = tempTitle.trim();
+      if (trimmed && trimmed !== title) {
+        await beforeRename?.();
+        await renameNote(path, trimmed);
+        await useStore.getState().reloadNote(path);
+      }
+      setIsEditingTitle(false);
+    } finally {
+      savingTitleRef.current = false;
     }
-    setIsEditingTitle(false);
   };
 
   const handleCancelEditing = () => {

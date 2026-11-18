@@ -11,7 +11,7 @@ export function AboutSection() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center">
+        <div className="h-16 w-16 rounded-lg bg-primary/10 flex items-center justify-center">
           <FolderOpen className="h-8 w-8 text-primary" />
         </div>
         <div>
