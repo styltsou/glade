@@ -23,6 +23,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useStore } from "@/store";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
+import { showWindowOnce } from "@/lib/showWindow";
 import type { Target } from "@/types";
 
 function SharedDialogs() {
@@ -106,6 +107,7 @@ function App() {
   const target = useStore((state) => state.target);
   const homeOpen = useStore((state) => state.homeOpen);
   const rootMissing = useStore((state) => state.rootMissing);
+  const restoring = useStore((state) => state.target?.kind === "folder" && state.uiLoadedFor !== state.target.path);
   const currentView = useStore((state) => state.currentView);
   const openSettingsPage = useStore((state) => state.openSettingsPage);
   const selectNote = useStore((state) => state.selectNote);
@@ -120,7 +122,16 @@ function App() {
 
   useEffect(() => {
     initWorkspace();
+    // Warm the editor chunk so the first note doesn't flash a skeleton.
+    void import("@/components/Editor");
   }, [initWorkspace]);
+
+  // Windows start hidden (no white flash); show once the first screen is ready.
+  useEffect(() => {
+    if (!isReady) return;
+    const frame = requestAnimationFrame(() => void showWindowOnce());
+    return () => cancelAnimationFrame(frame);
+  }, [isReady]);
 
   // The backend routes opens (CLI, file manager, Home) to this window.
   useEffect(() => {
@@ -300,6 +311,9 @@ function App() {
                 <WelcomeHome />
               ) : rootMissing ? (
                 <RootMissing />
+              ) : restoring ? (
+                // Saved tabs are still loading: show nothing rather than a flash of the overview.
+                <div className="flex-1" />
               ) : (
                 <PaneArea />
               )}

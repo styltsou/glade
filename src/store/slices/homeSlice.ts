@@ -44,7 +44,7 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   loadFolderNotes: async (path) => {
     try {
       const folderPath = path === undefined ? get().currentFolder : path;
-      set({ isFolderNotesLoading: true });
+      if (get().folderNotes.length === 0) set({ isFolderNotesLoading: true });
       const folderNotes = await invoke<NoteCard[]>("get_notes_in_folder", { 
         folder: folderPath || null 
       });

@@ -39,6 +39,7 @@ fn idle_window(app: &AppHandle, prefer: Option<&str>) -> Option<String> {
 fn create_window(app: &AppHandle, label: &str) -> Result<(), AppError> {
     WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
         .title("Glade")
+        .visible(false) // shown by the frontend once its first screen is ready
         .inner_size(1400.0, 900.0)
         .min_inner_size(800.0, 500.0)
         .decorations(false)
@@ -102,7 +103,14 @@ pub fn open_path(app: &AppHandle, path: &Path, prefer: Option<&str>) -> Result<(
         config::save_config(&cfg)?;
     }
 
-    let label = match idle_window(app, prefer) {
+    // "Open containing folder" from a single-file window turns that window into
+    // the folder view instead of opening another one.
+    let reuse = match (&target, prefer.and_then(|l| ws.target(l))) {
+        (Target::Folder(dir), Some(Target::File(file))) if file.starts_with(dir) => prefer.map(str::to_string),
+        _ => None,
+    };
+
+    let label = match reuse.or_else(|| idle_window(app, prefer)) {
         Some(label) => {
             ws.set_target(&label, target.clone());
             let _ = app.emit_to(label.as_str(), "workspace-changed", target.info());

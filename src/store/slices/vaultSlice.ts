@@ -63,7 +63,10 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (
   noteScrollPositions: {},
 
   loadVault: async () => {
-    set({ isVaultLoading: true, vaultError: null });
+    // Only the first load shows skeletons; refreshes (file watcher, renames,
+    // moves) update in place instead of flashing the tree.
+    if (get().entries.length === 0) set({ isVaultLoading: true, vaultError: null });
+    else set({ vaultError: null });
 
     try {
       const entries = await invoke<VaultEntry[]>("list_vault");

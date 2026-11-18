@@ -5,6 +5,7 @@ import { homeDir } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import type { HomeData, Target } from "@/types";
 import * as T from "@/lib/tabs";
+import { relativeTo } from "@/lib/paths";
 import type { StoreState } from "../index";
 
 export interface WorkspaceSlice {
@@ -17,6 +18,8 @@ export interface WorkspaceSlice {
   workspaceReady: boolean;
   workspaceError: string | null;
   switcherOpen: boolean;
+  /** A loose file to open as a tab once its containing folder has loaded. */
+  pendingFile: string | null;
   /** Folder whose saved UI state (tree, last note...) has been restored. */
   uiLoadedFor: string | null;
   /** Last change made to a note by another program (consumed by the editor). */
@@ -62,6 +65,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
   workspaceReady: false,
   workspaceError: null,
   switcherOpen: false,
+  pendingFile: null,
   uiLoadedFor: null,
   externalEvent: null,
   handleExternalChange: (e) => set({ externalEvent: { ...e, seq: Date.now() } }),
@@ -181,6 +185,12 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       get().loadAll();
       get().offerLegacyCleanup();
       await get().restoreWorkspaceUi(target.path);
+      const pending = get().pendingFile;
+      if (pending) {
+        set({ pendingFile: null });
+        const rel = relativeTo(target.path, pending);
+        if (rel) await get().openNote(rel, T.focusedPath(get().tabsState) ? "tab" : "active");
+      }
     } else {
       await get().openNote(target.path);
     }
@@ -222,6 +232,10 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       if (target?.kind === "folder" && target.path === path) {
         set({ homeOpen: false });
         return;
+      }
+      // Opening the folder around a loose file: keep that file open afterwards.
+      if (target?.kind === "file" && target.path.startsWith(path.endsWith("/") ? path : `${path}/`)) {
+        set({ pendingFile: target.path });
       }
       await invoke("open_path_cmd", { path });
       // The backend may have opened it in another window; leave the Home overlay.
