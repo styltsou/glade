@@ -1,34 +1,28 @@
 # Glade — Feature Backlog
 
-## Editor
+## Done
 
-- [ ] Word count & reading time (status bar)
-- [ ] Focus mode — hide sidebar, center editor, dim surroundings
-- [ ] Slash commands — type `/` to insert blocks (heading, code, image, etc.)
-- [ ] Note templates — starter templates on new note creation
+- [x] Open folders and single files in place; Home with pinned/recent folders and files
+- [x] Format-preserving saves; frontmatter untouched except edited lines
+- [x] Live reload of external changes with conflict choice
+- [x] Relative markdown links, link rewriting on rename/move, backlinks
+- [x] Tabs and split views (per-pane tabs), restored per folder
+- [x] Block handles, table controls, preview rail, collapsing breadcrumbs
+- [x] Pinned notes and folders, tags, full-text search, command palette
+- [x] Export to PDF / Markdown / PNG
+- [x] Light/dark themes, ambient sounds, local Linux install with launcher icon
 
-## Organization
+## Next
 
-- [x] Pinned notes — pin to top of sidebar via frontmatter flag
-- [x] Recently opened — recents section at top of sidebar
-- [ ] Note linking — `[[note name]]` wiki-style links between notes
+- [ ] Prebuilt binaries / installers (macOS, Windows, Linux)
+- [ ] Word count & reading time
+- [ ] Focus mode — hide sidebar, center editor
+- [ ] Note templates
+- [ ] Optional `[[wiki-link]]` input that saves standard relative links
+- [ ] Read-only git info (branch, dirty files in the tree)
+- [ ] Graph view
 
-## Git / Sync
+## Later / exploratory
 
-- [ ] Manual commit messages — override auto-generated commit message
-- [ ] Sync history — log of recent commits (timestamp + message)
-
-## Export
-
-- [x] Export note as clean `.md` or PDF
-
-## UI / UX
-
-- [ ] Dark / light mode
-
-## AI (BYOK — bring your own key, support major providers)
-
-- [ ] AI-assisted writing — inline suggestions, continue writing, rephrase selection
-- [ ] Automatic title generation — suggest a title based on note content
-- [ ] Note summary — generate a short summary, stored in frontmatter or as a collapsible block
-- [ ] Dictation — local speech-to-text via Whisper (runs on-device, no API key needed)
+- [ ] AI (bring your own key): inline writing help, title suggestions, summaries
+- [ ] Dictation via local speech-to-text

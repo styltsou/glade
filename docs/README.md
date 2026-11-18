@@ -1,21 +1,19 @@
 # Glade Documentation
 
-## Core Documentation
+Glade is a viewer and editor for markdown files that already exist on disk. Files are the source of truth; Glade only keeps its own bookkeeping elsewhere.
 
-- **[Architecture Overview](./architecture_overview.md)** — High-level view of how Tauri, React, and Rust work together.
-- **[Technical Decisions](./technical_decisions.md)** — Rationale behind the choice of technologies and patterns used in the project.
+## Core documentation
 
-## Project Management
+- **[PRD](./PRD.md)** — What Glade is, the file-first pivot, features and scope.
+- **[Architecture Overview](./architecture_overview.md)** — How Tauri, Rust and React fit together, and how saving keeps files clean.
+- **[Technical Decisions](./technical_decisions.md)** — Why the stack and patterns were chosen.
 
-- **[PRD](./PRD.md)** — Comprehensive Product Requirements Document.
-- **[Feature Backlog](./feature-backlog.md)** — Upcoming features and roadmap.
-- **[Known Issues](./known_issues.md)** — Persistent issues and UI polish items.
+## Project management
 
-## Archive: Specifications
+- **[Feature Backlog](./feature-backlog.md)** — What's done and what's next.
+- **[Known Issues](./known_issues.md)** — Deferred items.
 
-The following documents represent the original specifications for various features. Some details may have evolved during implementation, but they serve as a valuable reference for the project's design philosophy.
+## Specifications
 
-- **[Command Palette](./specs/command-palette.md)**
-- **[Home View & Sidebar](./specs/home-view-and-sidebar.md)**
-- **[Multiple Theme Support](./specs/theme-support.md)**
-- **[Note Export](./specs/note-export.md)**
+- **[Note Export](./specs/note-export.md)** — Export to PDF, Markdown and PNG.
+- Change proposals and specs live in `openspec/` (see `openspec/changes/file-first-folders/` for the pivot).

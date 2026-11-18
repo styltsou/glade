@@ -6,7 +6,7 @@
 > [!NOTE]
 > **No pre-built binary yet.** Run from source: see [Getting Started](#getting-started) below.
 
-A local-first markdown viewer and editor for the files you already have, built with [Tauri v2](https://tauri.app/), [React](https://react.dev/), and [Rust](https://www.rust-lang.org/).
+A fast, quiet markdown viewer and editor for the files you already have, built with [Tauri v2](https://tauri.app/), [React](https://react.dev/), and [Rust](https://www.rust-lang.org/).
 
 ## Overview
 
@@ -14,14 +14,15 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 - **Open anything**: Open a folder, or a single `.md` file. `glade .`, `glade notes/plan.md`, drag and drop, or "Open with Glade".
 - **Files stay clean**: Saving only changes what you edited — untouched blocks, frontmatter keys, comments and formatting are written back byte for byte. No ids, timestamps or other app-specific keys are added to your notes.
-- **Git-ready**: Notes are plain files — a `.git` repo and remote sync are on the roadmap.
+- **Git-friendly**: Notes are plain files in ordinary folders, so use git however you like; Glade picks up external changes automatically. Glade does not sync for you.
+- **Folders, not vaults**: Nothing to import or convert. Pin the folders you use and they appear on Home.
 - **Markdown-native**: Write raw markdown or use the rich text toolbar — both produce the same clean output.
 
 ## Features
 
 ### ✍️ Editing
 
-- **Rich Text Editing** — Powered by [TipTap 2](https://tiptap.dev/) with real-time markdown rendering, slash commands (`/`), and a floating bubble menu for quick formatting.
+- **Rich Text Editing** — Powered by [TipTap 3](https://tiptap.dev/) with real-time markdown rendering, slash commands (`/`), and a floating bubble menu for quick formatting.
 - **Mermaid Diagrams** — Write ```` ```mermaid ```` code blocks to render flowcharts, sequence diagrams, Gantt charts, and more. Dedicated full-screen editor with live preview, zoom, and **PNG export**.
 - **Tables** — Rounded, scrollable tables with hover controls: click or drag the bars at the right and bottom edge to add or remove columns and rows, and drag the grip above a column or beside a row to move it (arrow keys work too).
 - **Block handles** — Hover any block, including list items and other nested blocks, for a `+` (click to add below, Alt-click to add above) and a grip to drag it to a new place.
@@ -42,6 +43,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **@-Mentions** — Type `@` to search and link any note; click mentions in read mode to navigate.
 - **Breadcrumbs** — `Folder > Note` path at the top of the editor; loose files show their real path with "Open containing folder".
 - **Home** — A keyboard-first start screen listing pinned folders, recent folders and recent files (`Cmd/Ctrl+Shift+H`); `Cmd/Ctrl+O` switches between them.
+- **Backlinks** — A "Linked from" list under each note shows which notes link to it.
 - **Links** — `@` inserts standard relative markdown links (`[API](../reference/api.md)`) that work on GitHub too. Links to files outside the open folder are marked ↗ and open as loose files; broken links offer to create the file; renaming or moving a note offers to update links to it.
 - **Properties** — Frontmatter is shown above the title (collapsible). Edits change only the lines you touch.
 - **Live files** — Changes made by other programs (git, editors, sync tools) show up automatically; unsaved edits get a "Keep mine / Load theirs" choice instead of being overwritten.
@@ -101,7 +103,7 @@ Glade leverages the power of **Tauri v2** to combine a performant Rust backend w
 - **Frontend**: Built with React 18, Tailwind CSS v4, and Shadcn/ui for a premium, responsive interface.
 - **Backend**: Rust handles the heavy lifting—filesystem operations, `.gitignore`-aware scanning, file watching, link resolution, and full-text search.
 - **Local-First**: Notes are standard `.md` files wherever you keep them. App state lives in Glade's own config directory (`~/.config/glade` on Linux), keyed by folder path.
-- **Git (planned)**: Automatic versioning and remote sync via Git is on the roadmap.
+- **No sync layer**: Version control and sync are left to the tools you already use (git, Syncthing, a cloud drive).
 
 ---
 
@@ -152,15 +154,14 @@ Builds the release binary and installs `glade`, a launcher entry and icons under
 
 ## Roadmap
 
-### 🔄 Sync
+### 📦 Distribution
 
-- [ ] **Git-powered sync** — Automatic background commits, GitHub OAuth Device Flow, remote push/pull, sync status indicator.
-- [ ] **Conflict resolution UI** — Visual merge conflict resolution (currently manual via CLI).
+- [ ] **Prebuilt binaries** — Installers for macOS, Windows and Linux.
 
 ### 🔗 Linking & Discovery
 
-- [ ] **Wiki-style links** — `[[Note Name]]` for fast inter-note navigation.
-- [ ] **Backlinks panel** — See which notes link to the current note.
+- [ ] **Wiki-style links** — Optional `[[Note Name]]` input that saves standard relative links.
+- [ ] **Read-only git info** — Branch and changed files in the tree, without owning sync.
 - [ ] **Graph view** — Visual note relationship graph.
 
 ### 🤖 AI (BYOK)
@@ -173,7 +174,7 @@ Builds the release binary and installs `glade`, a launcher entry and icons under
 
 - [ ] **Focus mode** — Hide sidebar, center editor, dim surroundings.
 - [ ] **Note templates** — Starter templates on new note creation.
-- [ ] **Word count & reading time** — Status bar display.
+- [ ] **Word count & reading time** — Shown with the note.
 
 For the full list, see the **[Feature Backlog](./docs/feature-backlog.md)**.
 
@@ -187,7 +188,7 @@ For a deeper dive into the architecture and technical decisions, check out the *
 |-------|-----------|
 | Desktop Shell | Tauri v2 |
 | Frontend | React 18 + TypeScript + Vite |
-| Editor | TipTap 2 (ProseMirror) |
+| Editor | TipTap 3 (ProseMirror) |
 | Styling | Tailwind CSS v4 + Shadcn/ui |
 | State | Zustand |
 | Backend | Rust (2021 edition) |

@@ -1,39 +1,51 @@
 # Technical Decisions
 
-This document outlines the rationale behind the key technology choices and architectural patterns in Glade.
+Rationale for the key choices in Glade.
 
 ## Why Tauri v2?
 
-We chose **Tauri** over Electron for several reasons:
-- **Security**: Rust's memory safety and Tauri's fine-grained capability system provide a more secure environment for handling user files.
-- **Performance**: The binary size is significantly smaller, and the resource consumption (RAM/CPU) is lower because it uses the system's native webview.
-- **Rust Ecosystem**: Leveraging the Rust ecosystem for filesystem operations and Git integration provides a robust foundation for a technical tool.
+- **Security**: Rust's memory safety and Tauri's capability system suit an app that reads and writes user files.
+- **Footprint**: Small binary and low RAM/CPU use, thanks to the system webview.
+- **Rust ecosystem**: Fast `.gitignore`-aware scanning, file watching and search in the backend.
 
-## Why TipTap 2?
+## Why TipTap (ProseMirror)?
 
-**TipTap** was chosen as the editor core because:
-- **Headless**: It doesn't force a specific UI, allowing us to build a completely custom, minimal editor interface.
-- **Markdown Mapping**: Its schema-based approach allows for a clean mapping between rich text nodes and Markdown tokens, ensuring "no-loss" conversion.
-- **Extensibility**: It's built on ProseMirror, making it easy to add custom nodes like wiki-links, task lists, and code blocks with syntax highlighting.
+- **Headless**: A fully custom, minimal editor UI.
+- **Markdown mapping**: A schema-based mapping between rich text and markdown.
+- **Extensible**: Custom nodes (Mermaid, tables with controls, block handles). We pin `@tiptap/core` and `@tiptap/pm` to one version and patch the drag-handle package so nested blocks (list items) work.
 
-## Why Zustand for State?
+## Why Zustand?
 
-We opted for **Zustand** instead of Redux or Context:
-- **Simplicity**: Extremely low boilerplate, making it easy to reason about the state of the sidebar, search, and editor.
-- **Performance**: High-performance rendering with selective re-renders out of the box.
-- **Transient State**: Perfect for managing fast-changing UI states like search queries and panel visibility.
+Minimal boilerplate, selective re-renders, and a good fit for fast-changing UI state. State is split into slices (workspace, tabs, home, notes, UI).
 
-## Local-First & Git-Based Sync
+## File-first, not vault-first
 
-The decision to use standard Markdown files and Git for sync is central to Glade's philosophy:
-- **User Ownership**: Notes are just files. If Glade disappears, the user still has their notes and their history.
-- **Git Infrastructure**: Git is a mature, world-class versioning system. It handles diffs, history, and synchronization better than any custom-built solution.
-- **Interoperability**: Users can edit their notes in VS Code, Obsidian, or even via the terminal, and Glade will pick up the changes.
+Glade used to own a vault in `~/.glade`. It now opens files where they live:
 
-## Performance Optimization Strategy
+- **User ownership**: If Glade disappears, nothing about your files has changed. No marker directories, no injected ids or timestamps.
+- **Interoperability**: Notes stay editable from VS Code, Obsidian, git or the terminal; Glade reloads external changes.
+- **Per-folder state outside the folder**: Pins, open tabs, scroll and expanded folders live in Glade's config directory (`~/.config/glade/workspaces/<hash>/state.json` on Linux), keyed by a hash of the folder path. `GLADE_CONFIG_DIR` overrides the location (used by tests).
+- **One window per root**: Each window has its own workspace; commands resolve their root from the calling window.
 
-To achieve a "blazingly fast" feel on a local-first app, we implemented several key patterns:
-- **Background Pre-fetching**: Hovering over note cards or sidebar items triggers a silent fetch of the note content into a memory cache.
-- **Optimistic UI Updates**: When a note is clicked, the UI immediately switches to the new view using already-available metadata (title, tags), making the transition feel instantaneous while the body loads in the background.
-- **Stale-While-Revalidate**: The home screen displays previously cached notes immediately while refreshing them in the background, eliminating loading skeletons on repeated visits.
-- **Zero-Latency Transitions**: All motion overhead (fades, slides) has been removed from core navigation to ensure zero-latency view switching.
+## Format-preserving saves
+
+Re-serializing a document rewrites formatting the user never touched. Instead:
+
+- The editor remembers the original text of each top-level block (`lib/markdownFidelity.ts`); unchanged blocks are written back as-is, and only edited blocks are re-serialized.
+- Frontmatter is edited at line level (`frontmatter.rs`); a save that changes nothing writes nothing.
+- Trailing blank lines map to empty paragraphs, so pressing Enter at the end of a note survives a save.
+- Writes are refused if the file changed on disk since it was read, and the editor offers "Keep mine / Load theirs".
+
+## No built-in Git sync
+
+Earlier plans included automatic commits and GitHub sync. Because files are plain and live in ordinary folders, users can already use git as they like, and the watcher picks up changes. Owning sync would reintroduce the app-specific state this design avoids.
+
+## Tabs and panes as plain data
+
+Tab state (`lib/tabs.ts`) is a pure data model: up to two panes, each with its own tabs and active tab, all operations returning new state. This keeps behavior easy to unit test and to persist per folder.
+
+## Performance
+
+- Background prefetch of notes on hover, an in-memory note cache, and scroll restoration.
+- Optimistic updates (rename, move, pin, tag changes) with rollback on error.
+- Restrained motion: keyboard actions and high-frequency surfaces do not animate; interactions use short, interruptible transitions.

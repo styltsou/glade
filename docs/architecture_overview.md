@@ -59,6 +59,6 @@ The first document-level H1 supplies the note title. Without an H1, Glade uses t
 
 Rich and raw editing show the title in the title field and omit that one heading from the body. The editor preserves the original heading in Markdown saves, including its formatting on untouched titles. Renaming through the title field saves pending body edits first, then updates the H1 or renames the file when there is no H1. Additional H1 headings stay in the body.
 
-### Pane tab groups
+### Tabs and panes
 
-Each split pane owns its open tabs and selected file. Its compact tabs stay in the window bar, and the divider uses the same ratio as the editor panes. Window buttons remain global. Keyboard navigation and note commands target the focused pane. Version 2 workspace state saves each group's tabs, selection, focus, and divider ratio; older shared-tab/split-pair sessions migrate on load.
+Each split pane (at most two) owns its open tabs and active tab; a pane closes when its last tab closes, and a tab with no note shows the "new tab" page. The model is plain data in `lib/tabs.ts` (every operation returns new state), held in `tabsSlice`. Compact tabs sit in the window bar above their pane, and the divider uses the same ratio as the editor panes. Keyboard navigation and note commands target the focused pane. The tab layout is saved per folder in the app state file and restored when the folder is reopened.
