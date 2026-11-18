@@ -27,7 +27,7 @@ export function PinnedSection() {
   const selectNote = useStore((state) => state.selectNote);
   const pinnedNotes = useStore((state) => state.pinnedNotes);
   const unpinNote = useStore((state) => state.unpinNote);
-  const isVaultsLoading = useStore((state) => state.isVaultsLoading);
+  const isVaultsLoading = useStore((state) => state.isVaultLoading);
   const pinnedNotesCollapsed = useStore((state) => state.pinnedNotesCollapsed);
   const togglePinnedNotesCollapsed = useStore((state) => state.togglePinnedNotesCollapsed);
   const pinnedHeight = useStore((state) => state.pinnedHeight);

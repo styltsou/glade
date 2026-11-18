@@ -2,17 +2,20 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::RwLock;
 
-use chrono::Utc;
-use uuid::Uuid;
 
 use crate::error::AppError;
-use crate::types::{AppConfig, Vault, MAX_RECENTS};
+use crate::types::{AppConfig, MAX_RECENTS, MAX_RECENT_ITEMS};
 
 static CONFIG_CACHE: RwLock<Option<AppConfig>> = RwLock::new(None);
 
 /// Returns the path to the local app-config JSON file.
 /// Uses Tauri's app data directory: e.g. ~/.config/glade/glade-config.json on Linux.
-pub fn get_config_path() -> Result<PathBuf, AppError> {
+pub fn get_config_dir() -> Result<PathBuf, AppError> {
+    if let Ok(dir) = std::env::var("GLADE_CONFIG_DIR") {
+        let dir = PathBuf::from(dir);
+        fs::create_dir_all(&dir)?;
+        return Ok(dir);
+    }
     let home = dirs_next_home()
         .ok_or_else(|| AppError::InvalidPath("Could not determine home directory".into()))?;
 
@@ -31,7 +34,11 @@ pub fn get_config_path() -> Result<PathBuf, AppError> {
         fs::create_dir_all(&config_dir)?;
     }
 
-    Ok(config_dir.join("glade-config.json"))
+    Ok(config_dir)
+}
+
+pub fn get_config_path() -> Result<PathBuf, AppError> {
+    Ok(get_config_dir()?.join("glade-config.json"))
 }
 
 /// Load the app config from disk. Returns a default config if the file doesn't exist.
@@ -76,6 +83,13 @@ pub fn record_opened(config: &mut AppConfig, path: &str) {
     config.recents.truncate(MAX_RECENTS);
 }
 
+/// Move `path` to the front of a recents list: no duplicates, capped.
+pub fn push_recent(list: &mut Vec<String>, path: &str) {
+    list.retain(|p| p != path);
+    list.insert(0, path.to_string());
+    list.truncate(MAX_RECENT_ITEMS);
+}
+
 fn dirs_next_home() -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
@@ -87,18 +101,27 @@ fn dirs_next_home() -> Option<PathBuf> {
     }
 }
 
-pub fn create_vault(name: &str, slug: &str) -> Result<Vault, AppError> {
-    let now = Utc::now().to_rfc3339();
-    Ok(Vault {
-        id: Uuid::new_v4().to_string(),
-        name: name.to_string(),
-        slug: slug.to_string(),
-        git_remote: None,
-        created_at: now.clone(),
-        last_opened: now,
-    })
-}
 
-pub fn vault_exists(config: &AppConfig, slug: &str) -> bool {
-    config.vaults.iter().any(|v| v.slug == slug)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn recents_move_to_front_without_duplicates() {
+        let mut list: Vec<String> = vec!["a".into(), "b".into(), "c".into()];
+        push_recent(&mut list, "c");
+        assert_eq!(list, ["c", "a", "b"]);
+        push_recent(&mut list, "d");
+        assert_eq!(list, ["d", "c", "a", "b"]);
+    }
+
+    #[test]
+    fn recents_are_capped() {
+        let mut list = Vec::new();
+        for i in 0..40 {
+            push_recent(&mut list, &i.to_string());
+        }
+        assert_eq!(list.len(), MAX_RECENT_ITEMS);
+        assert_eq!(list[0], "39");
+    }
 }

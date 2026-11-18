@@ -1,8 +1,10 @@
 # Glade — Product Requirements Document
 
 **Version:** 1.0  
-**Status:** Draft  
+**Status:** Draft — partly superseded  
 **Stack:** Tauri 2 · React · Vite · TypeScript · shadcn/ui · TipTap  
+
+> **Note:** Glade has moved from a fixed `~/.glade` vault to a file-first model: it opens any folder or `.md` file in place and keeps its own bookkeeping outside the user's folders. The storage, vault and import sections below describe the original plan; the current behavior is specified in `openspec/changes/file-first-folders/` and summarized in [architecture_overview.md](architecture_overview.md).
 
 ---
 

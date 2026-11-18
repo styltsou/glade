@@ -7,7 +7,6 @@ import BubbleMenu from "@tiptap/extension-bubble-menu";
 import Mention from "@tiptap/extension-mention";
 import Underline from "@tiptap/extension-underline";
 import { CustomTaskItem } from "./CustomTaskItem";
-import Image from "@tiptap/extension-image";
 import { Markdown } from "tiptap-markdown";
 import { all, createLowlight } from "lowlight";
 import { CustomCodeBlock } from "./CustomCodeBlock";
@@ -18,6 +17,9 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { MermaidBlock } from "./extensions/MermaidBlock";
+import { LinkBehavior } from "./extensions/LinkBehavior";
+import { LocalImage } from "./extensions/LocalImage";
+import { isAllowedLinkHref } from "@/lib/links";
 
 const lowlight = createLowlight(all);
 
@@ -38,6 +40,7 @@ export const extensions = [
   }),
   Link.configure({
     openOnClick: false,
+    isAllowedUri: (url, ctx) => isAllowedLinkHref(url, ctx.defaultValidate),
     HTMLAttributes: { class: "editor-link" },
   }),
   Placeholder.configure({
@@ -56,7 +59,8 @@ export const extensions = [
   TaskList,
   CustomTaskItem.configure({ nested: true }),
   Underline,
-  Image.configure({ inline: false }),
+  LocalImage.configure({ inline: false }),
+  LinkBehavior,
   BubbleMenu.configure({
     element: null,
   }),

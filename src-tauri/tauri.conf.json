@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-"windows": [
+    "windows": [
       {
         "title": "Glade",
         "width": 1400,
@@ -20,6 +20,21 @@
         "decorations": false,
         "transparent": true,
         "shadow": false
+      }
+    ]
+  },
+  "bundle": {
+    "fileAssociations": [
+      {
+        "ext": [
+          "md",
+          "markdown",
+          "mdx"
+        ],
+        "name": "Markdown document",
+        "description": "Markdown document",
+        "role": "Editor",
+        "mimeType": "text/markdown"
       }
     ]
   }

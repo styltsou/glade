@@ -5,8 +5,8 @@ use crate::vault;
 
 /// Search notes by query string (case-insensitive, matches title and body).
 #[tauri::command]
-pub async fn search_notes(query: String, title_only: Option<bool>) -> Result<Vec<NoteData>, AppError> {
-    let vault_path = vault::get_vault_path()?;
+pub async fn search_notes(window: tauri::Window, query: String, title_only: Option<bool>) -> Result<Vec<NoteData>, AppError> {
+    let vault_path = crate::workspace::root_for(&window)?;
     let query_lower = query.to_lowercase();
     let terms: Vec<&str> = query_lower.split_whitespace().collect();
 
@@ -24,28 +24,19 @@ pub async fn search_notes(query: String, title_only: Option<bool>) -> Result<Vec
     Ok(scored_results.into_iter().map(|(_, note)| note).collect())
 }
 
-/// Recursively collect notes matching a search query.
+/// Collect notes under `root` matching a search query.
 pub fn collect_notes_recursive(
     root: &std::path::Path,
-    dir: &std::path::Path,
+    _dir: &std::path::Path,
     terms: &[&str],
     full_query: &str,
     title_only: bool,
     results: &mut Vec<(i32, NoteData)>,
 ) -> Result<(), AppError> {
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        let name = entry.file_name().to_string_lossy().to_string();
-
-        if name.starts_with('.') {
-            continue;
-        }
-
-        if path.is_dir() {
-            collect_notes_recursive(root, &path, terms, full_query, title_only, results)?;
-        } else if name.ends_with(".md") {
-            let content = fs::read_to_string(&path)?;
+    for rel in vault::scan_root(root)?.files {
+        let path = root.join(&rel);
+        {
+            let Ok(content) = fs::read_to_string(&path) else { continue };
             let (meta, body) = vault::parse_frontmatter(&content);
 
             let filename = path
@@ -139,7 +130,7 @@ pub fn collect_notes_recursive(
                     .to_string();
 
                 results.push((score, NoteData {
-                    id: meta.id.unwrap_or_else(|| relative.clone()),
+                    id: relative.clone(),
                     path: relative,
                     title,
                     tags: meta.tags,
@@ -147,6 +138,7 @@ pub fn collect_notes_recursive(
                     updated: modified,
                     preview,
                     body,
+                    properties: Default::default(),
                 }));
             }
         }

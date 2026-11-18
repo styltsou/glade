@@ -1,6 +1,15 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
-import type { VaultEntry, NoteData } from "@/types";
+import { offerLinkUpdates } from "@/lib/linkUpdates";
+import { isAbsolutePath } from "@/lib/links";
+import type { VaultEntry, NoteData, PropertyValue } from "@/types";
+
+export interface MissingLink {
+  from: string;
+  href: string;
+  abs: string;
+  outside: boolean;
+}
 import { 
   addEntryToTree, 
   removeEntryFromTree, 
@@ -10,7 +19,9 @@ import {
 
 export interface NoteSlice {
   selectNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
-  saveNote: (path: string, content: string) => Promise<void>;
+  saveNote: (path: string, content: string, force?: boolean) => Promise<void>;
+  /** Re-read a note from disk and replace what is shown (body included). */
+  reloadNote: (path: string) => Promise<void>;
   createNote: (folder?: string) => Promise<void>;
   renameNote: (path: string, newTitle: string) => Promise<void>;
   renameFolder: (path: string, newName: string) => Promise<void>;
@@ -31,12 +42,35 @@ export interface NoteSlice {
   toggleRawMode: (path: string) => void;
   mermaidFullscreenOpen: boolean;
   setMermaidFullscreenOpen: (open: boolean) => void;
+  /** Properties panel collapsed (one setting for every note). */
+  propertiesCollapsed: boolean;
+  toggleProperties: () => void;
+  addPropertyOpen: boolean;
+  setAddPropertyOpen: (open: boolean) => void;
+  editFrontmatterOpen: boolean;
+  setEditFrontmatterOpen: (open: boolean) => void;
+  /** Re-read a note's frontmatter-derived fields without touching its body. */
+  /** Notes visited through links, so "Back" can return after following one. */
+  backStack: string[];
+  linkNavigate: (path: string) => Promise<void>;
+  goBack: () => Promise<void>;
+  missingLink: MissingLink | null;
+  setMissingLink: (link: MissingLink | null) => void;
+  refreshNoteMeta: (path: string) => Promise<void>;
+  applyNoteMeta: (note: NoteData) => void;
+  setProperty: (key: string, value: PropertyValue) => Promise<void>;
+  removeProperty: (key: string) => Promise<void>;
+  setFrontmatterText: (text: string) => Promise<void>;
 }
 
 import type { StoreState } from "../index";
 
+/** The most recently requested note; stale reads must not replace it. */
+let latestSelect = "";
+
 export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set, get) => ({
   selectNote: async (path: string, partial?: Partial<NoteData>) => {
+    latestSelect = path;
     const { noteCache } = get();
     
     if (partial || noteCache[path]) {
@@ -65,8 +99,11 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
         noteCache: { ...state.noteCache, [path]: note } 
       }));
 
-      if (get().activeNote?.path === path) {
-        set({ activeNote: note, vaultError: null });
+      // Show it unless another note was requested while this one was loading.
+      // (Callers without preview data, e.g. link navigation and loose files,
+      // have no placeholder note yet, so the read result is what appears.)
+      if (latestSelect === path) {
+        set({ activeNote: note, currentFolder: null, vaultError: null });
       }
     } catch (e) {
       if (!get().activeNote) {
@@ -75,9 +112,21 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  saveNote: async (path: string, content: string) => {
+  reloadNote: async (path: string) => {
     try {
-      await invoke("write_note", { path, content });
+      const note = await invoke<NoteData>("read_note", { path });
+      set((state: StoreState) => ({
+        noteCache: { ...state.noteCache, [path]: note },
+        activeNote: state.activeNote?.path === path ? note : state.activeNote,
+      }));
+    } catch {
+      // Gone or unreadable; the external-change handling reports removal.
+    }
+  },
+
+  saveNote: async (path: string, content: string, force?: boolean) => {
+    try {
+      await invoke("write_note", { path, content, force: force ?? false });
       const note = await invoke<NoteData>("read_note", { path });
       
       set((state: StoreState) => ({
@@ -87,6 +136,14 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       }));
     } catch (e) {
       set({ vaultError: String(e) });
+      // The file changed on disk since it was loaded: let the editor offer
+      // "Keep mine" / "Load theirs" instead of silently overwriting.
+      if (String(e).startsWith("Conflict")) {
+        const root = get().target;
+        const abs = isAbsolutePath(path) ? path : `${root?.path ?? ""}/${path}`;
+        get().handleExternalChange({ path: abs, kind: "modified" });
+        throw e;
+      }
     }
   },
 
@@ -146,7 +203,13 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
     
     try {
-      await invoke("rename_note", { path, newTitle });
+      const newPath = await invoke<string>("rename_note", { path, newTitle });
+      if (newPath !== path) {
+        // Title came from the file name, so the file itself was renamed.
+        await offerLinkUpdates(path, newPath);
+        await get().loadVault();
+        await get().selectNote(newPath);
+      }
       get().loadFolderNotes();
     } catch (e) {
       await get().loadVault();
@@ -275,6 +338,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     try {
       // 3. Persist to backend
       await invoke("update_tags", { path: activeNote.path, tags });
+      get().refreshNoteMeta(activeNote.path);
       
       // 4. Refresh global tags list (this is usually fast and non-disruptive)
       await get().loadTags();
@@ -296,6 +360,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     
     try {
       await invoke("move_entry", { fromPath, toPath });
+      await offerLinkUpdates(fromPath, toPath);
       await get().loadVault();
       await get().loadTags();
       get().loadFolderNotes();
@@ -363,5 +428,90 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
 
   setMermaidFullscreenOpen: (open: boolean) => {
     set({ mermaidFullscreenOpen: open });
+  },
+
+  backStack: [],
+  linkNavigate: async (path: string) => {
+    const current = get().activeNote?.path;
+    if (current) set((s: StoreState) => ({ backStack: [...s.backStack, current] }));
+    get().hideHome();
+    await get().selectNote(path);
+  },
+  goBack: async () => {
+    const stack = get().backStack;
+    const prev = stack[stack.length - 1];
+    if (!prev) return;
+    set({ backStack: stack.slice(0, -1) });
+    await get().selectNote(prev);
+  },
+  missingLink: null,
+  setMissingLink: (link: MissingLink | null) => set({ missingLink: link }),
+
+  propertiesCollapsed: false,
+  toggleProperties: () => set((s: StoreState) => ({ propertiesCollapsed: !s.propertiesCollapsed })),
+  addPropertyOpen: false,
+  setAddPropertyOpen: (open: boolean) => set({ addPropertyOpen: open }),
+  editFrontmatterOpen: false,
+  setEditFrontmatterOpen: (open: boolean) => set({ editFrontmatterOpen: open }),
+
+  refreshNoteMeta: async (path: string) => {
+    try {
+      const note = await invoke<NoteData>("read_note", { path });
+      get().applyNoteMeta(note);
+    } catch {
+      // The note may have been moved or deleted; the tree refresh handles that.
+    }
+  },
+
+  setProperty: async (key: string, value: PropertyValue) => {
+    const { activeNote } = get();
+    if (!activeNote) return;
+    try {
+      const note = await invoke<NoteData>("set_property", { path: activeNote.path, key, value });
+      get().applyNoteMeta(note);
+      get().loadTags();
+    } catch (e) {
+      set({ vaultError: String(e) });
+      throw e;
+    }
+  },
+
+  removeProperty: async (key: string) => {
+    const { activeNote } = get();
+    if (!activeNote) return;
+    try {
+      const note = await invoke<NoteData>("remove_property", { path: activeNote.path, key });
+      get().applyNoteMeta(note);
+      get().loadTags();
+    } catch (e) {
+      set({ vaultError: String(e) });
+    }
+  },
+
+  setFrontmatterText: async (text: string) => {
+    const { activeNote } = get();
+    if (!activeNote) return;
+    const note = await invoke<NoteData>("set_frontmatter_text", { path: activeNote.path, text });
+    get().applyNoteMeta(note);
+    get().loadTags();
+  },
+
+  applyNoteMeta: (note: NoteData) => {
+    // Only frontmatter-derived fields: the body in the editor may hold unsaved edits.
+    set((state: StoreState) => {
+      const merge = (n: NoteData): NoteData => ({
+        ...n,
+        title: note.title,
+        tags: note.tags,
+        properties: note.properties,
+        updated: note.updated,
+      });
+      return {
+        activeNote: state.activeNote?.path === note.path ? merge(state.activeNote) : state.activeNote,
+        noteCache: state.noteCache[note.path]
+          ? { ...state.noteCache, [note.path]: merge(state.noteCache[note.path]) }
+          : state.noteCache,
+      };
+    });
   },
 });

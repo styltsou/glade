@@ -85,7 +85,7 @@ function DragGhost({ label, type, pos }: { label: string; type: string; pos: { x
 
 export function FileTree() {
   const entries = useStore((state) => state.entries);
-  const isVaultsLoading = useStore((state) => state.isVaultsLoading);
+  const isVaultsLoading = useStore((state) => state.isVaultLoading);
   const createNote = useStore((state) => state.createNote);
   const openCreateFolder = useStore((state) => state.openCreateFolder);
   const activeTagFilters = useStore((state) => state.activeTagFilters);

@@ -1,13 +1,11 @@
 import { useStore } from "@/store";
-import { VaultsSection } from "./SettingsPage/VaultsSection";
 import { AppearanceSection } from "./SettingsPage/AppearanceSection";
 import { AboutSection } from "./SettingsPage/AboutSection";
-import { Settings, FolderCog, Info, X } from "lucide-react";
+import { Settings, Info, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const sections = [
-  { id: "vaults" as const, label: "Vaults", icon: FolderCog },
   { id: "appearance" as const, label: "Appearance", icon: Settings },
   { id: "about" as const, label: "About", icon: Info },
 ];
@@ -51,9 +49,7 @@ export function SettingsPage() {
       </div>
 
       <div className="flex-1 overflow-auto p-6">
-        {settingsSection === "vaults" && <VaultsSection />}
-        {settingsSection === "appearance" && <AppearanceSection />}
-        {settingsSection === "about" && <AboutSection />}
+        {settingsSection === "about" ? <AboutSection /> : <AppearanceSection />}
       </div>
     </div>
   );

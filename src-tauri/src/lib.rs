@@ -1,46 +1,87 @@
 mod commands;
+mod frontmatter;
+mod launch;
+mod links;
+mod migration;
 mod config;
 mod error;
 mod types;
 mod vault;
+mod watch;
+mod workspace;
+mod workspace_state;
 
-use tauri::{Emitter, Manager};
+use tauri::Manager;
 use commands::{
-    create_folder, create_note, create_vault, delete_entry, delete_vault, duplicate_note,
-    export_markdown, export_pdf, get_active_vault, get_pinned_notes, get_recent_notes, write_file,
-    get_sidebar_state, initialize_app, list_tags, list_vault, list_vaults, pin_note, read_note,
-    read_note_raw, record_note_opened, rename_folder, rename_note, rename_vault, save_sidebar_state,
-    search_notes, set_active_vault, unpin_note, update_tags, update_vault_last_opened, write_note,
-    move_entry, get_notes_in_folder, update_vault_git_remote, scan_import_source, import_files,
-    check_import_conflicts,
-};
+    record_file_opened, get_home_data, pin_folder,
+    unpin_folder, remove_from_glade, locate_folder,
+    create_folder, create_note, delete_entry, duplicate_note,
+    export_markdown, export_pdf, get_pinned_notes, get_recent_notes, write_file,
+    get_sidebar_state, initialize_app, list_tags, list_vault, pin_note, read_note,
+    read_note_raw, record_note_opened, rename_folder, rename_note, save_sidebar_state, set_property, remove_property, set_frontmatter_text,
+    search_notes, unpin_note, update_tags, write_note,
+    move_entry, get_notes_in_folder, };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(workspace::Workspaces::default())
+        .manage(watch::Watchers::default())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
-            let _ = app.get_webview_window("main")
-                .expect("no main window")
-                .set_focus();
-            
-            if args.len() > 1 {
-                let file_path = &args[1];
-                let _ = app.emit("open-file", file_path.clone());
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            let paths: Vec<String> = args.into_iter().skip(1).collect();
+            let opened = launch::handle_args(app, &paths, std::path::Path::new(&cwd));
+            if opened == 0 {
+                if let Some((_, w)) = app.webview_windows().into_iter().next() {
+                    let _ = w.unminimize();
+                    let _ = w.set_focus();
+                }
             }
         }))
+        .register_uri_scheme_protocol("glade-img", |_ctx, request| {
+            // Serves local images only (never other file types), so notes can
+            // show images from anywhere on disk without broad file access.
+            let raw = request.uri().path().trim_start_matches('/');
+            let path = std::path::PathBuf::from(links::percent_decode(raw));
+            let mime = mime_guess::from_path(&path).first_or_octet_stream();
+            let not_found = || {
+                tauri::http::Response::builder()
+                    .status(404)
+                    .body(Vec::new())
+                    .unwrap()
+            };
+            if mime.type_() != mime_guess::mime::IMAGE || !path.is_file() {
+                return not_found();
+            }
+            match std::fs::read(&path) {
+                Ok(bytes) => tauri::http::Response::builder()
+                    .header("Content-Type", mime.essence_str())
+                    .body(bytes)
+                    .unwrap(),
+                Err(_) => not_found(),
+            }
+        })
+        .setup(|app| {
+            launch::startup(app.handle());
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                let app = window.app_handle();
+                app.state::<workspace::Workspaces>().clear(window.label());
+                watch::stop(app, window.label());
+                // Keep the previous session when the last window goes away, so
+                // quitting by closing windows still restores them next time.
+                let others = app.webview_windows().keys().any(|l| l != window.label());
+                if others {
+                    launch::persist_session(app);
+                }
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             initialize_app,
-            list_vaults,
-            get_active_vault,
-            set_active_vault,
-            create_vault,
-            rename_vault,
-            delete_vault,
-            update_vault_last_opened,
-            update_vault_git_remote,
             list_vault,
             read_note,
             write_note,
@@ -66,10 +107,41 @@ pub fn run() {
             export_pdf,
             write_file,
             move_entry,
-            scan_import_source,
-            import_files,
-            check_import_conflicts,
+            set_property,
+            watch::check_external,
+            commands::classify_links,
+            commands::create_linked_note,
+            commands::list_dir_markdown,
+            commands::get_backlinks,
+            commands::preview_link_updates,
+            commands::apply_link_updates,
+            set_frontmatter_text,
+            remove_property,
+            launch::open_path_cmd,
+            launch::get_window_target,
+            launch::close_target,
+            commands::repo_root_of,
+            commands::cleanup_legacy,
+            commands::legacy_cleanup_pending,
+            commands::dismiss_legacy_cleanup,
+            record_file_opened,
+            get_home_data,
+            pin_folder,
+            unpin_folder,
+            remove_from_glade,
+            locate_folder,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, _event| {
+            // macOS delivers file-association opens as an event, not as args.
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Opened { urls } = _event {
+                for url in urls {
+                    if let Ok(path) = url.to_file_path() {
+                        let _ = launch::open_path(_app, &path, None);
+                    }
+                }
+            }
+        });
 }

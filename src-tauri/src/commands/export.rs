@@ -5,9 +5,9 @@ use crate::vault;
 
 /// Read the raw markdown content of a note (full file including frontmatter).
 #[tauri::command]
-pub async fn read_note_raw(path: String) -> Result<String, AppError> {
-    let vault_path = vault::get_vault_path()?;
-    let full_path = vault_path.join(&path);
+pub async fn read_note_raw(window: tauri::Window, path: String) -> Result<String, AppError> {
+    let vault_path = crate::workspace::root_for(&window)?;
+    let full_path = crate::workspace::resolve_markdown(&vault_path, &path)?;
 
     if !full_path.exists() {
         return Err(AppError::NotFound(format!("Note not found: {}", path)));
@@ -20,12 +20,13 @@ pub async fn read_note_raw(path: String) -> Result<String, AppError> {
 /// Export a note as a markdown file to the given destination path.
 #[tauri::command]
 pub async fn export_markdown(
+    window: tauri::Window,
     source_path: String,
     dest_path: String,
     strip_frontmatter: bool,
 ) -> Result<(), AppError> {
-    let vault_path = vault::get_vault_path()?;
-    let full_source = vault_path.join(&source_path);
+    let vault_path = crate::workspace::root_for(&window)?;
+    let full_source = crate::workspace::resolve_markdown(&vault_path, &source_path)?;
 
     if !full_source.exists() {
         return Err(AppError::NotFound(format!(
@@ -51,8 +52,9 @@ pub async fn export_markdown(
     let output = if strip_frontmatter {
         final_body
     } else {
-        let frontmatter = vault::build_frontmatter(&meta);
-        format!("{}\n\n{}", frontmatter, final_body)
+        let head = crate::frontmatter::split(&content).map(|p| p.head).unwrap_or("");
+        let gap = if head.is_empty() { "" } else { "\n" };
+        format!("{}{}{}", head, gap, final_body)
     };
 
     fs::write(&dest_path, output)?;
@@ -63,6 +65,7 @@ pub async fn export_markdown(
 /// loading it in a hidden webview, and triggering print-to-PDF.
 #[tauri::command]
 pub async fn export_pdf(
+    window: tauri::Window,
     app: tauri::AppHandle,
     source_path: String,
     dest_path: String,
@@ -72,8 +75,8 @@ pub async fn export_pdf(
     use tauri::{WebviewUrl, WebviewWindowBuilder};
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    let vault_path = vault::get_vault_path()?;
-    let full_source = vault_path.join(&source_path);
+    let vault_path = crate::workspace::root_for(&window)?;
+    let full_source = crate::workspace::resolve_markdown(&vault_path, &source_path)?;
 
     if !full_source.exists() {
         return Err(AppError::NotFound(format!(
@@ -99,8 +102,9 @@ pub async fn export_pdf(
     let markdown = if strip_frontmatter {
         final_body
     } else {
-        let frontmatter = vault::build_frontmatter(&meta);
-        format!("{}\n\n{}", frontmatter, final_body)
+        let head = crate::frontmatter::split(&content).map(|p| p.head).unwrap_or("");
+        let gap = if head.is_empty() { "" } else { "\n" };
+        format!("{}{}{}", head, gap, final_body)
     };
 
     // Parse markdown to HTML
