@@ -116,12 +116,12 @@ describe("editor tab controls", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("can close the last file with its close button, returning to the new tab page", () => {
+  it("can close the last file with its close button, leaving no tabs", () => {
     const controls = render(["a.md"]);
     const close = host.querySelector<HTMLButtonElement>('[aria-label="Close a.md"]')!;
     act(() => close.click());
-    expect(controls()).toHaveLength(1);
-    expect(controls()[0].getAttribute("aria-label")).toBe("New tab");
+    expect(controls()).toHaveLength(0);
+    expect(host.querySelector('[aria-label="New tab"]')).not.toBeNull();
   });
 
   it("Delete closes a tab and focuses the selected neighbour", async () => {

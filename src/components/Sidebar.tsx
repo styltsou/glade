@@ -2,10 +2,8 @@ import { useEffect, useState } from "react";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { SidebarHeader } from "@/components/sidebar/SidebarHeader";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
-import { TagsPanel } from "@/components/sidebar/TagsPanel";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -15,7 +13,6 @@ export function Sidebar() {
   const rootPath = useStore((state) => state.target?.path);
   const loadHome = useStore((state) => state.loadAll);
   const loadSidebarState = useStore((state) => state.loadSidebarState);
-  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
@@ -34,17 +31,6 @@ export function Sidebar() {
     }
   }, [rootPath, loadVault, loadHome]);
 
-  // Keyboard shortcut Ctrl+B
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "b") {
-        e.preventDefault();
-        toggleSidebarCollapsed();
-      }
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [toggleSidebarCollapsed]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,16 +64,14 @@ export function Sidebar() {
     <div className="relative h-full flex shrink-0">
       <aside
         style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        className="flex flex-col h-full rounded-r-lg bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden"
+        className={`flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden ${isResizing ? "" : "transition-[width] duration-[180ms] ease-[var(--ease-ui)]"} ${sidebarCollapsed ? "border-r-0" : ""}`}
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
-          <SidebarHeader />
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />
           </div>
-          <TagsPanel />
         </div>
       </aside>
 
@@ -113,7 +97,7 @@ export function SidebarCollapseToggle() {
       <TooltipTrigger asChild>
         <button
           onClick={toggleSidebarCollapsed}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-r-lg bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors duration-100 cursor-pointer"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors duration-100 cursor-pointer"
         >
           <PanelLeft className="h-4 w-4" />
         </button>

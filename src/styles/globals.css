@@ -171,7 +171,7 @@ html[data-fullscreen="true"] .app-frame {
 [data-slot="dialog-content"],
 [data-slot="alert-dialog-content"] {
   box-shadow: var(--elev-xl) !important;
-  --tw-animation-duration: 200ms;
+  --tw-animation-duration: 150ms;
   --tw-ease: var(--ease-ui);
 }
 

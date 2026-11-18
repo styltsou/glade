@@ -251,13 +251,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         }
       }
 
-      // Cmd/Ctrl+E to toggle read/edit mode
-      if (isModPressed && e.key === "e") {
-        e.preventDefault();
-        if (activeNote) {
-          setNoteEditMode(activeNote.path, !isEditMode);
-        }
-      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);

@@ -18,7 +18,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { motion, AnimatePresence } from "motion/react";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
 
@@ -188,15 +187,9 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           </ContextMenuContent>
         </ContextMenu>
 
-        <AnimatePresence initial={false}>
-          {expanded && children.length > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-              className="overflow-hidden"
-            >
+        {/* Expanding a folder is frequent, so it is instant. */}
+        {expanded && children.length > 0 && (
+            <div>
               <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
                 <div className="absolute top-0 bottom-1 left-0 w-px bg-border/60" />
                 
@@ -213,9 +206,8 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                   ))}
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </div>
     );
   }

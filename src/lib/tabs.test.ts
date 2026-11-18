@@ -103,11 +103,20 @@ describe("closing", () => {
 		expect(active(s)).toBe("c.md");
 	});
 
-	it("never leaves the window without a tab", () => {
+	it("closing the last tab leaves no tabs, and opening a note adds one again", () => {
 		const only = T.initialTabs("a.md");
 		const s = T.closeTab(only, 0, only.groups[0].tabs[0].id);
-		expect(paths(s)).toEqual([[null]]);
-		expect(T.activeTab(s).folder).toBeUndefined();
+		expect(paths(s)).toEqual([[]]);
+		expect(T.activeTab(s).path).toBeNull();
+		expect(T.splitActive(s)).toBe(s);
+		expect(paths(T.openInActive(s, "b.md"))).toEqual([["b.md"]]);
+		expect(active(T.openInActive(s, "b.md"))).toBe("b.md");
+		expect(paths(T.openFolder(s, "docs"))).toEqual([[null]]);
+		expect(T.toSaved(s).groups).toEqual([[]]);
+	});
+
+	it("starts with no tabs when there is nothing to open", () => {
+		expect(paths(T.initialTabs())).toEqual([[]]);
 	});
 
 	it("closes the tab showing a deleted path", () => {

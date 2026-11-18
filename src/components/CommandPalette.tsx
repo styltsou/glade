@@ -1,728 +1,566 @@
-import { activeTab } from "@/lib/tabs";
+import { useEffect, useMemo, useState } from "react";
+import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import {
-  FolderCog as FolderCogIcon,
-  Palette as PaletteIcon,
-  Plus as PlusIcon,
-  FolderPlus as FolderPlusIcon,
-  Trash2 as TrashIcon,
+  ArrowDown as ArrowDownIcon,
+  ArrowUp as ArrowUpIcon,
   BookOpen as BookOpenIcon,
+  Code as CodeIcon,
+  Columns2 as Columns2Icon,
   Copy as CopyIcon,
-  Search as SearchIcon,
-  Sidebar as SidebarIcon,
-  Sun as SunIcon,
+  CornerDownLeft as CornerDownLeftIcon,
+  Delete as DeleteKeyIcon,
+  Eye as EyeIcon,
+  FilePlus as FilePlusIcon,
+  FileText as FileTextIcon,
+  FolderOpen as FolderOpenIcon,
+  FolderPlus as FolderPlusIcon,
+  History as HistoryIcon,
+  Home as HomeIcon,
+  ListPlus as ListPlusIcon,
+  Moon as MoonIcon,
+  Palette as PaletteIcon,
+  PanelLeft as PanelLeftIcon,
   Pencil as PencilIcon,
+  Plus as PlusIcon,
+  Search as SearchIcon,
+  Settings2 as SettingsIcon,
+  Sun as SunIcon,
+  Trash2 as TrashIcon,
+  X as XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useRef } from "react";
-import {
-  CommandDialog,
-  CommandList,
-  CommandShortcut,
-} from "@/components/ui/command";
-import { useCommandShortcuts } from "@/hooks/useCommandShortcuts";
-import { flattenNotes } from "@/lib/notes";
-import { useStore } from "@/store";
-import type { NoteData, NoteSearchResult } from "@/types";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { HighlightedText } from "./command-palette/HighlightedText";
-import { toast } from "sonner";
+import { useStore } from "@/store";
+import { useShallow } from "zustand/react/shallow";
+import { activeTab, focusedGroup } from "@/lib/tabs";
+import { flattenNotes } from "@/lib/notes";
+import { baseName } from "@/lib/paths";
+import {
+  KEYBINDINGS,
+  bindingFor,
+  isMac,
+  matchesShortcut,
+  shortcutKeys,
+  type GlobalCommand,
+} from "@/lib/keybindings";
+import type { NoteSearchResult } from "@/types";
 import { cn } from "@/lib/utils";
 
-type InteractionMethod = "click" | "enter" | "keybind";
+type PaletteMode = "search" | "commands";
 
-interface PendingConfirmation {
-  actionId: "delete-note" | "delete-folder";
-  method: InteractionMethod;
-  keybind?: string;
+type CommandId =
+  | Exclude<GlobalCommand, "toggle-command-palette">
+  | "duplicate-note"
+  | "add-property"
+  | "close-folder"
+  | "toggle-appearance"
+  | "change-theme";
+
+type Icon = typeof FileTextIcon;
+
+interface CommandDef {
+  id: CommandId;
+  /** Stable label used for filtering and selection. */
+  label: string;
+  icon: Icon;
 }
 
-type CommandPaletteNote = NoteSearchResult | NoteData;
+const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
+  {
+    heading: "Create",
+    items: [
+      { id: "new-note", label: "New note", icon: FilePlusIcon },
+      { id: "new-folder", label: "New folder", icon: FolderPlusIcon },
+      { id: "duplicate-note", label: "Duplicate note", icon: CopyIcon },
+      { id: "add-property", label: "Add property", icon: ListPlusIcon },
+    ],
+  },
+  {
+    heading: "Navigate",
+    items: [
+      { id: "toggle-home", label: "Go to Home", icon: HomeIcon },
+      { id: "open-recent", label: "Open recent", icon: HistoryIcon },
+      { id: "open-folder", label: "Open folder", icon: FolderOpenIcon },
+      { id: "open-file", label: "Open file", icon: FileTextIcon },
+      { id: "close-folder", label: "Close folder", icon: XIcon },
+      { id: "open-settings", label: "Open settings", icon: SettingsIcon },
+    ],
+  },
+  {
+    heading: "Tabs",
+    items: [
+      { id: "new-tab", label: "New tab", icon: PlusIcon },
+      { id: "close-tab", label: "Close tab", icon: XIcon },
+      { id: "split-right", label: "Split right", icon: Columns2Icon },
+    ],
+  },
+  {
+    heading: "View",
+    items: [
+      { id: "toggle-sidebar", label: "Toggle sidebar", icon: PanelLeftIcon },
+      { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
+      { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
+      { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
+      { id: "toggle-appearance", label: "Toggle light and dark mode", icon: MoonIcon },
+      { id: "change-theme", label: "Change theme", icon: PaletteIcon },
+    ],
+  },
+  {
+    heading: "Danger",
+    items: [{ id: "delete", label: "Delete", icon: TrashIcon }],
+  },
+];
 
-type PaletteMode = "notes" | "actions";
 
-interface BaseItem {
-  id: string;
-  title: string;
-  icon?: React.ReactNode;
-  shortcut?: string;
-  type: "action" | "note";
-  action: string;
+/** Where the window is, as far as commands care. */
+function commandContext() {
+  const s = useStore.getState();
+  const inFolder = s.target?.kind === "folder";
+  const inWorkspace = !!s.target && !s.homeOpen && s.currentView !== "settings";
+  const note = inWorkspace ? s.activeNote : null;
+  const group = focusedGroup(s.tabsState);
+  return { s, inFolder, inWorkspace, note, group };
 }
 
-interface ActionItem extends BaseItem {
-  type: "action";
+function isAvailable(id: CommandId): boolean {
+  const { s, inFolder, inWorkspace, note, group } = commandContext();
+  switch (id) {
+    case "new-note":
+    case "new-folder":
+      return inFolder;
+    case "duplicate-note":
+    case "add-property":
+    case "toggle-toc":
+    case "toggle-edit-mode":
+    case "toggle-raw-mode":
+      return !!note;
+    case "delete":
+      return !!note || (inWorkspace && inFolder && !!s.currentFolder);
+    case "toggle-sidebar":
+      return inFolder && !s.homeOpen && s.currentView !== "settings";
+    case "new-tab":
+      return inWorkspace;
+    case "close-tab":
+      return inWorkspace && group.tabs.length > 0;
+    case "split-right":
+      return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
+    case "close-folder":
+      return !!s.target;
+    default:
+      return true;
+  }
 }
 
-interface NoteItem extends BaseItem {
-  type: "note";
-  note: CommandPaletteNote;
-  preview?: string;
-  tags: string[];
+/** Label that says what the command will do now. */
+function liveLabel(def: CommandDef): string {
+  const { s, note } = commandContext();
+  switch (def.id) {
+    case "toggle-sidebar":
+      return s.sidebarCollapsed ? "Show sidebar" : "Hide sidebar";
+    case "toggle-toc":
+      return note && s.tocOpen[note.path] ? "Hide table of contents" : "Show table of contents";
+    case "toggle-edit-mode":
+      return note && (s.noteEditMode[note.path] ?? false) ? "Switch to reading mode" : "Switch to editing mode";
+    case "toggle-raw-mode":
+      return note && s.isRawMode[note.path] ? "Show rich text" : "Show raw markdown";
+    case "toggle-appearance":
+      return s.resolvedMode === "dark" ? "Switch to light mode" : "Switch to dark mode";
+    case "toggle-home":
+      return s.homeOpen ? "Close Home" : "Go to Home";
+    case "delete":
+      return note ? "Delete note" : "Delete folder";
+    default:
+      return def.label;
+  }
 }
 
-type PaletteItem = ActionItem | NoteItem;
+function liveIcon(def: CommandDef): Icon {
+  const { s, note } = commandContext();
+  if (def.id === "toggle-appearance") return s.resolvedMode === "dark" ? SunIcon : MoonIcon;
+  if (def.id === "toggle-edit-mode") return note && (s.noteEditMode[note.path] ?? false) ? EyeIcon : PencilIcon;
+  return def.icon;
+}
+
+/** Run a command if it applies right now. Returns whether it ran. */
+function runCommand(id: CommandId): boolean {
+  if (!isAvailable(id)) return false;
+  const { s, note, group } = commandContext();
+  switch (id) {
+    case "new-note":
+      void s.createNote(s.currentFolder || undefined);
+      break;
+    case "new-folder":
+      s.openCreateFolder(s.currentFolder || undefined);
+      break;
+    case "duplicate-note":
+      if (note) void s.duplicateNote(note.path);
+      break;
+    case "add-property":
+      s.setAddPropertyOpen(true);
+      break;
+    case "delete":
+      if (note) s.openDelete(note.path, note.title);
+      else if (s.currentFolder) s.openDelete(s.currentFolder, baseName(s.currentFolder), true);
+      break;
+    case "toggle-toc":
+      if (note) s.toggleToc(note.path);
+      break;
+    case "toggle-edit-mode":
+      if (note) s.setNoteEditMode(note.path, !(s.noteEditMode[note.path] ?? false));
+      break;
+    case "toggle-raw-mode":
+      if (note) s.toggleRawMode(note.path);
+      break;
+    case "toggle-sidebar":
+      s.toggleSidebarCollapsed();
+      break;
+    case "new-tab":
+      s.newTab();
+      break;
+    case "close-tab":
+      s.closeTab(s.tabsState.focused, activeTab(s.tabsState).id || group.activeId);
+      break;
+    case "split-right":
+      s.splitActive();
+      break;
+    case "toggle-home":
+      if (s.homeOpen) s.hideHome();
+      else {
+        s.closeSettingsPage();
+        s.showHome();
+      }
+      break;
+    case "open-recent":
+      s.openSwitcher();
+      break;
+    case "open-folder":
+      void s.pickFolder();
+      break;
+    case "open-file":
+      void s.pickFile();
+      break;
+    case "close-folder":
+      void s.closeTarget();
+      break;
+    case "open-settings":
+    case "change-theme":
+      s.openSettingsPage("appearance");
+      break;
+    case "toggle-appearance":
+      s.toggleAppearance();
+      break;
+  }
+  return true;
+}
+
+/** Another dialog (rename, delete, ...) owns the keyboard while it is open. */
+function otherModalOpen(): boolean {
+  return !!document.querySelector(
+    '[data-slot="dialog-content"][data-state="open"]:not([data-command-palette]), [data-slot="alert-dialog-content"][data-state="open"]',
+  );
+}
+
+type NoteRow = NoteSearchResult & { recent?: boolean };
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mode, setMode] = useState<PaletteMode>("notes");
-  const [pendingDeleteConfirmation, setPendingDeleteConfirmation] = useState<PendingConfirmation | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const openRef = useRef(open);
+  const [mode, setMode] = useState<PaletteMode>("search");
+  const [query, setQuery] = useState("");
+  const [selectedCommand, setSelectedCommand] = useState("");
+  // Re-render on store changes so labels and availability stay current.
+  useStore(useShallow((s) => [s.target, s.homeOpen, s.currentView, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.noteEditMode]));
 
+  const entries = useStore((s) => s.entries);
+  const recentFiles = useStore((s) => s.home?.recent_files);
+  const rootPath = useStore((s) => (s.target?.kind === "folder" ? s.target.path : null));
+  const searchResults = useStore((s) => s.searchResults);
+  const searchNotes = useStore((s) => s.searchNotes);
+  const clearSearch = useStore((s) => s.clearSearch);
+  const openNote = useStore((s) => s.openNote);
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setMode("search");
+      setQuery("");
+      setSelectedCommand("");
+      clearSearch();
+    }
+  }
+
+  // Global shortcuts: one listener, driven by the registry.
   useEffect(() => {
-    openRef.current = open;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      if (!open && otherModalOpen()) return;
+      const match = KEYBINDINGS.find((kb) => matchesShortcut(event, kb));
+      if (!match) return;
+      if (match.command === "toggle-command-palette") {
+        event.preventDefault();
+        if (open) handleOpenChange(false);
+        else setOpen(true);
+        return;
+      }
+      if (open) return;
+      if (runCommand(match.command)) event.preventDefault();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const entries = useStore((state) => state.entries);
-  const activeNote = useStore((state) => state.activeNote);
-  const selectNote = useStore((state) => state.selectNote);
-  const createNote = useStore((state) => state.createNote);
-  const duplicateNote = useStore((state) => state.duplicateNote);
-  const openCreateFolder = useStore((state) => state.openCreateFolder);
-  const currentFolder = useStore((state) => state.currentFolder);
-  const searchNotes = useStore((state) => state.searchNotes);
-  const searchResults = useStore((state) => state.searchResults);
-  const clearSearch = useStore((state) => state.clearSearch);
-
-  const openSettingsPage = useStore((state) => state.openSettingsPage);
-  const pickFolder = useStore((state) => state.pickFolder);
-  const pickFile = useStore((state) => state.pickFile);
-  const showHome = useStore((state) => state.showHome);
-  const newTab = useStore((state) => state.newTab);
-  const closeTab = useStore((state) => state.closeTab);
-  const splitActive = useStore((state) => state.splitActive);
-  const setAddPropertyOpen = useStore((state) => state.setAddPropertyOpen);
-  const closeTarget = useStore((state) => state.closeTarget);
-  const toggleToc = useStore((state) => state.toggleToc);
-  const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
-  const toggleAppearance = useStore((state) => state.toggleAppearance);
-  const setNoteEditMode = useStore((state) => state.setNoteEditMode);
-  const noteEditMode = useStore((state) => state.noteEditMode);
-  const toggleRawModeFromStore = useStore((state) => state.toggleRawMode);
-
-  // Register global shortcuts
-  useCommandShortcuts(setOpen, openRef, (action) => {
-    handleSelectAction(action, "keyboard");
-  });
-
-  const deleteEntry = useStore((state) => state.deleteEntry);
-
-  // Reset state when palette closes
-  const handleOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      setOpen(nextOpen);
-      if (!nextOpen) {
-        setSearchValue("");
-        setMode("notes");
-        setSelectedIndex(0);
-        clearSearch();
-        setPendingDeleteConfirmation(null);
-      }
-    },
-    [clearSearch],
-  );
-
-  const handleSelectAction = useCallback(
-    (action: string, source: "click" | "keyboard" = "click") => {
-      // Map source to interaction method
-      const method: InteractionMethod = source === "click" ? "click" : "enter";
-
-      // Handle delete actions with inline confirmation
-      if (action === "delete-note" || action === "delete-folder") {
-        const pending = pendingDeleteConfirmation;
-
-        // Check if we should confirm based on method
-        let shouldConfirm = false;
-        if (pending && pending.actionId === action) {
-          // Click confirms if pending was triggered by click
-          if (source === "click" && pending.method === "click") {
-            shouldConfirm = true;
-          }
-          // Keyboard (Enter or Ctrl+D) confirms if pending was triggered by keyboard
-          if (source === "keyboard" && (pending.method === "enter" || pending.method === "keybind")) {
-            shouldConfirm = true;
-          }
-        }
-
-        if (shouldConfirm) {
-          handleOpenChange(false);
-          if (action === "delete-note" && activeNote) {
-            deleteEntry(activeNote.path);
-            toast.success(`Deleted ${activeNote.title}`, {
-              duration: 5000,
-            });
-          } else if (action === "delete-folder" && currentFolder) {
-            const folderName = currentFolder.split("/").pop() || currentFolder;
-            deleteEntry(currentFolder);
-            toast.success(`Deleted ${folderName}`, {
-              duration: 5000,
-            });
-          }
-          setPendingDeleteConfirmation(null);
-          return;
-        }
-
-        // Otherwise set/update pending confirmation
-        setPendingDeleteConfirmation({
-          actionId: action,
-          method: method,
-          keybind: source === "keyboard" ? "⌘D" : undefined,
-        });
-        return;
-      }
-
-      // Non-delete actions: execute directly
-      handleOpenChange(false);
-
-      switch (action) {
-        case "new-note":
-          createNote(currentFolder || undefined);
-          break;
-        case "new-folder":
-          openCreateFolder(currentFolder || undefined);
-          break;
-        case "duplicate-note":
-          if (activeNote) {
-            duplicateNote(activeNote.path);
-          }
-          break;
-        case "toggle-toc":
-          if (activeNote) {
-            toggleToc(activeNote.path);
-          }
-          break;
-        case "toggle-sidebar":
-          toggleSidebarCollapsed();
-          break;
-        case "open-folder":
-          pickFolder();
-          break;
-        case "open-file":
-          pickFile();
-          break;
-        case "add-property":
-          setAddPropertyOpen(true);
-          break;
-        case "new-tab":
-          newTab();
-          break;
-        case "close-tab":
-          { const ts = useStore.getState().tabsState; closeTab(ts.focused, activeTab(ts).id); }
-          break;
-        case "split-right":
-          splitActive();
-          break;
-        case "go-home":
-          showHome();
-          break;
-        case "close-folder":
-          closeTarget();
-          break;
-        case "appearance":
-          openSettingsPage("appearance");
-          break;
-        case "toggle-appearance":
-          toggleAppearance();
-          break;
-        case "toggle-read-edit-mode":
-          if (activeNote) {
-            const currentMode = noteEditMode[activeNote.path] ?? false;
-            setNoteEditMode(activeNote.path, !currentMode);
-          }
-          break;
-        case "toggle-raw-mode":
-          if (activeNote) {
-            toggleRawModeFromStore(activeNote.path);
-          }
-          break;
-        default:
-          if (action.startsWith("note:")) {
-            selectNote(action.slice(5));
-          }
-          break;
-      }
-    },
-    [
-      activeNote,
-      createNote,
-      duplicateNote,
-      openCreateFolder,
-      currentFolder,
-      deleteEntry,
-      openSettingsPage,
-      pickFolder,
-      pickFile,
-      showHome,
-      newTab,
-      closeTab,
-      splitActive,
-      setAddPropertyOpen,
-      closeTarget,
-      selectNote,
-      handleOpenChange,
-      toggleToc,
-      toggleSidebarCollapsed,
-      toggleAppearance,
-      setNoteEditMode,
-      noteEditMode,
-      pendingDeleteConfirmation,
-      toggleRawModeFromStore,
-    ],
-  );
-
-  // Debounced search — only search notes in notes mode
+  // Full-text search for longer queries.
   useEffect(() => {
-    if (mode !== "notes") return;
-    const timer = setTimeout(() => {
-      const query = searchValue.trim();
-      if (query.length >= 3) {
-        searchNotes(query);
-      } else {
-        clearSearch();
-      }
-    }, 150);
-
+    if (!open || mode !== "search") return;
+    const q = query.trim();
+    const timer = setTimeout(() => (q.length >= 3 ? searchNotes(q) : clearSearch()), 120);
     return () => clearTimeout(timer);
-  }, [searchValue, searchNotes, clearSearch, mode]);
+  }, [open, mode, query, searchNotes, clearSearch]);
 
-  const allNotes = useMemo(() => {
-    if (!entries) return [];
-    return flattenNotes(entries).slice(0, 100);
-  }, [entries]);
+  const allNotes = useMemo(() => (entries ? flattenNotes(entries) : []), [entries]);
 
-  // Build filtered action and note lists separately
-  const { filteredActions, filteredNotes } = useMemo(() => {
-    const s = searchValue.toLowerCase().trim();
-
-    const allActionItems: ActionItem[] = [
-      {
-        id: "new-note",
-        title: "Create New Note",
-        icon: <PlusIcon />,
-        shortcut: "⌘N",
-        type: "action",
-        action: "new-note",
-      },
-      {
-        id: "new-folder",
-        title: "Create New Folder",
-        icon: <FolderPlusIcon />,
-        shortcut: "⌘F",
-        type: "action",
-        action: "new-folder",
-        hidden: !!activeNote,
-      },
-      {
-        id: "duplicate-note",
-        title: "Duplicate Current Note",
-        icon: <CopyIcon />,
-        type: "action",
-        action: "duplicate-note",
-        hidden: !activeNote,
-      },
-      {
-        id: "toggle-toc",
-        title: "Toggle Table of Contents",
-        icon: <BookOpenIcon />,
-        shortcut: "⌘⇧T",
-        type: "action",
-        action: "toggle-toc",
-        hidden: !activeNote,
-      },
-      {
-        id: "toggle-read-edit-mode",
-        title: "Toggle Read/Edit Mode",
-        icon: <PencilIcon />,
-        shortcut: "⌘E",
-        type: "action",
-        action: "toggle-read-edit-mode",
-        hidden: !activeNote,
-      },
-      {
-        id: "toggle-raw-mode",
-        title: "Toggle Raw/Rich View",
-        icon: <PencilIcon />,
-        shortcut: "⌘⇧R",
-        type: "action",
-        action: "toggle-raw-mode",
-        hidden: !activeNote,
-      },
-      {
-        id: "delete-note",
-        title: "Delete Current Note",
-        icon: <TrashIcon />,
-        shortcut: "⌘D",
-        type: "action",
-        action: "delete-note",
-        hidden: !activeNote,
-      },
-      {
-        id: "delete-folder",
-        title: "Delete Current Folder",
-        icon: <TrashIcon />,
-        shortcut: "⌘D",
-        type: "action",
-        action: "delete-folder",
-        hidden: !!activeNote || !currentFolder,
-      },
-      {
-        id: "toggle-sidebar",
-        title: "Toggle Sidebar",
-        icon: <SidebarIcon />,
-        shortcut: "⌘B",
-        type: "action",
-        action: "toggle-sidebar",
-      },
-      {
-        id: "open-folder",
-        title: "Open Folder…",
-        icon: <FolderCogIcon />,
-        shortcut: "⇧⌘O",
-        type: "action",
-        action: "open-folder",
-      },
-      {
-        id: "open-file",
-        title: "Open File…",
-        icon: <FolderCogIcon />,
-        shortcut: "⌥⌘O",
-        type: "action",
-        action: "open-file",
-      },
-      {
-        id: "add-property",
-        title: "Add Property…",
-        icon: <FolderCogIcon />,
-        type: "action",
-        action: "add-property",
-        hidden: !activeNote,
-      },
-      {
-        id: "new-tab",
-        title: "New Tab",
-        icon: <FolderCogIcon />,
-        shortcut: "⌘T",
-        type: "action",
-        action: "new-tab",
-      },
-      {
-        id: "close-tab",
-        title: "Close Tab",
-        icon: <FolderCogIcon />,
-        shortcut: "⌘W",
-        type: "action",
-        action: "close-tab",
-      },
-      {
-        id: "split-right",
-        title: "Split Right",
-        icon: <FolderCogIcon />,
-        shortcut: "⌘\\",
-        type: "action",
-        action: "split-right",
-      },
-      {
-        id: "go-home",
-        title: "Go to Home",
-        icon: <FolderCogIcon />,
-        shortcut: "⇧⌘H",
-        type: "action",
-        action: "go-home",
-      },
-      {
-        id: "close-folder",
-        title: "Close Folder",
-        icon: <FolderCogIcon />,
-        type: "action",
-        action: "close-folder",
-      },
-      {
-        id: "appearance",
-        title: "Switch Theme",
-        icon: <PaletteIcon />,
-        shortcut: "⌘,",
-        type: "action",
-        action: "appearance",
-      },
-      {
-        id: "toggle-appearance",
-        title: "Toggle Appearance",
-        icon: <SunIcon />,
-        type: "action",
-        action: "toggle-appearance",
-      },
-    ].filter((item) => !item.hidden) as ActionItem[];
-
-    const actions = s
-      ? allActionItems.filter((item) => item.title.toLowerCase().includes(s))
-      : allActionItems;
-
-    const notesToSearch = searchResults.length > 0 ? searchResults : allNotes;
-    const notes: NoteItem[] = notesToSearch
-      .map((note) => ({
-        id: `note:${note.path}`,
-        title: note.title,
-        type: "note" as const,
-        action: `note:${note.path}`,
-        note,
-        preview: note.preview,
-        tags: note.tags,
-      }))
-      .filter((item) => {
-        if (!s) return true;
-        return (
-          item.title.toLowerCase().includes(s) ||
-          item.preview?.toLowerCase().includes(s) ||
-          item.tags.some((t) => t.toLowerCase().includes(s))
-        );
-      });
-
-    return {
-      filteredActions: actions,
-      filteredNotes: notes,
-    };
-  }, [searchValue, activeNote, currentFolder, allNotes, searchResults]);
-
-  // Derive the visible list based on current mode
-  const visibleItems: PaletteItem[] = useMemo(() => {
-    return mode === "actions" ? filteredActions : filteredNotes;
-  }, [mode, filteredActions, filteredNotes]);
-
-  // Reset selectedIndex on search change or list change
-  useEffect(() => {
-    setSelectedIndex(0);
-  }, [visibleItems.length, searchValue, mode]);
-
-  // Handle navigation and mode switching
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      const isEmpty = searchValue.length === 0;
-
-      // --- Mode switching logic ---
-      // Empty search + Tab in notes mode → switch to actions
-      if (e.key === "Tab" && !e.shiftKey && isEmpty && mode === "notes") {
-        e.preventDefault();
-        setMode("actions");
-        setSelectedIndex(0);
-        return;
-      }
-
-      // Backspace on empty search in actions mode → back to notes
-      if (e.key === "Backspace" && isEmpty && mode === "actions") {
-        e.preventDefault();
-        setMode("notes");
-        setSelectedIndex(0);
-        setPendingDeleteConfirmation(null);
-        return;
-      }
-
-      // --- List navigation ---
-      if (visibleItems.length === 0) return;
-
-      if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) {
-        e.preventDefault();
-        setSelectedIndex((i) => (i + 1) % visibleItems.length);
-      } else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
-        e.preventDefault();
-        setSelectedIndex((i) => (i - 1 + visibleItems.length) % visibleItems.length);
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        const selected = visibleItems[selectedIndex];
-        if (selected) {
-          handleSelectAction(selected.action, "keyboard");
-        }
-      } else if (e.key === "Escape") {
-        if (pendingDeleteConfirmation) {
-          e.preventDefault();
-          setPendingDeleteConfirmation(null);
-        }
-      } else if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
-        if (pendingDeleteConfirmation) {
-          setPendingDeleteConfirmation(null);
-        }
-      }
-    },
-    [visibleItems, selectedIndex, handleSelectAction, searchValue, mode, pendingDeleteConfirmation, setPendingDeleteConfirmation],
-  );
-
-  // Scroll active item into view
-  useLayoutEffect(() => {
-    if (!scrollContainerRef.current) return;
-    const container = scrollContainerRef.current;
-    const selectedItem = container.querySelector(
-      "[data-active='true']",
-    ) as HTMLElement | null;
-    if (selectedItem) {
-      const containerRect = container.getBoundingClientRect();
-      const itemRect = selectedItem.getBoundingClientRect();
-
-      const relativeTop = itemRect.top - containerRect.top;
-      const relativeBottom = itemRect.bottom - containerRect.top;
-
-      if (relativeBottom > containerRect.height - 4) {
-        container.scrollTop += relativeBottom - (containerRect.height - 4);
-      } else if (relativeTop < 4) {
-        container.scrollTop += relativeTop - 4;
-      }
+  const noteRows: NoteRow[] = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      // Recent files from this folder first, then the rest.
+      const prefix = rootPath ? `${rootPath.replace(/\/$/, "")}/` : null;
+      const recentPaths = (recentFiles ?? [])
+        .filter((f) => prefix && f.path.startsWith(prefix))
+        .map((f) => f.path.slice(prefix!.length));
+      const byPath = new Map(allNotes.map((n) => [n.path, n]));
+      const recent = recentPaths.flatMap((p) => (byPath.has(p) ? [{ ...byPath.get(p)!, recent: true }] : []));
+      const seen = new Set(recent.map((n) => n.path));
+      return [...recent, ...allNotes.filter((n) => !seen.has(n.path))].slice(0, 50);
     }
-  }, [selectedIndex]);
+    const local = allNotes.filter(
+      (n) => n.title.toLowerCase().includes(q) || n.path.toLowerCase().includes(q) || (n.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+    );
+    const seen = new Set(local.map((n) => n.path));
+    return [...local, ...searchResults.filter((n) => !seen.has(n.path))].slice(0, 50);
+  }, [query, allNotes, recentFiles, rootPath, searchResults]);
 
-  const placeholder = mode === "actions" ? "Search actions…" : "Search notes…";
+  const availableGroups = COMMAND_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => isAvailable(i.id)) })).filter(
+    (g) => g.items.length > 0,
+  );
+  const availableCommands = availableGroups.flatMap((g) => g.items);
+
+  function firstMatchingCommand(search: string) {
+    return (
+      availableCommands
+        .map((item) => ({ label: item.label, score: search.trim() ? defaultFilter(item.label, search.trim()) : 1 }))
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)[0]?.label ?? ""
+    );
+  }
+
+  function changeMode(next: PaletteMode) {
+    setSelectedCommand(next === "commands" ? firstMatchingCommand(query) : "");
+    setMode(next);
+  }
+
+  function openNoteFrom(path: string, how: "active" | "tab" | "side") {
+    handleOpenChange(false);
+    void openNote(path, how);
+  }
+
+  function selectedNotePath(root: Element | null): string | null {
+    return root?.querySelector('[cmdk-item][aria-selected="true"]')?.getAttribute("data-path") ?? null;
+  }
+
+  const modKey = isMac() ? "⌘" : "Ctrl";
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      showCloseButton={false}
-      className="max-w-lg"
-    >
-      <div
-        data-slot="command-input-wrapper"
-        className="flex h-12 items-center gap-2 border-b px-3"
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        data-command-palette
+        showCloseButton={false}
+        className="top-[13vh] w-[min(44rem,calc(100%-2rem))] max-w-none translate-y-0 gap-0 overflow-hidden p-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
       >
-        {mode === "actions" ? (
-          <span className="flex items-center shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[11px] font-semibold text-primary-foreground leading-none">
-            Actions
-          </span>
-        ) : (
-          <SearchIcon className="size-4 shrink-0 opacity-50" />
-        )}
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={searchValue}
-          onChange={(e) => setSearchValue(e.target.value)}
-          onKeyDown={onKeyDown}
-          className="flex h-10 w-full bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
-          autoFocus
-        />
-      </div>
-      <CommandList ref={scrollContainerRef} className="[&::-webkit-scrollbar]:hidden">
-        {visibleItems.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">
-            {mode === "actions" && searchValue
-              ? "No actions found."
-              : mode === "notes" && searchValue
-                ? "No notes found."
-                : mode === "actions"
-                  ? "No actions available."
-                  : "No notes yet."}
+        <DialogTitle className="sr-only">{mode === "search" ? "Search notes" : "Actions"}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {mode === "search" ? "Search notes in this folder." : "Search app actions."}
+        </DialogDescription>
+        <CommandPrimitive
+          key={mode}
+          value={mode === "commands" ? selectedCommand : undefined}
+          shouldFilter={mode === "commands"}
+          loop
+          className="flex flex-col"
+          onKeyDown={(event) => {
+            if (event.key === "Tab") {
+              event.preventDefault();
+              changeMode(mode === "search" ? "commands" : "search");
+              return;
+            }
+            if (event.key === "Backspace" && mode === "commands" && query.length === 0) {
+              event.preventDefault();
+              changeMode("search");
+            }
+          }}
+          onValueChange={(value) => {
+            if (mode !== "commands") return;
+            if (query.trim() && defaultFilter(value, query.trim()) <= 0) return;
+            setSelectedCommand(value);
+          }}
+        >
+          <div className="flex h-12 items-center gap-2 border-b border-border/50 px-3">
+            {mode === "commands" ? (
+              <span
+                aria-label="Actions mode. Press Backspace with an empty query to search notes."
+                className="inline-flex h-6 shrink-0 items-center rounded-md border border-border/70 bg-muted/70 px-2 text-xs font-medium text-foreground"
+              >
+                Actions
+              </span>
+            ) : (
+              <SearchIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            )}
+            <CommandPrimitive.Input
+              autoFocus
+              value={query}
+              maxLength={200}
+              onValueChange={(value) => {
+                setQuery(value);
+                if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
+              }}
+              placeholder={mode === "search" ? "Search notes…" : "Search actions…"}
+              className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              onKeyDown={(event) => {
+                if (mode !== "search" || event.key !== "Enter") return;
+                const how = event.altKey ? "side" : event.metaKey || event.ctrlKey ? "tab" : null;
+                if (!how) return;
+                const path = selectedNotePath(event.currentTarget.closest("[cmdk-root]"));
+                if (!path) return;
+                event.preventDefault();
+                event.stopPropagation();
+                openNoteFrom(path, how);
+              }}
+            />
+            <Kbd>Esc</Kbd>
           </div>
-        ) : (
-          <div className="flex flex-col p-1.5 gap-0.5">
-            {visibleItems.map((item, index) => (
-              <ItemRow
-                key={item.id}
-                item={item}
-                active={selectedIndex === index}
-                onClick={() => handleSelectAction(item.action, "click")}
-                searchValue={searchValue}
-                pendingConfirmation={
-                  pendingDeleteConfirmation?.actionId === item.action
-                    ? pendingDeleteConfirmation
-                    : null
-                }
-              />
-            ))}
-          </div>
-        )}
-      </CommandList>
-      {/* Hint for mode switching */}
-      <div className="flex items-center justify-between border-t px-3 py-1.5 text-[11px] text-muted-foreground/60">
-        {mode === "notes" && !searchValue ? (
-          <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Tab</kbd> actions
+
+          <CommandPrimitive.List className="max-h-[min(26rem,55vh)] scroll-py-1.5 overflow-y-auto overscroll-contain p-1.5 [&::-webkit-scrollbar]:hidden">
+            {mode === "search" ? (
+              noteRows.length === 0 ? (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {query.trim() ? "No notes match." : "No notes in this folder yet."}
+                </p>
+              ) : (
+                <CommandPrimitive.Group heading={query.trim() ? "Results" : noteRows[0]?.recent ? "Recent" : "Notes"} className={groupClass}>
+                  {noteRows.map((note) => {
+                    const folder = note.path.includes("/") ? note.path.split("/").slice(0, -1).join("/") : "";
+                    return (
+                      <CommandPrimitive.Item
+                        key={note.path}
+                        value={note.path}
+                        data-path={note.path}
+                        onSelect={() => openNoteFrom(note.path, "active")}
+                        className={cn(itemClass, "gap-3 py-2")}
+                      >
+                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                          <FileTextIcon className="size-4" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            <HighlightedText text={note.title} query={query} />
+                          </span>
+                          {query.trim() && note.preview ? (
+                            <span className="block truncate text-xs text-muted-foreground">
+                              <HighlightedText text={note.preview} query={query} />
+                            </span>
+                          ) : null}
+                        </span>
+                        {folder ? (
+                          <span className="ml-auto max-w-40 shrink-0 truncate text-right text-[11px] text-muted-foreground/75">{folder}</span>
+                        ) : null}
+                      </CommandPrimitive.Item>
+                    );
+                  })}
+                </CommandPrimitive.Group>
+              )
+            ) : (
+              <>
+                <CommandPrimitive.Empty className="py-8 text-center text-sm text-muted-foreground">No actions found.</CommandPrimitive.Empty>
+                {availableGroups.map((group, index) => (
+                  <div key={group.heading}>
+                    {index > 0 ? <CommandPrimitive.Separator className="mx-1 my-1 h-px bg-border/60" /> : null}
+                    <CommandPrimitive.Group heading={group.heading} className={groupClass}>
+                      {group.items.map((item) => {
+                        const Icon = liveIcon(item);
+                        const binding = bindingFor(item.id as GlobalCommand);
+                        return (
+                          <CommandPrimitive.Item
+                            key={item.id}
+                            value={item.label}
+                            keywords={[liveLabel(item)]}
+                            onSelect={() => {
+                              handleOpenChange(false);
+                              runCommand(item.id);
+                            }}
+                            className={cn(itemClass, item.id === "delete" && "text-destructive data-[selected=true]:text-destructive")}
+                          >
+                            <Icon className="size-4 shrink-0" />
+                            <span className="truncate">{liveLabel(item)}</span>
+                            {binding ? <KbdGroup keys={shortcutKeys(binding)} className="ml-auto" /> : null}
+                          </CommandPrimitive.Item>
+                        );
+                      })}
+                    </CommandPrimitive.Group>
+                  </div>
+                ))}
+              </>
+            )}
+          </CommandPrimitive.List>
+        </CommandPrimitive>
+
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 px-3 py-2 text-[11px] leading-4 text-muted-foreground">
+          {mode === "search" ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd>Tab</Kbd>
+              <span>for actions</span>
+            </span>
+          ) : query.length === 0 ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd>Tab</Kbd>
+              <span>or</span>
+              <Kbd aria-label="Backspace">
+                <DeleteKeyIcon aria-hidden />
+              </Kbd>
+              <span>to search</span>
+            </span>
+          ) : null}
+          {mode === "search" ? (
+            <span className="inline-flex items-center gap-1">
+              <Kbd>{modKey}</Kbd>
+              <Kbd aria-label="Enter">
+                <CornerDownLeftIcon aria-hidden />
+              </Kbd>
+              <span>new tab</span>
+            </span>
+          ) : null}
+          <span className="ml-auto inline-flex items-center gap-1">
+            <Kbd aria-label="Up arrow">
+              <ArrowUpIcon aria-hidden />
+            </Kbd>
+            <Kbd aria-label="Down arrow">
+              <ArrowDownIcon aria-hidden />
+            </Kbd>
+            <span>to navigate</span>
           </span>
-        ) : mode === "actions" && !searchValue ? (
-          <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">⌫</kbd> back
+          <span className="inline-flex items-center gap-1">
+            <Kbd aria-label="Enter">
+              <CornerDownLeftIcon aria-hidden />
+            </Kbd>
+            <span>to select</span>
           </span>
-        ) : (
-          <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">Tab</kbd> navigate
-          </span>
-        )}
-        <span className="flex items-center gap-2">
-          <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↑↓</kbd> navigate
-          <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] font-mono">↵</kbd> select
-        </span>
-      </div>
-    </CommandDialog>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function ItemRow({
-  item,
-  active,
-  onClick,
-  searchValue,
-  pendingConfirmation,
-}: {
-  item: PaletteItem;
-  active: boolean;
-  onClick: () => void;
-  searchValue?: string;
-  pendingConfirmation: PendingConfirmation | null;
-}) {
-  const isPending = pendingConfirmation !== null;
-  const isDanger = isPending && (item.action === "delete-note" || item.action === "delete-folder");
+const groupClass =
+  "text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-1.5 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
-  const getConfirmationText = () => {
-    if (!pendingConfirmation) return null;
-    switch (pendingConfirmation.method) {
-      case "click":
-        return "Click again to confirm";
-      case "enter":
-        return "Press Enter or Ctrl+D to confirm";
-      case "keybind":
-        return "Press Enter or Ctrl+D to confirm";
-      default:
-        return null;
-    }
-  };
-
-  const confirmationText = getConfirmationText();
-
-  return (
-    <div
-      role="option"
-      aria-selected={active}
-      data-active={active ? "true" : "false"}
-      onClick={onClick}
-      className={cn(
-        "relative flex cursor-pointer items-center gap-3 rounded-md px-3 py-2 text-sm outline-hidden select-none",
-        isDanger ? "text-destructive" : "text-muted-foreground",
-        isDanger 
-          ? "bg-destructive/10 hover:bg-destructive/20" 
-          : "hover:bg-accent/50",
-        isDanger && active ? "bg-destructive/20" : "data-[active=true]:bg-accent",
-        !isDanger && "hover:text-foreground",
-        isDanger && active ? "text-destructive" : "data-[active=true]:text-accent-foreground",
-        "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:size-4",
-      )}
-    >
-      {item.icon && (
-        <span className="flex items-center justify-center w-4 h-4">
-          {item.icon}
-        </span>
-      )}
-      <span className="truncate font-medium min-w-0 flex-1">
-        {isPending && confirmationText ? (
-          confirmationText
-        ) : searchValue ? (
-          <HighlightedText text={item.title} query={searchValue} />
-        ) : (
-          item.title
-        )}
-      </span>
-      {item.shortcut && !isPending && (
-        <CommandShortcut className="text-inherit opacity-60">{item.shortcut}</CommandShortcut>
-      )}
-      {item.type === "note" && item.note.path.includes("/") && (
-        <span className="text-inherit text-[10px] ml-auto shrink-0 font-medium opacity-60">
-          {item.note.path.split("/").slice(0, -1).join("/")}
-        </span>
-      )}
-    </div>
-  );
-}
+const itemClass =
+  "relative flex cursor-default items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-foreground outline-hidden select-none data-[selected=true]:bg-foreground/[0.08] [&_svg]:pointer-events-none";

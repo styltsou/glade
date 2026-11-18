@@ -8,10 +8,8 @@ export interface SoundState {
 
 export interface SidebarSlice {
   sidebarCollapsed: boolean;
-  tagsCollapsed: boolean;
   pinnedNotesCollapsed: boolean;
   sidebarWidth: number;
-  tagsHeight: number;
   pinnedHeight: number;
   isSidebarLoaded: boolean;
   expandedFolders: string[];
@@ -20,14 +18,12 @@ export interface SidebarSlice {
 
   loadSidebarState: () => Promise<void>;
   toggleSidebarCollapsed: () => void;
-  toggleTagsCollapsed: () => void;
   togglePinnedNotesCollapsed: () => void;
   toggleFolderExpanded: (path: string) => void;
   setPinnedNotePaths: (paths: string[]) => void;
   addPinnedNote: (path: string) => void;
   removePinnedNote: (path: string) => void;
   setSidebarWidth: (width: number) => void;
-  setTagsHeight: (height: number) => void;
   setPinnedHeight: (height: number) => void;
   setSoundStates: (states: Record<SoundId, SoundState>) => void;
 }
@@ -41,10 +37,8 @@ const DEFAULT_SOUND_STATES: Record<SoundId, SoundState> = {
 
 export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> = (set, get) => ({
   sidebarCollapsed: false,
-  tagsCollapsed: true,
   pinnedNotesCollapsed: false,
   sidebarWidth: 260,
-  tagsHeight: 200,
   pinnedHeight: 150,
   isSidebarLoaded: true,
   expandedFolders: [],
@@ -57,10 +51,6 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
 
   toggleSidebarCollapsed: () => {
     set({ sidebarCollapsed: !get().sidebarCollapsed });
-  },
-
-  toggleTagsCollapsed: () => {
-    set({ tagsCollapsed: !get().tagsCollapsed });
   },
 
   togglePinnedNotesCollapsed: () => {
@@ -93,10 +83,6 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
 
   setSidebarWidth: (width: number) => {
     set({ sidebarWidth: width });
-  },
-
-  setTagsHeight: (height: number) => {
-    set({ tagsHeight: height });
   },
 
   setPinnedHeight: (height: number) => {

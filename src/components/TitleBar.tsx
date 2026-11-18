@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "motion/react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
@@ -34,6 +35,10 @@ export function TitleBar() {
 
   const folderOpen = target?.kind === "folder" && !homeOpen && currentView !== "settings";
   const sidebarVisible = folderOpen && !sidebarCollapsed;
+  // Animate only when the sidebar opens or closes, not while it is being resized.
+  const wasVisible = useRef(sidebarVisible);
+  const toggled = wasVisible.current !== sidebarVisible;
+  useEffect(() => { wasVisible.current = sidebarVisible; }, [sidebarVisible]);
 
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
@@ -55,10 +60,15 @@ export function TitleBar() {
 
   return (
     <div
-      className="relative flex h-9 shrink-0 items-center border-b border-border/70 bg-background pl-1.5 select-none"
+      className="relative flex h-9 shrink-0 items-center border-b border-border/70 bg-background select-none"
       onMouseDown={handleDragStart}
     >
-      <div className={sidebarVisible ? "flex h-full shrink-0 items-center" : "absolute left-1.5 top-0 z-10 flex h-full items-center bg-background"} style={sidebarVisible ? { width: sidebarWidth - 6 } : undefined}>
+      <motion.div
+        initial={false}
+        animate={{ width: sidebarVisible ? sidebarWidth : "auto" }}
+        transition={toggled ? { duration: 0.18, ease: [0.23, 1, 0.32, 1] } : { duration: 0 }}
+        className={`flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 transition-colors duration-150 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
+      >
       {/* Sidebar toggle */}
       {folderOpen && <button
         onClick={toggleSidebarCollapsed}
@@ -71,10 +81,10 @@ export function TitleBar() {
           <PanelLeftClose className="h-4 w-4" />
         )}
       </button>}
-      {!sidebarVisible && <WorkspaceMenu folder={folderOpen} className="h-7 max-w-32 flex-none px-2 text-xs" />}
+      <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-7 min-w-0 flex-1 px-2 text-xs" : "h-7 max-w-32 flex-none px-2 text-xs"} />
 
-      </div>
-      {target && !homeOpen && currentView !== "settings" ? <TabStrip leadingInset={sidebarVisible ? 0 : folderOpen ? 176 : 112} trailingInset={128} /> : <div className="h-full flex-1" />}
+      </motion.div>
+      {target && !homeOpen && currentView !== "settings" ? <TabStrip trailingInset={128} /> : <div className="h-full flex-1" />}
       <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
 
       <AmbientSounds />

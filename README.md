@@ -39,7 +39,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Table of Contents** — Auto-generated from headings (H1–H4), clickable with scroll tracking.
 - **Full-Text Search** — Blazing fast search across all notes, powered by the Rust backend.
 - **Find & Replace** — `Cmd/Ctrl+F` with support for case-sensitive, whole-word, and regex matching.
-- **Command Palette** — `Cmd/Ctrl+P` for keyboard-driven navigation and actions.
+- **Command Palette** — `Cmd/Ctrl+K` searches notes (recent first, full text for longer queries); `Tab` switches to grouped actions with their shortcuts, `Backspace` on an empty query switches back. `Cmd/Ctrl+Enter` opens a note in a new tab, `Alt+Enter` beside the current one.
 - **@-Mentions** — Type `@` to search and link any note; click mentions in read mode to navigate.
 - **Breadcrumbs** — `Folder > Note` path at the top of the editor; loose files show their real path with "Open containing folder".
 - **Home** — A keyboard-first start screen listing pinned folders, recent folders and recent files (`Cmd/Ctrl+Shift+H`); `Cmd/Ctrl+O` switches between them.
@@ -81,17 +81,24 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 | Shortcut | Action |
 |---|---|
-| `Cmd/Ctrl + P` | Command Palette |
+| `Cmd/Ctrl + K` (or `P`) | Command palette — search notes; `Tab` switches to actions |
 | `Cmd/Ctrl + N` | New note |
-| `Cmd/Ctrl + F` | New folder (no note open) / Find in note (editor) |
+| `Cmd/Ctrl + Shift + N` | New folder |
+| `Cmd/Ctrl + D` | Delete note / folder |
+| `Cmd/Ctrl + F` | Find in note |
 | `Cmd/Ctrl + H` | Find & Replace |
 | `Cmd/Ctrl + E` | Toggle read / edit mode |
 | `Cmd/Ctrl + Shift + R` | Toggle raw markdown mode |
 | `Cmd/Ctrl + Shift + T` | Toggle table of contents |
 | `Cmd/Ctrl + B` | Toggle sidebar |
+| `Cmd/Ctrl + T` / `W` | New tab / close tab |
+| `Cmd/Ctrl + \` | Split right |
+| `Cmd/Ctrl + Tab`, `Cmd/Ctrl + 1–9` | Cycle / jump to tabs |
+| `Cmd/Ctrl + O` | Open recent |
+| `Cmd/Ctrl + Shift + O` / `Alt + O` | Open folder / open file |
+| `Cmd/Ctrl + Shift + H` | Home |
 | `Cmd/Ctrl + ,` | Settings |
 | `Cmd/Ctrl + S` | Save note |
-| `Cmd/Ctrl + D` | Delete note / folder |
 | `Alt + C` | Search: case-sensitive toggle |
 | `Alt + W` | Search: whole-word toggle |
 | `Alt + R` | Search: regex toggle |

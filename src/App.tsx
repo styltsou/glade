@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
-import { focusedGroup, activeTab } from "@/lib/tabs";
+import { focusedGroup } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
@@ -230,32 +230,16 @@ function App() {
         return;
       }
       if (!mod) return;
-      const key = e.key.toLowerCase();
 
       // Tabs and splits (only when a folder or file is open).
       const st = useStore.getState();
       if (st.target && !st.homeOpen && st.currentView !== "settings" && !e.altKey) {
-        if (key === "t" && !e.shiftKey) {
-          e.preventDefault();
-          st.newTab();
-          return;
-        }
-        if (key === "w" && !e.shiftKey) {
-          e.preventDefault();
-          st.closeTab(st.tabsState.focused, activeTab(st.tabsState).id);
-          return;
-        }
-        if (e.key === "\\") {
-          e.preventDefault();
-          if (st.tabsState.groups.length > 1) st.closeTab(st.tabsState.focused, focusedGroup(st.tabsState).activeId);
-          else st.splitActive();
-          return;
-        }
         if (e.key === "Tab") {
           e.preventDefault();
           const { tabs, activeId } = focusedGroup(st.tabsState);
           const i = tabs.findIndex((t) => t.id === activeId);
           const next = tabs[(i + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
+          if (!next) return;
           st.activateTab(st.tabsState.focused, next.id);
           return;
         }
@@ -267,23 +251,6 @@ function App() {
             return;
           }
         }
-      }
-      if (key === ",") {
-        e.preventDefault();
-        openSettingsPage("appearance");
-      } else if (key === "h" && e.shiftKey) {
-        e.preventDefault();
-        if (useStore.getState().homeOpen) hideHome();
-        else showHome();
-      } else if (key === "o" && e.shiftKey) {
-        e.preventDefault();
-        pickFolder();
-      } else if (key === "o" && e.altKey) {
-        e.preventDefault();
-        pickFile();
-      } else if (key === "o") {
-        e.preventDefault();
-        openSwitcher();
       }
     };
     window.addEventListener("keydown", handler);
@@ -320,7 +287,7 @@ function App() {
               )}
           </div>
         </div>
-        {currentView !== "settings" && target && <CommandPalette />}
+        <CommandPalette />
         <SharedDialogs />
         <Toaster />
         <WindowResizeHandles />

@@ -124,9 +124,10 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
     }
   },
 
+  // Folder navigation always goes through the active tab, so the tab keeps
+  // showing that folder when it is refocused and is labelled with its name.
   setCurrentFolder: (path: string | null) => {
-    set({ currentFolder: path, folderNotes: [] });
-    get().loadFolderNotes(path);
+    get().openFolderTab(path);
   },
 
   navigateToFolder: (path: string | null) => {

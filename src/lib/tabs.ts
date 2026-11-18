@@ -2,8 +2,9 @@
  * Tabs and split views, as plain data.
  *
  * The window has one or two panes ("groups"). Each pane has its own tabs and
- * its own active tab; a pane closes when its last tab does. A tab shows a note,
- * a folder overview, or the "new tab" page. All operations return new state, so
+ * its own active tab; a pane closes when its last tab does. The last pane can
+ * have no tabs at all, and then shows Home. A tab shows a note, a folder
+ * overview, or the "new tab" page. All operations return new state, so
  * they are easy to test and to persist.
  */
 
@@ -49,16 +50,24 @@ function makeGroup(tab: Tab = makeTab()): Group {
 	return { id: newId("g"), tabs: [tab], activeId: tab.id };
 }
 
-export function initialTabs(path: string | null = null): TabsState {
-	return { groups: [makeGroup(makeTab(path))], focused: 0, ratio: 0.5 };
+function emptyGroup(): Group {
+	return { id: newId("g"), tabs: [], activeId: "" };
 }
+
+/** Start with `path` open, or with no tabs (Home) when there is none. */
+export function initialTabs(path: string | null = null): TabsState {
+	return { groups: [path === null ? emptyGroup() : makeGroup(makeTab(path))], focused: 0, ratio: 0.5 };
+}
+
+/** Stand-in for "no tab": a pane with no tabs shows Home. */
+export const NO_TAB: Tab = Object.freeze({ id: "", path: null }) as Tab;
 
 export function focusedGroup(state: TabsState): Group {
 	return state.groups[state.focused] ?? state.groups[0];
 }
 
 export function activeTabOf(group: Group): Tab {
-	return group.tabs.find((t) => t.id === group.activeId) ?? group.tabs[0];
+	return group.tabs.find((t) => t.id === group.activeId) ?? group.tabs[0] ?? NO_TAB;
 }
 
 export function activeTab(state: TabsState): Tab {
@@ -98,6 +107,7 @@ export function openInActive(state: TabsState, path: string | null): TabsState {
 		if (open) return reveal(state, open.group, open.tabId);
 	}
 	const gi = state.focused;
+	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
 	return mapGroup(state, gi, (g) => ({
 		...g,
 		tabs: g.tabs.map((t) => (t.id === g.activeId ? makeTabKeepingId(t.id, path) : t)),
@@ -110,6 +120,7 @@ function makeTabKeepingId(id: string, path: string | null, folder?: string | nul
 
 /** Show a folder overview in the active tab. */
 export function openFolder(state: TabsState, folder: string | null): TabsState {
+	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, folder)));
 	return mapGroup(state, state.focused, (g) => ({
 		...g,
 		tabs: g.tabs.map((t) => (t.id === g.activeId ? makeTabKeepingId(t.id, null, folder) : t)),
@@ -164,8 +175,8 @@ function removeGroup(state: TabsState, index: number): TabsState {
 }
 
 /**
- * Close a tab. A pane disappears with its last tab; the very last tab of the
- * window is replaced by a fresh "new tab" page instead.
+ * Close a tab. A pane disappears with its last tab; closing the very last tab
+ * of the window leaves no tabs, and the window shows Home.
  */
 export function closeTab(state: TabsState, group: number, tabId: string): TabsState {
 	const g = state.groups[group];
@@ -175,7 +186,7 @@ export function closeTab(state: TabsState, group: number, tabId: string): TabsSt
 
 	if (g.tabs.length === 1) {
 		if (state.groups.length > 1) return removeGroup(state, group);
-		return { ...state, groups: [makeGroup()], focused: 0 };
+		return { ...state, groups: [{ ...g, tabs: [], activeId: "" }], focused: 0 };
 	}
 	const tabs = g.tabs.filter((t) => t.id !== tabId);
 	const activeId = g.activeId === tabId ? tabs[Math.min(index, tabs.length - 1)].id : g.activeId;
@@ -195,6 +206,7 @@ export function closePathTab(state: TabsState, path: string): TabsState {
 export function splitActive(state: TabsState): TabsState {
 	if (state.groups.length >= MAX_GROUPS) return state;
 	const g = focusedGroup(state);
+	if (g.tabs.length === 0) return state;
 	if (g.tabs.length === 1) {
 		return { ...state, groups: [...state.groups, makeGroup()], focused: 1 };
 	}
