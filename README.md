@@ -118,7 +118,7 @@ Glade leverages the power of **Tauri v2** to combine a performant Rust backend w
 bun run install:local
 ```
 
-Builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
+Builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
 - **Git**: Ensure Git is installed and configured on your system.
 
 ### Installation & Run

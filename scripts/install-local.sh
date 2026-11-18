@@ -2,7 +2,7 @@
 # Build Glade in release mode and install it for the current user (no sudo):
 #   binary   -> ~/.local/bin/glade
 #   launcher -> ~/.local/share/applications/glade.desktop
-#   icons    -> ~/.local/share/icons/hicolor/<size>/apps/glade.png
+#   icons    -> ~/.local/share/icons/hicolor/<size>/apps/glade.png (+ scalable svg)
 #
 # Re-run after changing the app to update the installed version.
 #   bun run install:local            # build + install
@@ -23,10 +23,20 @@ BIN=src-tauri/target/release/glade
 PREFIX="${PREFIX:-$HOME/.local}"
 install -Dm755 "$BIN" "$PREFIX/bin/glade"
 
-for size in 32 128; do
-  install -Dm644 "src-tauri/icons/${size}x${size}.png" "$PREFIX/share/icons/hicolor/${size}x${size}/apps/glade.png"
+# Icon: black tile for light desktops, white tile for dark ones.
+#   ICON_VARIANT=black|white overrides the automatic choice.
+VARIANT="${ICON_VARIANT:-auto}"
+if [ "$VARIANT" = "auto" ]; then
+  if gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null | grep -q dark; then
+    VARIANT=white
+  else
+    VARIANT=black
+  fi
+fi
+for size in 32 128 256; do
+  install -Dm644 "assets/icon/$VARIANT/${size}.png" "$PREFIX/share/icons/hicolor/${size}x${size}/apps/glade.png"
 done
-install -Dm644 "src-tauri/icons/128x128@2x.png" "$PREFIX/share/icons/hicolor/256x256/apps/glade.png"
+install -Dm644 "assets/icon/glade-$VARIANT.svg" "$PREFIX/share/icons/hicolor/scalable/apps/glade.svg"
 
 mkdir -p "$PREFIX/share/applications"
 cat > "$PREFIX/share/applications/glade.desktop" <<DESKTOP
@@ -45,4 +55,4 @@ DESKTOP
 command -v update-desktop-database >/dev/null && update-desktop-database "$PREFIX/share/applications" || true
 command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -f -t "$PREFIX/share/icons/hicolor" 2>/dev/null || true
 
-echo "Installed Glade to $PREFIX (launcher: Glade, command: glade)."
+echo "Installed Glade to $PREFIX (launcher: Glade, command: glade, icon: $VARIANT)."
