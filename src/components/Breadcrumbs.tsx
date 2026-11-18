@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { baseName, dirName, shortenPath } from "@/lib/paths";
 import { isAbsolutePath } from "@/lib/links";
+import { usePanePath } from "@/components/editor/PaneContext";
 import { ArrowLeft } from "lucide-react";
 
 interface BreadcrumbsProps {
@@ -63,11 +64,11 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
   const navigateToFolder = useStore((state) => state.navigateToFolder);
   const rootName = useStore((state) => (state.target ? baseName(state.target.path) : "Folder"));
 
+  const panePath = usePanePath();
   const looseFile = useStore((state) => {
-    if (state.target?.kind === "file") return state.activeNote?.path ?? state.target.path;
+    if (state.target?.kind === "file") return panePath ?? state.target.path;
     // A note reached through a link to a file outside the open folder.
-    const active = state.activeNote?.path;
-    return active && isAbsolutePath(active) ? active : null;
+    return panePath && isAbsolutePath(panePath) ? panePath : null;
   });
   if (looseFile) return <LooseFileCrumb filePath={looseFile} className={className} />;
 
@@ -78,7 +79,7 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
   return (
     <div className={cn("flex items-center select-none overflow-hidden", className)}>
       <Breadcrumb>
-        <BreadcrumbList className="text-[14px]">
+        <BreadcrumbList className="text-[14px] flex-nowrap">
           <BreadcrumbItem>
             {segments.length === 0 && !activeItem ? (
               <BreadcrumbPage className="font-semibold text-foreground truncate max-w-[250px]">

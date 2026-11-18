@@ -165,6 +165,7 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (
   },
 
   goHome: () => {
+    get().setFocusedPathNull();
     set({
       activeNote: null,
       currentFolder: null,

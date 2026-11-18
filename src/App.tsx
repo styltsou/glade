@@ -1,8 +1,6 @@
-import { lazy, Suspense, useEffect } from "react";
+import { useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { TitleBar } from "@/components/TitleBar";
-import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
-import { HomeView } from "@/components/HomeView";
 import { StatusBar } from "@/components/StatusBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
@@ -11,6 +9,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WelcomeHome } from "@/components/WelcomeHome";
+import { PaneArea } from "@/components/PaneArea";
 import { FolderSwitcher } from "@/components/FolderSwitcher";
 import { MissingLinkDialog } from "@/components/MissingLinkDialog";
 import { RootMissing } from "@/components/RootMissing";
@@ -25,8 +24,6 @@ import { useStore } from "@/store";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import type { Target } from "@/types";
-
-const Editor = lazy(() => import("@/components/Editor").then(m => ({ default: m.Editor })));
 
 function SharedDialogs() {
   const renameOpen = useStore((state) => state.renameOpen);
@@ -103,7 +100,6 @@ function SharedDialogs() {
 }
 
 function App() {
-  const activeNote = useStore((state) => state.activeNote);
   const initWorkspace = useStore((state) => state.initWorkspace);
   const applyTarget = useStore((state) => state.applyTarget);
   const workspaceReady = useStore((state) => state.workspaceReady);
@@ -167,6 +163,7 @@ function App() {
         s.expandedFolders === prev.expandedFolders &&
         s.noteEditMode === prev.noteEditMode &&
         s.noteScrollPositions === prev.noteScrollPositions &&
+        s.tabsState === prev.tabsState &&
         s.activeNote?.path === prev.activeNote?.path
       ) {
         return;
@@ -222,6 +219,44 @@ function App() {
       }
       if (!mod) return;
       const key = e.key.toLowerCase();
+
+      // Tabs and splits (only when a folder or file is open).
+      const st = useStore.getState();
+      if (st.target && !st.homeOpen && st.currentView !== "settings" && !e.altKey) {
+        if (key === "t" && !e.shiftKey) {
+          e.preventDefault();
+          st.newTab();
+          return;
+        }
+        if (key === "w" && !e.shiftKey) {
+          e.preventDefault();
+          st.closeTab(st.tabsState.activeId);
+          return;
+        }
+        if (e.key === "\\") {
+          e.preventDefault();
+          const tab = st.tabsState.tabs.find((t) => t.id === st.tabsState.activeId);
+          if (tab && tab.panes.length > 1) st.closePane(tab.focused);
+          else st.splitActive();
+          return;
+        }
+        if (e.key === "Tab") {
+          e.preventDefault();
+          const { tabs, activeId } = st.tabsState;
+          const i = tabs.findIndex((t) => t.id === activeId);
+          const next = tabs[(i + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
+          st.activateTab(next.id);
+          return;
+        }
+        if (/^[1-9]$/.test(e.key) && !e.shiftKey) {
+          const tab = st.tabsState.tabs[Number(e.key) - 1];
+          if (tab) {
+            e.preventDefault();
+            st.activateTab(tab.id);
+            return;
+          }
+        }
+      }
       if (key === ",") {
         e.preventDefault();
         openSettingsPage("appearance");
@@ -265,18 +300,8 @@ function App() {
                 <WelcomeHome />
               ) : rootMissing ? (
                 <RootMissing />
-              ) : activeNote ? (
-                <Suspense fallback={<EditorSkeleton />}>
-                  <div className="flex-1 flex flex-col overflow-hidden">
-                    <Editor />
-                  </div>
-                </Suspense>
-              ) : target?.kind === "file" ? (
-                <EditorSkeleton />
               ) : (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  <HomeView />
-                </div>
+                <PaneArea />
               )}
           </div>
         </div>

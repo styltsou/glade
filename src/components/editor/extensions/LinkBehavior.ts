@@ -1,8 +1,8 @@
 import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { useStore } from "@/store";
 import { classifyLinks, openLink, type LinkInfo } from "@/lib/openLink";
+import { paneNotePath } from "./PaneNote";
 
 const TTL_MS = 5000;
 const cache = new Map<string, { info: LinkInfo; at: number }>();
@@ -35,7 +35,7 @@ export const LinkBehavior = Extension.create({
         },
         props: {
           decorations(state) {
-            const from = useStore.getState().activeNote?.path;
+            const from = paneNotePath(editor);
             if (!from) return null;
             const decorations: Decoration[] = [];
             state.doc.descendants((node, pos) => {
@@ -67,7 +67,7 @@ export const LinkBehavior = Extension.create({
               const modifier = event.metaKey || event.ctrlKey;
               // Plain clicks while editing just place the cursor.
               if (editor.isEditable && !modifier) return true;
-              void openLink(href, modifier);
+              void openLink(href, modifier, paneNotePath(editor) ?? undefined);
               return true;
             },
             auxclick(_view, event) {
@@ -81,7 +81,7 @@ export const LinkBehavior = Extension.create({
           let timer: ReturnType<typeof setTimeout> | null = null;
 
           const scan = async () => {
-            const from = useStore.getState().activeNote?.path;
+            const from = paneNotePath(editor);
             if (!from) return;
             const wanted = new Set<string>();
             view.state.doc.descendants((node) => {

@@ -31,6 +31,13 @@ pub struct WorkspaceState {
     /// Per-note scroll position.
     #[serde(default)]
     pub scroll: std::collections::HashMap<String, f64>,
+    /// Open tabs: each is one or two panes (a split), each pane a note path or none.
+    #[serde(default)]
+    pub tabs: Vec<Vec<Option<String>>>,
+    #[serde(default)]
+    pub active_tab: usize,
+    #[serde(default)]
+    pub focused_pane: usize,
 }
 
 /// The parts of a folder's state the UI owns and saves as a whole. Pins are
@@ -45,6 +52,12 @@ pub struct UiState {
     pub edit_mode: std::collections::HashMap<String, bool>,
     #[serde(default)]
     pub scroll: std::collections::HashMap<String, f64>,
+    #[serde(default)]
+    pub tabs: Vec<Vec<Option<String>>>,
+    #[serde(default)]
+    pub active_tab: usize,
+    #[serde(default)]
+    pub focused_pane: usize,
 }
 
 impl WorkspaceState {
@@ -54,6 +67,9 @@ impl WorkspaceState {
             last_file: self.last_file.clone(),
             edit_mode: self.edit_mode.clone(),
             scroll: self.scroll.clone(),
+            tabs: self.tabs.clone(),
+            active_tab: self.active_tab,
+            focused_pane: self.focused_pane,
         }
     }
 
@@ -62,6 +78,9 @@ impl WorkspaceState {
         self.last_file = ui.last_file;
         self.edit_mode = ui.edit_mode;
         self.scroll = ui.scroll;
+        self.tabs = ui.tabs;
+        self.active_tab = ui.active_tab;
+        self.focused_pane = ui.focused_pane;
     }
 }
 
@@ -233,6 +252,9 @@ mod tests {
             last_file: Some("docs/a.md".into()),
             edit_mode: [("docs/a.md".to_string(), true)].into(),
             scroll: [("docs/a.md".to_string(), 120.0)].into(),
+            tabs: vec![vec![Some("docs/a.md".into()), None], vec![Some("b.md".into())]],
+            active_tab: 1,
+            focused_pane: 0,
         });
         save_in(base.path(), root.path(), &st).unwrap();
 
@@ -241,6 +263,9 @@ mod tests {
         assert_eq!(back.ui().last_file.as_deref(), Some("docs/a.md"));
         assert_eq!(back.ui().expanded_folders, vec!["docs"]);
         assert_eq!(back.ui().scroll["docs/a.md"], 120.0);
+        assert_eq!(back.ui().tabs.len(), 2);
+        assert_eq!(back.ui().tabs[0][0].as_deref(), Some("docs/a.md"));
+        assert_eq!(back.ui().active_tab, 1);
         // Older state files without these fields still load.
         let old = r#"{"root":"/x","pinned":["p.md"]}"#;
         let parsed: WorkspaceState = serde_json::from_str(old).unwrap();

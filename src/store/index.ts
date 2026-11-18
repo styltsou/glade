@@ -7,6 +7,7 @@ import { createNoteSlice, type NoteSlice } from "./slices/noteSlice";
 import { createDialogSlice, type DialogSlice } from "./slices/dialogSlice";
 import { createHomeSlice, type HomeSlice } from "./slices/homeSlice";
 import { createSidebarSlice, type SidebarSlice } from "./slices/sidebarSlice";
+import { createTabsSlice, type TabsSlice } from "./slices/tabsSlice";
 
 export type StoreState = ThemeSlice &
   WorkspaceSlice &
@@ -14,7 +15,8 @@ export type StoreState = ThemeSlice &
   NoteSlice &
   DialogSlice &
   HomeSlice &
-  SidebarSlice;
+  SidebarSlice &
+  TabsSlice;
 
 
 export const useStore = create<StoreState>()(
@@ -27,6 +29,7 @@ export const useStore = create<StoreState>()(
       ...createDialogSlice(...a),
       ...createHomeSlice(...a),
       ...createSidebarSlice(...a),
+      ...createTabsSlice(...a),
     }),
     {
       name: "glade-store",

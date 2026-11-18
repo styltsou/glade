@@ -23,11 +23,31 @@ import { BlockHandles } from "@/components/editor/blocks/BlockHandles";
 import { PreviewRail } from "@/components/editor/PreviewRail";
 import { ConflictBanner } from "@/components/editor/ConflictBanner";
 import { isAbsolutePath } from "@/lib/links";
+import { PaneProvider } from "@/components/editor/PaneContext";
+import { cn } from "@/lib/utils";
 
-export function Editor() {
-  const activeNote = useStore((state) => state.activeNote);
+export interface EditorProps {
+  /** Note shown by this pane. */
+  path: string;
+  /** Whether this pane has focus (the one the global "active note" mirrors). */
+  focused: boolean;
+  onFocus: () => void;
+  /** Index of this pane within its tab. */
+  paneIndex: number;
+  /** Whether the tab is split (shows the focus indicator). */
+  split: boolean;
+}
+
+export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps) {
+  const activeNote = useStore(
+    (state) => state.noteCache[path] ?? (state.activeNote?.path === path ? state.activeNote : null),
+  );
+  const fetchNote = useStore((state) => state.fetchNote);
+  const [overlayEl, setOverlayEl] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    void fetchNote(path);
+  }, [path, fetchNote]);
   const saveNote = useStore((state) => state.saveNote);
-  const createNote = useStore((state) => state.createNote);
   const selectNote = useStore((state) => state.selectNote);
   const noteScrollPositions = useStore((state) => state.noteScrollPositions);
   const updateNoteScrollPosition = useStore(
@@ -257,6 +277,7 @@ export function Editor() {
   useLayoutEffect(() => {
     if (editor && activeNote) {
       const pathChanged = currentPathRef.current !== activeNote.path;
+      (editor.storage as any).paneNote.path = activeNote.path;
       isLoadingRef.current = true;
 
       // Save scroll position for the *previous* note before switching
@@ -374,6 +395,18 @@ export function Editor() {
     noteScrollPositions,
   ]);
 
+  // Switching tabs or closing a pane unmounts this editor: never lose unsaved edits.
+  const paneIndexRef = useRef(paneIndex);
+  paneIndexRef.current = paneIndex;
+  useEffect(() => {
+    return () => {
+      const path = currentPathRef.current;
+      if (path && !conflictRef.current && latestContentRef.current !== lastSavedContentRef.current) {
+        void useStore.getState().saveNote(path, latestContentRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     return () => {
       if (scrollSaveTimerRef.current) {
@@ -465,23 +498,6 @@ export function Editor() {
       editor.off("update", updateHeadings);
     };
   }, [editor]);
-
-  if (!activeNote) {
-    return (
-      <div className="flex flex-col flex-1 h-full bg-background items-center justify-center select-none">
-        <FileTextIcon className="w-10 h-10 text-muted-foreground mb-4" />
-        <p className="text-[14px] text-muted-foreground mb-1">
-          No note selected
-        </p>
-        <button
-          onClick={() => createNote()}
-          className="text-[13px] text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Create a new note
-        </button>
-      </div>
-    );
-  }
 
   const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
   const shouldAnimateToc = activeNote && isTocOpen && !tocInitialized[activeNote.path];
@@ -684,11 +700,34 @@ export function Editor() {
   const handleCloseDeleted = useCallback(() => {
     setConflict(null);
     lastSavedContentRef.current = latestContentRef.current;
-    useStore.setState({ activeNote: null });
+    const store = useStore.getState();
+    store.focusPane(paneIndexRef.current);
+    store.setFocusedPathNull();
   }, []);
 
+  if (!activeNote) {
+    return (
+      <div className="flex flex-col flex-1 h-full bg-background items-center justify-center select-none">
+        <FileTextIcon className="w-10 h-10 text-muted-foreground mb-4" />
+        <p className="text-[14px] text-muted-foreground mb-1">
+          Loading…
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 h-full bg-background overflow-hidden relative">
+    <PaneProvider value={{ path }}>
+    <div
+      data-pane-focused={focused}
+      onMouseDownCapture={onFocus}
+      onFocusCapture={onFocus}
+      className={cn(
+        "@container/pane flex flex-col flex-1 h-full min-w-0 bg-background overflow-hidden relative",
+        split && "transition-[box-shadow] duration-150",
+        split && focused && "shadow-[inset_0_2px_0_hsl(var(--primary)/0.55)]",
+      )}
+    >
       {!mermaidFullscreenOpen && (
         <NoteHeader
           notePath={activeNote.path}
@@ -749,10 +788,10 @@ export function Editor() {
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
-        <div id="note-overlay-portal" className="absolute inset-0 pointer-events-none z-40 overflow-hidden" />
+        <div ref={setOverlayEl} id={focused ? "note-overlay-portal" : undefined} className="absolute inset-0 pointer-events-none z-40 overflow-hidden" />
         {editor && !isRawMode && <BlockHandles editor={editor} blockControls={blockControls} />}
         {editor && !isRawMode && activeNote && (
-          <PreviewRail editor={editor} scrollContainerRef={scrollRef} noteKey={activeNote.path} />
+          <PreviewRail editor={editor} scrollContainerRef={scrollRef} noteKey={activeNote.path} host={overlayEl} />
         )}
         <NoteEditor
           activeNote={activeNote}
@@ -788,5 +827,6 @@ export function Editor() {
         </AnimatePresence>
       </div>
     </div>
+    </PaneProvider>
   );
 }

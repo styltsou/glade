@@ -89,11 +89,14 @@ export function PreviewRail({
   editor,
   scrollContainerRef,
   noteKey,
+  host,
 }: {
   editor: Editor;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
   /** Changes when another note is shown, so measurements start over. */
   noteKey: string;
+  /** The overlay element the rail is drawn into (one per pane). */
+  host: HTMLElement | null;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const [sections, setSections] = useState(() => readSections(editor));
@@ -166,10 +169,10 @@ export function PreviewRail({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    setRailHost(document.getElementById("note-overlay-portal"));
+    setRailHost(host);
 
     return () => setRailHost(null);
-  }, [scrollContainerRef, noteKey]);
+  }, [scrollContainerRef, noteKey, host]);
 
   useEffect(() => {
     const container = scrollContainerRef.current;

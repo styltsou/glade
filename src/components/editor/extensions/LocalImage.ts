@@ -4,10 +4,11 @@ import { useStore } from "@/store";
 import { isAbsolutePath, relativeLink } from "@/lib/links";
 
 /** Resolve a markdown image source to something the webview can load. */
-export function displayImageSrc(src: string | null | undefined): string | null | undefined {
+export function displayImageSrc(src: string | null | undefined, notePath?: string | null): string | null | undefined {
   if (!src || /^[a-z][a-z0-9+.-]*:/i.test(src) && !src.startsWith("file:")) return src;
   const { activeNote, target } = useStore.getState();
-  if (!activeNote) return src;
+  const current = notePath ?? activeNote?.path;
+  if (!current) return src;
 
   let decoded = src.startsWith("file://") ? src.slice(7) : src;
   try {
@@ -17,9 +18,9 @@ export function displayImageSrc(src: string | null | undefined): string | null |
   }
   let abs = decoded;
   if (!isAbsolutePath(decoded)) {
-    const noteAbs = isAbsolutePath(activeNote.path)
-      ? activeNote.path
-      : `${target?.path ?? ""}/${activeNote.path}`;
+    const noteAbs = isAbsolutePath(current)
+      ? current
+      : `${target?.path ?? ""}/${current}`;
     const parts = noteAbs.split("/").slice(0, -1);
     for (const seg of decoded.split("/")) {
       if (seg === "..") parts.pop();
@@ -60,6 +61,7 @@ export const LocalImage = Image.extend({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ["img", { ...HTMLAttributes, src: displayImageSrc(HTMLAttributes.src) }];
+    const notePath = (this.editor?.storage as any)?.paneNote?.path as string | null | undefined;
+    return ["img", { ...HTMLAttributes, src: displayImageSrc(HTMLAttributes.src, notePath) }];
   },
 });

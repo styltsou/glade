@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir } from "@tauri-apps/api/path";
 import { toast } from "sonner";
 import type { HomeData, Target } from "@/types";
+import * as T from "@/lib/tabs";
 import type { StoreState } from "../index";
 
 export interface WorkspaceSlice {
@@ -75,6 +76,9 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         last_file: string | null;
         edit_mode: Record<string, boolean>;
         scroll: Record<string, number>;
+        tabs: (string | null)[][];
+        active_tab: number;
+        focused_pane: number;
       }>("get_workspace_ui");
       // The window may have moved on to another folder while this loaded.
       if (get().target?.path !== root) return;
@@ -84,8 +88,16 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         noteScrollPositions: ui.scroll,
         uiLoadedFor: root,
       });
-      if (ui.last_file && get().idToPath[ui.last_file] && !get().activeNote) {
-        await get().selectNote(ui.last_file);
+      const idToPath = get().idToPath;
+      const restored = T.fromSaved(
+        { tabs: ui.tabs ?? [], active: ui.active_tab ?? 0, focused: ui.focused_pane ?? 0 },
+        (p) => !!idToPath[p],
+      );
+      if (restored && !T.focusedPath(get().tabsState)) {
+        set({ tabsState: restored });
+        await get().syncFocusedNote();
+      } else if (ui.last_file && idToPath[ui.last_file] && !get().activeNote) {
+        await get().openNote(ui.last_file);
       }
     } catch {
       set({ uiLoadedFor: root });
@@ -98,8 +110,13 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
     const relative = <T,>(m: Record<string, T>) =>
       Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith("/") && !/^[A-Za-z]:[\\/]/.test(k)));
     const last = activeNote && !activeNote.path.startsWith("/") ? activeNote.path : null;
+    const saved = T.toSaved(get().tabsState);
+    const relativeTabs = saved.tabs.map((panes) => panes.map((p) => (p && !p.startsWith("/") ? p : null)));
     await invoke("save_workspace_ui", {
       ui: {
+        tabs: relativeTabs,
+        active_tab: saved.active,
+        focused_pane: saved.focused,
         expanded_folders: expandedFolders,
         last_file: last,
         edit_mode: relative(noteEditMode),
@@ -147,6 +164,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       noteCache: {},
       tags: [],
       activeNote: null,
+      tabsState: T.initialTabs(),
       backStack: [],
       currentFolder: null,
       pinnedNotes: [],
@@ -164,7 +182,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       get().offerLegacyCleanup();
       await get().restoreWorkspaceUi(target.path);
     } else {
-      await get().selectNote(target.path);
+      await get().openNote(target.path);
     }
   },
 

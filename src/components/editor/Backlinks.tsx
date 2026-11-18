@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Link2 } from "lucide-react";
 import { useStore } from "@/store";
+import { usePanePath } from "./PaneContext";
 
 interface Backlink {
   path: string;
@@ -10,7 +11,7 @@ interface Backlink {
 
 /** Notes in the open folder that link to the current note. */
 export function Backlinks() {
-  const path = useStore((s) => s.activeNote?.path);
+  const path = usePanePath() ?? undefined;
   const inFolder = useStore((s) => s.target?.kind === "folder");
   const selectNote = useStore((s) => s.selectNote);
   const [items, setItems] = useState<Backlink[]>([]);

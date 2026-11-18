@@ -87,6 +87,9 @@ export function CommandPalette() {
   const pickFolder = useStore((state) => state.pickFolder);
   const pickFile = useStore((state) => state.pickFile);
   const showHome = useStore((state) => state.showHome);
+  const newTab = useStore((state) => state.newTab);
+  const closeTab = useStore((state) => state.closeTab);
+  const splitActive = useStore((state) => state.splitActive);
   const setAddPropertyOpen = useStore((state) => state.setAddPropertyOpen);
   const closeTarget = useStore((state) => state.closeTarget);
   const toggleToc = useStore((state) => state.toggleToc);
@@ -199,6 +202,15 @@ export function CommandPalette() {
         case "add-property":
           setAddPropertyOpen(true);
           break;
+        case "new-tab":
+          newTab();
+          break;
+        case "close-tab":
+          closeTab(useStore.getState().tabsState.activeId);
+          break;
+        case "split-right":
+          splitActive();
+          break;
         case "go-home":
           showHome();
           break;
@@ -240,6 +252,9 @@ export function CommandPalette() {
       pickFolder,
       pickFile,
       showHome,
+      newTab,
+      closeTab,
+      splitActive,
       setAddPropertyOpen,
       closeTarget,
       selectNote,
@@ -380,6 +395,30 @@ export function CommandPalette() {
         type: "action",
         action: "add-property",
         hidden: !activeNote,
+      },
+      {
+        id: "new-tab",
+        title: "New Tab",
+        icon: <FolderCogIcon />,
+        shortcut: "⌘T",
+        type: "action",
+        action: "new-tab",
+      },
+      {
+        id: "close-tab",
+        title: "Close Tab",
+        icon: <FolderCogIcon />,
+        shortcut: "⌘W",
+        type: "action",
+        action: "close-tab",
+      },
+      {
+        id: "split-right",
+        title: "Split Right",
+        icon: <FolderCogIcon />,
+        shortcut: "⌘\\",
+        type: "action",
+        action: "split-right",
       },
       {
         id: "go-home",

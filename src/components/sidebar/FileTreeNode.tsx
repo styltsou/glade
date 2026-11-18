@@ -9,6 +9,7 @@ import {
   PinOff as PinOffIcon,
   Trash2 as TrashIcon,
   Plus as PlusIcon,
+  Columns2 as ColumnsIcon,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -39,7 +40,7 @@ export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
 
 function useFileTreeStore() {
   const activeNotePath = useStore((state) => state.activeNote?.path);
-  const selectNote = useStore((state) => state.selectNote);
+  const openNote = useStore((state) => state.openNote);
   const duplicateNote = useStore((state) => state.duplicateNote);
   const createNote = useStore((state) => state.createNote);
   const openCreateFolder = useStore((state) => state.openCreateFolder);
@@ -55,7 +56,7 @@ function useFileTreeStore() {
 
   return {
     activeNotePath,
-    selectNote,
+    openNote,
     duplicateNote,
     createNote,
     openCreateFolder,
@@ -82,7 +83,7 @@ interface FileTreeNodeProps {
 export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onToggleFolder }: FileTreeNodeProps) {
   const {
     activeNotePath,
-    selectNote,
+    openNote,
     duplicateNote,
     createNote,
     openCreateFolder,
@@ -102,11 +103,13 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
   const isOverFolder = dropTarget === entry.path;
   const isPinned = !entry.is_dir && pinnedNotePaths.includes(entry.path);
 
-  const handleClick = () => {
+  const handleClick = (e?: React.MouseEvent) => {
     if (entry.is_dir) {
       toggleFolderExpanded(entry.path);
     } else {
-      selectNote(entry.path, {
+      // Ctrl/Cmd-click: new tab. Alt-click: beside the current note.
+      const mode = e && (e.ctrlKey || e.metaKey) ? "tab" : e?.altKey ? "side" : "active";
+      openNote(entry.path, mode, {
         path: entry.path,
         title: entry.name,
         tags: entry.tags,
@@ -225,6 +228,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
           <button
             onClick={handleClick}
+            onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => prefetchNote(entry.path)}
             className={cn(
@@ -240,6 +244,15 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => openNote(entry.path, "tab")}>
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Open in new tab
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => openNote(entry.path, "side")}>
+          <ColumnsIcon className="mr-2 h-4 w-4" />
+          Open to the side
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={() => openRename(entry.path, entry.name)}>
           <PencilIcon className="mr-2 h-4 w-4" />
           Rename

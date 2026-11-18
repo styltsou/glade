@@ -19,6 +19,8 @@ import {
 
 export interface NoteSlice {
   selectNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
+  /** Load a note into the cache and make it the active note (tab state is set by the caller). */
+  loadNote: (path: string, partial?: Partial<NoteData>) => Promise<void>;
   saveNote: (path: string, content: string, force?: boolean) => Promise<void>;
   /** Re-read a note from disk and replace what is shown (body included). */
   reloadNote: (path: string) => Promise<void>;
@@ -28,7 +30,7 @@ export interface NoteSlice {
   duplicateNote: (path: string) => Promise<void>;
   deleteEntry: (path: string) => Promise<void>;
   createFolder: (path: string) => Promise<void>;
-  updateNoteTags: (tags: string[]) => Promise<void>;
+  updateNoteTags: (tags: string[], path?: string) => Promise<void>;
   moveEntry: (fromPath: string, toPath: string) => Promise<void>;
   tocOpen: Record<string, boolean>;
   toggleToc: (path: string) => void;
@@ -58,9 +60,9 @@ export interface NoteSlice {
   setMissingLink: (link: MissingLink | null) => void;
   refreshNoteMeta: (path: string) => Promise<void>;
   applyNoteMeta: (note: NoteData) => void;
-  setProperty: (key: string, value: PropertyValue) => Promise<void>;
-  removeProperty: (key: string) => Promise<void>;
-  setFrontmatterText: (text: string) => Promise<void>;
+  setProperty: (key: string, value: PropertyValue, path?: string) => Promise<void>;
+  removeProperty: (key: string, path?: string) => Promise<void>;
+  setFrontmatterText: (text: string, path?: string) => Promise<void>;
 }
 
 import type { StoreState } from "../index";
@@ -70,6 +72,10 @@ let latestSelect = "";
 
 export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set, get) => ({
   selectNote: async (path: string, partial?: Partial<NoteData>) => {
+    await get().openNote(path, "active", partial);
+  },
+
+  loadNote: async (path: string, partial?: Partial<NoteData>) => {
     latestSelect = path;
     const { noteCache } = get();
     
@@ -206,6 +212,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       const newPath = await invoke<string>("rename_note", { path, newTitle });
       if (newPath !== path) {
         // Title came from the file name, so the file itself was renamed.
+        get().tabsRenamePath(path, newPath);
         await offerLinkUpdates(path, newPath);
         await get().loadVault();
         await get().selectNote(newPath);
@@ -299,6 +306,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       pinnedNotes: newPinned,
       folderNotes: newFolderNotes,
     });
+    get().tabsRemovePath(path);
     
     try {
       await invoke("delete_entry", { path });
@@ -320,14 +328,16 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  updateNoteTags: async (tags: string[]) => {
-    const { activeNote, entries, noteCache } = get();
+  updateNoteTags: async (tags: string[], path?: string) => {
+    const { entries, noteCache } = get();
+    const target = path ?? get().activeNote?.path;
+    const activeNote = target ? noteCache[target] ?? (get().activeNote?.path === target ? get().activeNote : null) : null;
     if (!activeNote) return;
 
     // 1. Optimistic update of activeNote and cache
     const updatedNote = { ...activeNote, tags };
     set({
-      activeNote: updatedNote,
+      activeNote: get().activeNote?.path === activeNote.path ? updatedNote : get().activeNote,
       noteCache: { ...noteCache, [activeNote.path]: updatedNote },
     });
 
@@ -360,6 +370,7 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     
     try {
       await invoke("move_entry", { fromPath, toPath });
+      get().tabsRenamePath(fromPath, toPath);
       await offerLinkUpdates(fromPath, toPath);
       await get().loadVault();
       await get().loadTags();
@@ -463,11 +474,11 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  setProperty: async (key: string, value: PropertyValue) => {
-    const { activeNote } = get();
-    if (!activeNote) return;
+  setProperty: async (key: string, value: PropertyValue, path?: string) => {
+    const target = path ?? get().activeNote?.path;
+    if (!target) return;
     try {
-      const note = await invoke<NoteData>("set_property", { path: activeNote.path, key, value });
+      const note = await invoke<NoteData>("set_property", { path: target, key, value });
       get().applyNoteMeta(note);
       get().loadTags();
     } catch (e) {
@@ -476,11 +487,11 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  removeProperty: async (key: string) => {
-    const { activeNote } = get();
-    if (!activeNote) return;
+  removeProperty: async (key: string, path?: string) => {
+    const target = path ?? get().activeNote?.path;
+    if (!target) return;
     try {
-      const note = await invoke<NoteData>("remove_property", { path: activeNote.path, key });
+      const note = await invoke<NoteData>("remove_property", { path: target, key });
       get().applyNoteMeta(note);
       get().loadTags();
     } catch (e) {
@@ -488,10 +499,10 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  setFrontmatterText: async (text: string) => {
-    const { activeNote } = get();
-    if (!activeNote) return;
-    const note = await invoke<NoteData>("set_frontmatter_text", { path: activeNote.path, text });
+  setFrontmatterText: async (text: string, path?: string) => {
+    const target = path ?? get().activeNote?.path;
+    if (!target) return;
+    const note = await invoke<NoteData>("set_frontmatter_text", { path: target, text });
     get().applyNoteMeta(note);
     get().loadTags();
   },

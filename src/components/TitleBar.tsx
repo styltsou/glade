@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
+import { TabStrip } from "@/components/TabStrip";
 
 const appWindow = getCurrentWindow();
 
@@ -29,7 +30,10 @@ export function TitleBar() {
   const handleMaximize = () => appWindow.toggleMaximize();
   const handleClose = () => appWindow.close();
   const handleDragStart = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button")) return;
+    // Tabs are interactive; the empty space after them drags the window.
+    if (target.closest("[data-no-drag]") && !target.closest("[data-drag-spacer]")) return;
     appWindow.startDragging();
   };
 
@@ -58,13 +62,10 @@ export function TitleBar() {
         )}
       </button>
 
-      {/* App title - centered in the full window width */}
-      <div className="pointer-events-none absolute left-1/2 -translate-x-1/2">
-        <span className="text-[13px] font-medium tracking-[-0.01em] text-muted-foreground/80">Glade</span>
-      </div>
+      <TabStrip />
 
       {/* Window controls */}
-      <div className="ml-auto flex items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-0.5">
         <button onClick={handleMinimize} title="Minimize" className={iconButton}>
           <Minus className="h-4 w-4" />
         </button>

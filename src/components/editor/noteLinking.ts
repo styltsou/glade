@@ -3,6 +3,7 @@ import type { VaultEntry } from '@/types';
 import { useStore } from '@/store';
 import { invoke } from '@tauri-apps/api/core';
 import { relativeLink } from '@/lib/links';
+import { paneNotePath } from './extensions/PaneNote';
 
 export interface SuggestionItem {
   id: string;
@@ -37,7 +38,7 @@ export function unregisterSuggestionCallbacks() {
 export default {
   // Inserts a standard relative markdown link, e.g. [API](../reference/api.md).
   command: ({ editor, range, props }: { editor: any; range: { from: number; to: number }; props: { id: string | null; label?: string | null } }) => {
-    const from = useStore.getState().activeNote?.path;
+    const from = paneNotePath(editor) ?? useStore.getState().activeNote?.path;
     if (!from || !props.id) return;
     const href = relativeLink(from, props.id);
     editor

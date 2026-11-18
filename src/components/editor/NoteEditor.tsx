@@ -372,7 +372,7 @@ export function NoteEditor({
 		<div
 			ref={scrollRef as React.RefObject<HTMLDivElement>}
 			onScroll={onScroll}
-			className="flex-1 overflow-auto px-24 py-8 note-scroll"
+			className="flex-1 overflow-auto px-16 @[46rem]/pane:px-24 py-8 note-scroll"
 		>
 			<div className="max-w-187.5 mx-auto">
 				{editor && (

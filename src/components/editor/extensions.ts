@@ -18,6 +18,7 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { MermaidBlock } from "./extensions/MermaidBlock";
 import { LinkBehavior } from "./extensions/LinkBehavior";
+import { PaneNote } from "./extensions/PaneNote";
 import { NoteTableView } from "./tables/tableView";
 import { TableActiveCell } from "./tables/tableActiveCell";
 import { LocalImage } from "./extensions/LocalImage";
@@ -72,6 +73,7 @@ export const extensions = [
   Underline,
   LocalImage.configure({ inline: false }),
   LinkBehavior,
+  PaneNote,
   BubbleMenu.configure({
     element: null,
   }),

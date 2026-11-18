@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronRight, Plus, X, FileCode } from "lucide-react";
 import { useStore } from "@/store";
+import { usePaneNote } from "./PaneContext";
 import { cn } from "@/lib/utils";
 import type { PropertyEntry } from "@/types";
 
@@ -11,6 +12,7 @@ function asText(value: unknown): string {
 
 function ScalarEditor({ entry }: { entry: PropertyEntry }) {
   const setProperty = useStore((s) => s.setProperty);
+  const notePath = usePaneNote()?.path;
   const original = asText(entry.value);
   const [text, setText] = useState(original);
   const [error, setError] = useState(false);
@@ -18,7 +20,7 @@ function ScalarEditor({ entry }: { entry: PropertyEntry }) {
   const commit = async () => {
     if (text === original) return;
     try {
-      await setProperty(entry.key, { kind: "scalar", value: text });
+      await setProperty(entry.key, { kind: "scalar", value: text }, notePath);
       setError(false);
     } catch {
       setError(true);
@@ -47,10 +49,11 @@ function ScalarEditor({ entry }: { entry: PropertyEntry }) {
 
 function ListEditor({ entry }: { entry: PropertyEntry }) {
   const setProperty = useStore((s) => s.setProperty);
+  const notePath = usePaneNote()?.path;
   const items = (Array.isArray(entry.value) ? entry.value : []).map(asText);
   const [draft, setDraft] = useState("");
 
-  const save = (next: string[]) => setProperty(entry.key, { kind: "list", value: next }).catch(() => {});
+  const save = (next: string[]) => setProperty(entry.key, { kind: "list", value: next }, notePath).catch(() => {});
 
   const add = () => {
     const value = draft.trim().replace(/,$/, "");
@@ -110,7 +113,8 @@ function ReadOnlyValue({ entry }: { entry: PropertyEntry }) {
 
 /** Frontmatter shown above the title; collapsible, edits only the lines it touches. */
 export function PropertiesPanel() {
-  const properties = useStore((s) => s.activeNote?.properties);
+  const paneNote = usePaneNote();
+  const properties = paneNote?.properties;
   const collapsed = useStore((s) => s.propertiesCollapsed);
   const toggle = useStore((s) => s.toggleProperties);
   const removeProperty = useStore((s) => s.removeProperty);
@@ -169,7 +173,7 @@ export function PropertiesPanel() {
                 </div>
                 <button
                   aria-label={`Remove ${entry.key}`}
-                  onClick={() => removeProperty(entry.key)}
+                  onClick={() => removeProperty(entry.key, paneNote?.path)}
                   className="mt-1 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
                 >
                   <X className="size-3.5" />

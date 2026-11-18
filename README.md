@@ -51,6 +51,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Tagging System** — YAML frontmatter-based tags with auto-complete, popularity ranking, and click-to-filter (AND-combinable).
 - **Pinned Notes** — Pin important notes to a dedicated section at the top of the sidebar.
 - **Pinned Folders** — Pin folders to keep them on the Home screen; every opened folder gets the same features, pinned or not.
+- **Tabs & split views** — Tabs live in the title bar. Click a note to navigate the current tab; Ctrl/Cmd-click or middle-click opens a new tab, Alt-click opens it beside the current note in a split with a draggable divider. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump, `Ctrl/Cmd+\` split or close the focused pane. Tabs and splits are restored per folder.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
 - **Editable Titles** — Click the note title to rename inline.

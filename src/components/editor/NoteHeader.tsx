@@ -181,7 +181,7 @@ export function NoteHeader({
         {saveStatus !== "idle" && (
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-in fade-in-0 duration-150">
             <span className={cn("size-1.5 rounded-full", saveStatus === "saved" ? "bg-emerald-500" : "bg-amber-500")} />
-            {saveStatus === "saved" ? "Saved" : "Unsaved"}
+            <span className="hidden @[34rem]/pane:inline">{saveStatus === "saved" ? "Saved" : "Unsaved"}</span>
           </span>
         )}
 
@@ -198,11 +198,11 @@ export function NoteHeader({
           ) : (
             <Eye className="w-3 h-3" />
           )}
-          <span>{isEditMode ? "Edit mode" : "Read mode"}</span>
+          <span className="hidden @[30rem]/pane:inline">{isEditMode ? "Edit mode" : "Read mode"}</span>
         </div>
 
         {dateLabel && (
-          <span className="text-muted-foreground text-xs flex items-center gap-1">
+          <span className="text-muted-foreground text-xs hidden @[40rem]/pane:flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {dateLabel}
           </span>

@@ -1,11 +1,12 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { X as Cross2Icon } from "lucide-react";
 import { useStore } from "@/store";
+import { usePaneNote } from "@/components/editor/PaneContext";
 import { cn } from "@/lib/utils";
 import type { TagCount } from "@/types";
 
 export function TagInput() {
-  const activeNote = useStore((state) => state.activeNote);
+  const activeNote = usePaneNote();
   const updateNoteTags = useStore((state) => state.updateNoteTags);
   const allTags = useStore((state) => state.tags);
   const tags = activeNote?.tags ?? [];
@@ -81,7 +82,7 @@ export function TagInput() {
     (tag: string) => {
       const normalised = tag.trim().toLowerCase();
       if (normalised && !tags.includes(normalised)) {
-        updateNoteTags([...tags, normalised]);
+        updateNoteTags([...tags, normalised], activeNote?.path);
       }
       setInputValue("");
       setTypedValue("");
@@ -93,7 +94,7 @@ export function TagInput() {
 
   const removeTag = useCallback(
     (tag: string) => {
-      updateNoteTags(tags.filter((t: string) => t !== tag));
+      updateNoteTags(tags.filter((t: string) => t !== tag), activeNote?.path);
     },
     [tags, updateNoteTags],
   );

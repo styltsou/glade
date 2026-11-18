@@ -130,7 +130,8 @@ export const createHomeSlice: StateCreator<StoreState, [], [], HomeSlice> = (set
   },
 
   navigateToFolder: (path: string | null) => {
-    set({ activeNote: null, currentFolder: path, folderNotes: [] });
+    get().setFocusedPathNull();
+    set({ currentFolder: path, folderNotes: [] });
     get().loadFolderNotes(path);
   },
 });

@@ -17,9 +17,9 @@ export async function classifyLinks(from: string, hrefs: string[]): Promise<Link
 }
 
 /** Follow a link from the active note. Never executes anything. */
-export async function openLink(href: string, modifier: boolean): Promise<void> {
+export async function openLink(href: string, modifier: boolean, fromPath?: string): Promise<void> {
   const store = useStore.getState();
-  const from = store.activeNote?.path;
+  const from = fromPath ?? store.activeNote?.path;
   if (!from) return;
 
   let info: LinkInfo;
