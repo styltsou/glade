@@ -124,6 +124,22 @@ pub async fn locate_folder(old_path: String, new_path: String) -> Result<String,
     Ok(new_str)
 }
 
+/// The UI state saved for this window's folder (tree expansion, last note...).
+#[tauri::command]
+pub async fn get_workspace_ui(window: tauri::Window) -> Result<workspace_state::UiState, AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    Ok(workspace_state::load(&root)?.ui())
+}
+
+/// Save the UI state for this window's folder. Pinned notes are untouched.
+#[tauri::command]
+pub async fn save_workspace_ui(window: tauri::Window, ui: workspace_state::UiState) -> Result<(), AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    let mut state = workspace_state::load(&root)?;
+    state.apply_ui(ui);
+    workspace_state::save(&root, &state)
+}
+
 /// Whether this window's folder still holds keys older Glade versions wrote.
 #[tauri::command]
 pub async fn legacy_cleanup_pending(window: tauri::Window) -> Result<bool, AppError> {

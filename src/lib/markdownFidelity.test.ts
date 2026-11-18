@@ -13,7 +13,7 @@ import {
 	splitSource,
 	trailingBlankCount,
 } from "./markdownFidelity";
-import { appendTrailingBlanks, countTrailingEmpties, isEmptyParagraph } from "./trailingBlanks";
+import { appendTrailingBlanks, baselineOf, countTrailingEmpties, isEmptyParagraph } from "./trailingBlanks";
 
 
 
@@ -140,7 +140,7 @@ describe("blank lines at the end of a note", () => {
 	function load(source: string) {
 		const editor = makeEditor(source);
 		appendTrailingBlanks(editor, source);
-		const fidelity = createFidelity(source, topLevel(editor), isEmptyParagraph)!;
+		const fidelity = createFidelity(source, topLevel(editor), isEmptyParagraph, baselineOf)!;
 		return { editor, fidelity };
 	}
 	const addEmpty = (editor: Editor, n: number) => {
@@ -184,6 +184,22 @@ describe("blank lines at the end of a note", () => {
 		expect(save(editor, fidelity)).toBe("text");
 		addEmpty(editor, 2);
 		expect(save(editor, fidelity)).toBe("text\n\n\n");
+	});
+
+	it("does not add a blank line when the last block is edited", () => {
+		// The editor keeps its own empty paragraph after a final list or table;
+		// that must never turn into an extra blank line in the file.
+		const source = "intro\n\n* a\n* b\n";
+		const { editor, fidelity } = load(source);
+		expect(save(editor, fidelity)).toBe(source);
+		let endOfB = -1;
+		editor.state.doc.descendants((node, pos) => {
+			if (node.isText && node.text === "b") endOfB = pos + 1;
+		});
+		editor.commands.insertContentAt(endOfB, "!");
+		const saved = save(editor, fidelity);
+		expect(saved.endsWith("b!\n")).toBe(true);
+		expect(saved.endsWith("\n\n")).toBe(false);
 	});
 
 	it("returns the original bytes again after typing and undoing", () => {

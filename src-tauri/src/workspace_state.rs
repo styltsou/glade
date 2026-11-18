@@ -19,6 +19,50 @@ pub struct WorkspaceState {
     /// Pinned notes, as paths relative to the root.
     #[serde(default)]
     pub pinned: Vec<String>,
+    /// Expanded folders in the tree (relative paths).
+    #[serde(default)]
+    pub expanded_folders: Vec<String>,
+    /// The note that was open when the folder was last used.
+    #[serde(default)]
+    pub last_file: Option<String>,
+    /// Per-note read (false) / edit (true) mode.
+    #[serde(default)]
+    pub edit_mode: std::collections::HashMap<String, bool>,
+    /// Per-note scroll position.
+    #[serde(default)]
+    pub scroll: std::collections::HashMap<String, f64>,
+}
+
+/// The parts of a folder's state the UI owns and saves as a whole. Pins are
+/// managed by their own commands and are never overwritten by this.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct UiState {
+    #[serde(default)]
+    pub expanded_folders: Vec<String>,
+    #[serde(default)]
+    pub last_file: Option<String>,
+    #[serde(default)]
+    pub edit_mode: std::collections::HashMap<String, bool>,
+    #[serde(default)]
+    pub scroll: std::collections::HashMap<String, f64>,
+}
+
+impl WorkspaceState {
+    pub fn ui(&self) -> UiState {
+        UiState {
+            expanded_folders: self.expanded_folders.clone(),
+            last_file: self.last_file.clone(),
+            edit_mode: self.edit_mode.clone(),
+            scroll: self.scroll.clone(),
+        }
+    }
+
+    pub fn apply_ui(&mut self, ui: UiState) {
+        self.expanded_folders = ui.expanded_folders;
+        self.last_file = ui.last_file;
+        self.edit_mode = ui.edit_mode;
+        self.scroll = ui.scroll;
+    }
 }
 
 /// Stable directory key for a root path.
@@ -173,6 +217,35 @@ mod tests {
 
         discard_in(base.path(), new.path()).unwrap();
         assert!(load_in(base.path(), new.path()).pinned.is_empty());
+    }
+
+    #[test]
+    fn ui_state_round_trips_without_touching_pins() {
+        let base = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let mut st = load_in(base.path(), root.path());
+        st.pinned.push("a.md".into());
+        save_in(base.path(), root.path(), &st).unwrap();
+
+        let mut st = load_in(base.path(), root.path());
+        st.apply_ui(UiState {
+            expanded_folders: vec!["docs".into()],
+            last_file: Some("docs/a.md".into()),
+            edit_mode: [("docs/a.md".to_string(), true)].into(),
+            scroll: [("docs/a.md".to_string(), 120.0)].into(),
+        });
+        save_in(base.path(), root.path(), &st).unwrap();
+
+        let back = load_in(base.path(), root.path());
+        assert_eq!(back.pinned, vec!["a.md"]);
+        assert_eq!(back.ui().last_file.as_deref(), Some("docs/a.md"));
+        assert_eq!(back.ui().expanded_folders, vec!["docs"]);
+        assert_eq!(back.ui().scroll["docs/a.md"], 120.0);
+        // Older state files without these fields still load.
+        let old = r#"{"root":"/x","pinned":["p.md"]}"#;
+        let parsed: WorkspaceState = serde_json::from_str(old).unwrap();
+        assert_eq!(parsed.pinned, vec!["p.md"]);
+        assert!(parsed.expanded_folders.is_empty());
     }
 
     #[test]

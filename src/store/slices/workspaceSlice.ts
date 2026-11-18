@@ -16,6 +16,8 @@ export interface WorkspaceSlice {
   workspaceReady: boolean;
   workspaceError: string | null;
   switcherOpen: boolean;
+  /** Folder whose saved UI state (tree, last note...) has been restored. */
+  uiLoadedFor: string | null;
   /** Last change made to a note by another program (consumed by the editor). */
   externalEvent: { path: string; kind: "modified" | "removed"; seq: number } | null;
   handleExternalChange: (e: { path: string; kind: "modified" | "removed" }) => void;
@@ -26,6 +28,10 @@ export interface WorkspaceSlice {
   pollExternal: boolean;
   setPollExternal: (poll: boolean) => void;
   refreshTree: () => Promise<void>;
+  /** Restore tree expansion, per-note modes/scroll and the last open note. */
+  restoreWorkspaceUi: (root: string) => Promise<void>;
+  /** Save them (debounced by the caller). */
+  saveWorkspaceUi: () => Promise<void>;
 
   initWorkspace: () => Promise<void>;
   applyTarget: (target: Target | null) => Promise<void>;
@@ -55,12 +61,53 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
   workspaceReady: false,
   workspaceError: null,
   switcherOpen: false,
+  uiLoadedFor: null,
   externalEvent: null,
   handleExternalChange: (e) => set({ externalEvent: { ...e, seq: Date.now() } }),
   rootMissing: false,
   setRootMissing: (missing) => set({ rootMissing: missing }),
   pollExternal: false,
   setPollExternal: (poll) => set({ pollExternal: poll }),
+  restoreWorkspaceUi: async (root) => {
+    try {
+      const ui = await invoke<{
+        expanded_folders: string[];
+        last_file: string | null;
+        edit_mode: Record<string, boolean>;
+        scroll: Record<string, number>;
+      }>("get_workspace_ui");
+      // The window may have moved on to another folder while this loaded.
+      if (get().target?.path !== root) return;
+      set({
+        expandedFolders: ui.expanded_folders,
+        noteEditMode: ui.edit_mode,
+        noteScrollPositions: ui.scroll,
+        uiLoadedFor: root,
+      });
+      if (ui.last_file && get().idToPath[ui.last_file] && !get().activeNote) {
+        await get().selectNote(ui.last_file);
+      }
+    } catch {
+      set({ uiLoadedFor: root });
+    }
+  },
+
+  saveWorkspaceUi: async () => {
+    const { target, uiLoadedFor, expandedFolders, noteEditMode, noteScrollPositions, activeNote } = get();
+    if (target?.kind !== "folder" || uiLoadedFor !== target.path) return;
+    const relative = <T,>(m: Record<string, T>) =>
+      Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith("/") && !/^[A-Za-z]:[\\/]/.test(k)));
+    const last = activeNote && !activeNote.path.startsWith("/") ? activeNote.path : null;
+    await invoke("save_workspace_ui", {
+      ui: {
+        expanded_folders: expandedFolders,
+        last_file: last,
+        edit_mode: relative(noteEditMode),
+        scroll: relative(noteScrollPositions),
+      },
+    }).catch(() => {});
+  },
+
   refreshTree: async () => {
     await get().loadVault();
     get().loadTags();
@@ -91,6 +138,10 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       homeOpen: false,
       rootMissing: false,
       externalEvent: null,
+      uiLoadedFor: null,
+      expandedFolders: [],
+      noteEditMode: {},
+      noteScrollPositions: {},
       entries: [],
       idToPath: {},
       noteCache: {},
@@ -111,6 +162,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       get().loadTags();
       get().loadAll();
       get().offerLegacyCleanup();
+      await get().restoreWorkspaceUi(target.path);
     } else {
       await get().selectNote(target.path);
     }

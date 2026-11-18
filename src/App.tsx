@@ -156,6 +156,30 @@ function App() {
     };
   }, [applyTarget, selectNote]);
 
+  // Remember this folder's tree, last note and per-note modes (outside its files).
+  const rootKind = useStore((state) => state.target?.kind);
+  const rootPathForUi = useStore((state) => state.target?.path);
+  useEffect(() => {
+    if (rootKind !== "folder") return;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = useStore.subscribe((s, prev) => {
+      if (
+        s.expandedFolders === prev.expandedFolders &&
+        s.noteEditMode === prev.noteEditMode &&
+        s.noteScrollPositions === prev.noteScrollPositions &&
+        s.activeNote?.path === prev.activeNote?.path
+      ) {
+        return;
+      }
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => useStore.getState().saveWorkspaceUi(), 600);
+    });
+    return () => {
+      unsubscribe();
+      if (timer) clearTimeout(timer);
+    };
+  }, [rootKind, rootPathForUi]);
+
   // Fallback when the OS watcher can't be used: poll the open note.
   const pollExternal = useStore((state) => state.pollExternal);
   useEffect(() => {

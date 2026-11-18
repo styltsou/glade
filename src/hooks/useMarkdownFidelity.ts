@@ -5,7 +5,7 @@ import {
 	serializeWithFidelity,
 	type Fidelity,
 } from "@/lib/markdownFidelity";
-import { appendTrailingBlanks, countTrailingEmpties, isEmptyParagraph, topLevelNodes } from "@/lib/trailingBlanks";
+import { appendTrailingBlanks, baselineOf, countTrailingEmpties, isEmptyParagraph, topLevelNodes } from "@/lib/trailingBlanks";
 
 export function useMarkdownFidelity() {
 	const fidelityRef = useRef<Fidelity | null>(null);
@@ -13,7 +13,7 @@ export function useMarkdownFidelity() {
 	/** Remember the source the editor was just loaded with. */
 	const snapshot = useCallback((editor: Editor, source: string) => {
 		appendTrailingBlanks(editor, source);
-		fidelityRef.current = createFidelity(source, topLevelNodes(editor), isEmptyParagraph);
+		fidelityRef.current = createFidelity(source, topLevelNodes(editor), isEmptyParagraph, baselineOf);
 	}, []);
 
 	const getMarkdown = useCallback((editor: Editor): string => {
@@ -22,7 +22,9 @@ export function useMarkdownFidelity() {
 		if (!fidelity) {
 			// Fallback: still keep blank lines the user added at the end.
 			const text: string = storage.getMarkdown();
-			const blanks = countTrailingEmpties(editor);
+			const nodes = topLevelNodes(editor);
+			const empties = countTrailingEmpties(editor);
+			const blanks = Math.max(0, empties - baselineOf(nodes.slice(0, nodes.length - empties)));
 			return blanks > 0 ? text.replace(/\s+$/, "") + "\n".repeat(blanks + 1) : text;
 		}
 		return serializeWithFidelity(

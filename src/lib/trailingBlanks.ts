@@ -11,6 +11,16 @@ export function topLevelNodes(editor: Editor): object[] {
 	return nodes;
 }
 
+/**
+ * The editor keeps one empty paragraph after a final block that is not a
+ * paragraph (list, table, code...) so there is somewhere to type. That one is
+ * the editor's, not a blank line from the file.
+ */
+export function baselineOf(contentNodes: object[]): number {
+	const last: any = contentNodes[contentNodes.length - 1];
+	return last && last.type?.name !== "paragraph" ? 1 : 0;
+}
+
 export function countTrailingEmpties(editor: Editor): number {
 	const nodes = topLevelNodes(editor);
 	let n = 0;
@@ -23,15 +33,18 @@ export function countTrailingEmpties(editor: Editor): number {
  * added without touching undo history and without counting as an edit.
  */
 export function appendTrailingBlanks(editor: Editor, source: string): void {
-	const blanks = trailingBlankCount(source);
-	if (blanks === 0 || countTrailingEmpties(editor) >= blanks) return;
+	const nodes = topLevelNodes(editor);
+	const empties = countTrailingEmpties(editor);
+	const core = nodes.slice(0, nodes.length - empties);
+	const missing = trailingBlankCount(source) + baselineOf(core) - empties;
+	if (missing <= 0) return;
 	const { schema } = editor.state;
 	editor
 		.chain()
 		.command(({ tr }) => {
 			tr.setMeta("addToHistory", false);
 			tr.setMeta("preventUpdate", true);
-			tr.insert(tr.doc.content.size, Array.from({ length: blanks }, () => schema.nodes.paragraph.create()));
+			tr.insert(tr.doc.content.size, Array.from({ length: missing }, () => schema.nodes.paragraph.create()));
 			return true;
 		})
 		.run();

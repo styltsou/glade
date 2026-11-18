@@ -111,6 +111,8 @@ pub fn run() {
             launch::get_window_target,
             launch::close_target,
             commands::repo_root_of,
+            commands::get_workspace_ui,
+            commands::save_workspace_ui,
             commands::cleanup_legacy,
             commands::legacy_cleanup_pending,
             commands::dismiss_legacy_cleanup,

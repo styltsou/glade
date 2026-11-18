@@ -37,8 +37,14 @@ export function trailingBlankCount(source: string): number {
 
 export interface Fidelity {
 	source: SourceMap;
-	/** Empty paragraphs at the end of the document as loaded. */
+	/** Blank lines at the end of the file as loaded. */
 	extraTrailing: number;
+	/**
+	 * Empty paragraphs the editor itself keeps at the end for a given set of
+	 * content nodes (e.g. after a final list or table). They are not blank lines
+	 * in the file.
+	 */
+	baselineOf: (contentNodes: object[]) => number;
 	/** Top-level nodes as they were right after the source was loaded. */
 	originals: Map<object, number>;
 	/** The same nodes in document order (for structural comparison). */
@@ -108,6 +114,7 @@ export function createFidelity(
 	source: string,
 	topLevelNodes: object[],
 	isEmpty: (node: object) => boolean = () => false,
+	baselineOf: (contentNodes: object[]) => number = () => 0,
 ): Fidelity | null {
 	const map = splitSource(source);
 	const { core, empties } = splitTrailingEmpties(topLevelNodes, isEmpty);
@@ -116,7 +123,7 @@ export function createFidelity(
 	core.forEach((n, i) => originals.set(n, i));
 	// Distinct nodes required; shared instances would make the mapping ambiguous.
 	if (originals.size !== core.length) return null;
-	return { source: map, originals, originalList: core, extraTrailing: empties };
+	return { source: map, originals, originalList: core, extraTrailing: Math.max(0, empties - baselineOf(core)), baselineOf };
 }
 
 /** Separate the nodes that carry content from empty paragraphs at the end. */
@@ -137,7 +144,8 @@ export function serializeWithFidelity(
 	isEmpty: (node: object) => boolean = () => false,
 ): string {
 	const { source, originals, originalList } = fidelity;
-	const { core: nodes, empties } = splitTrailingEmpties(allNodes, isEmpty);
+	const { core: nodes, empties: rawEmpties } = splitTrailingEmpties(allNodes, isEmpty);
+	const empties = Math.max(0, rawEmpties - fidelity.baselineOf(nodes));
 
 	// A node counts as untouched if it is the same object, or structurally equal
 	// to an original (undoing an edit rebuilds the node as an equal copy).
