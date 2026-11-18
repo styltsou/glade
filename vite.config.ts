@@ -37,9 +37,23 @@ export default defineConfig(async () => ({
     },
   },
   build: {
+    // A desktop app loads its bundle from disk, so size matters less than on
+    // the web; split the heavy libraries so each chunk stays reasonable. Mermaid (the "diagrams" chunk) is the
+    // largest and only loads when a diagram is used.
+    chunkSizeWarningLimit: 3100,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
+      },
+      output: {
+        manualChunks(id: string) {
+          if (!id.includes("node_modules")) return undefined;
+          if (/lowlight|highlight\.js/.test(id)) return "syntax";
+          if (/@codemirror|@lezer|@uiw\/react-codemirror/.test(id)) return "codemirror";
+          if (/prosemirror|@tiptap|tiptap-markdown|markdown-it/.test(id)) return "editor-core";
+          if (/mermaid|cytoscape|katex|d3|dagre/.test(id)) return "diagrams";
+          return undefined;
+        },
       },
     },
   },
