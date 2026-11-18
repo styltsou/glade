@@ -53,7 +53,7 @@ export function TagsPanel() {
   }, [isResizing, setTagsHeight]);
 
   return (
-    <div className="shrink-0 mt-1 border-t border-border bg-sidebar relative">
+    <div className="shrink-0 mt-1 border-t border-border/60 bg-sidebar relative">
       {/* Resize handle */}
       {!tagsCollapsed && (
         <div
@@ -75,7 +75,7 @@ export function TagsPanel() {
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           )}
-          <span className="text-xs font-bold text-foreground uppercase tracking-widest group-hover:text-foreground">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] group-hover:text-foreground">
             Tags
           </span>
         </button>

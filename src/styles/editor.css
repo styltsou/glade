@@ -266,12 +266,13 @@
 }
 
 .tiptap-editor code:not(.code-block code) {
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 14px;
-  background: hsl(var(--muted));
-  border-radius: 0.25rem;
-  padding: 0.15rem 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: hsl(var(--foreground) / 0.07);
+  border-radius: 6px;
+  padding: 0.15em 0.4em;
   color: hsl(var(--editor-text));
+  letter-spacing: 0;
 }
 
 .tiptap-editor hr {
@@ -579,4 +580,79 @@
 .note-float-block-controls [data-drag-handle] svg {
   width: 1rem;
   height: 1rem;
+}
+
+/* ── Refinement pass: calmer, more typographic ─────────────────────────────── */
+.tiptap-editor {
+  letter-spacing: -0.011em;
+  font-optical-sizing: auto;
+}
+
+.tiptap-editor h1,
+.tiptap-editor h2,
+.tiptap-editor h3,
+.tiptap-editor h4 {
+  text-wrap: balance;
+}
+
+.tiptap-editor h1 {
+  letter-spacing: -0.03em;
+}
+
+.tiptap-editor h2 {
+  letter-spacing: -0.022em;
+}
+
+.tiptap-editor blockquote {
+  border-left: 3px solid hsl(var(--primary) / 0.45);
+  border-radius: 2px;
+  padding-left: 1.1rem;
+  font-style: normal;
+}
+
+.tiptap-editor .code-block {
+  border-radius: var(--radius-lg);
+  border-color: hsl(var(--border) / 0.8);
+  box-shadow: var(--elev-xs) !important;
+}
+
+.tiptap-editor :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border-radius: 6px;
+  background: hsl(var(--foreground) / 0.07);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  letter-spacing: 0;
+}
+
+.tiptap-editor hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+  margin: 2rem 0;
+}
+
+.tiptap-editor .editor-link {
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: hsl(var(--primary) / 0.4);
+  transition: text-decoration-color 150ms var(--ease-ui), color 150ms var(--ease-ui);
+}
+
+.tiptap-editor .editor-link:hover {
+  opacity: 1;
+  text-decoration-color: hsl(var(--primary));
+}
+
+.tiptap-editor img {
+  border-radius: var(--radius-lg);
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
+  border-radius: 5px;
+  transition: background-color 150ms var(--ease-ui), border-color 150ms var(--ease-ui), transform 120ms var(--ease-ui);
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label input[type="checkbox"]:active {
+  transform: scale(0.9);
 }

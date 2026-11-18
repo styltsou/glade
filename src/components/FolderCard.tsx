@@ -47,11 +47,12 @@ export function FolderCard({ folder }: FolderCardProps) {
           }}
           className="
             group relative flex flex-col gap-1.5 text-left w-full
-            rounded-lg p-3 cursor-pointer
-            bg-card border border-border
-            hover:border-foreground/20 hover:bg-muted/50
-            hover:shadow-sm
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+            rounded-xl p-3 cursor-pointer
+            bg-card border border-border/70 shadow-xs
+            transition-[transform,box-shadow,border-color,background-color] duration-200
+            hover:border-foreground/15 hover:shadow-md hover:-translate-y-px
+            active:translate-y-0 active:scale-[0.99] active:shadow-xs
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
           "
         >
           {/* Icon + Title */}

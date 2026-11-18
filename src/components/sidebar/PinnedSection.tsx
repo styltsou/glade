@@ -70,7 +70,7 @@ export function PinnedSection() {
   if (pinnedNotes.length === 0 && !isVaultsLoading) return null;
 
   return (
-    <div className="shrink-0 mb-1 border-b border-border bg-sidebar relative">
+    <div className="shrink-0 mb-1 border-b border-border/60 bg-sidebar relative">
       <div className="flex items-center">
         <button
           onClick={() => togglePinnedNotesCollapsed()}
@@ -81,7 +81,7 @@ export function PinnedSection() {
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
           )}
-          <span className="text-xs font-bold text-foreground uppercase tracking-widest group-hover:text-foreground">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] group-hover:text-foreground">
             Pinned
           </span>
         </button>

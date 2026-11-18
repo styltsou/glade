@@ -25,18 +25,18 @@ export function SidebarHeader() {
   const pinned = !!home?.pinned_folders.some((f) => f.path === target.path);
 
   return (
-    <div className="flex items-center h-10 shrink-0 border-b border-border">
+    <div className="flex items-center gap-1 h-11 shrink-0 px-2">
       <button
         onClick={showHome}
         title="Home (Ctrl+Shift+H)"
-        className="flex h-10 w-10 shrink-0 items-center justify-center border-r border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="press flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground"
       >
         <Home className="size-4" />
       </button>
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex h-10 flex-1 items-center gap-2 px-3 text-sm font-medium outline-none hover:bg-accent data-[state=open]:bg-accent">
+        <DropdownMenuTrigger className="flex h-8 flex-1 items-center gap-2 rounded-lg px-2.5 text-[13px] font-semibold tracking-[-0.01em] outline-none hover:bg-foreground/[0.07] data-[state=open]:bg-foreground/[0.07]">
           <span className="truncate">{baseName(target.path)}</span>
-          <ChevronDown className="ml-auto size-4 shrink-0 text-muted-foreground" />
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ease-[var(--ease-ui)] [[data-state=open]_&]:rotate-180" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-52">
           <DropdownMenuItem onSelect={openSwitcher}>

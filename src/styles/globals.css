@@ -1,14 +1,14 @@
 @custom-variant dark (&:is([data-mode="dark"] *));
 
 @theme inline {
-  --radius-xs: 2px;
-  --radius-sm: 2px;
-  --radius-md: 2px;
-  --radius-lg: 2px;
-  --radius-xl: 2px;
-  --radius-2xl: 2px;
-  --radius-3xl: 2px;
-  --radius-4xl: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+  --radius-4xl: 28px;
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
   --color-card: hsl(var(--card));
@@ -41,6 +41,15 @@
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
+  --shadow-xs: var(--elev-xs);
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
+  --shadow-xl: var(--elev-xl);
+
+  --ease-out: var(--ease-ui);
+  --ease-in-out: var(--ease-move);
+
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-serif: "Source Serif 4", "Georgia", serif;
   --font-mono: "JetBrains Mono", "Fira Code", monospace;
@@ -62,12 +71,131 @@
   }
 }
 
-* {
-  box-shadow: none !important;
+/* ── Motion + elevation tokens ───────────────────────────────────────────────
+   Strong custom curves (built-in CSS easings are too weak), and soft layered
+   shadows tinted per mode so surfaces feel lifted rather than outlined. */
+:root {
+  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 120ms;
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+
+  --shadow-rgb: 24 24 27;
+  --elev-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.06);
+  --elev-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.06), 0 2px 6px -1px rgb(var(--shadow-rgb) / 0.08);
+  --elev-md: 0 2px 4px rgb(var(--shadow-rgb) / 0.05), 0 8px 16px -4px rgb(var(--shadow-rgb) / 0.1);
+  --elev-lg: 0 4px 8px -2px rgb(var(--shadow-rgb) / 0.08), 0 16px 32px -8px rgb(var(--shadow-rgb) / 0.16);
+  --elev-xl: 0 8px 16px -4px rgb(var(--shadow-rgb) / 0.1), 0 28px 56px -12px rgb(var(--shadow-rgb) / 0.24);
+  /* Floating surfaces (menus, palette, dialogs): hairline ring + soft drop. */
+  --elev-pop: 0 0 0 1px hsl(var(--foreground) / 0.07), 0 2px 6px rgb(var(--shadow-rgb) / 0.08),
+    0 12px 28px -6px rgb(var(--shadow-rgb) / 0.2);
 }
 
-button, a, input, [role="button"] {
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+[data-mode="dark"] {
+  --shadow-rgb: 0 0 0;
+  --elev-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.3);
+  --elev-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.3), 0 2px 6px -1px rgb(var(--shadow-rgb) / 0.35);
+  --elev-md: 0 2px 4px rgb(var(--shadow-rgb) / 0.3), 0 8px 16px -4px rgb(var(--shadow-rgb) / 0.45);
+  --elev-lg: 0 4px 8px -2px rgb(var(--shadow-rgb) / 0.4), 0 16px 32px -8px rgb(var(--shadow-rgb) / 0.55);
+  --elev-xl: 0 8px 16px -4px rgb(var(--shadow-rgb) / 0.45), 0 28px 56px -12px rgb(var(--shadow-rgb) / 0.65);
+  --elev-pop: 0 0 0 1px hsl(var(--foreground) / 0.1), 0 2px 6px rgb(var(--shadow-rgb) / 0.4),
+    0 14px 32px -6px rgb(var(--shadow-rgb) / 0.6);
+}
+
+@layer base {
+  /* Name the properties that change; `all` animates layout properties too. */
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"] {
+    transition-property: color, background-color, border-color, opacity, transform, box-shadow;
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-ui);
+  }
+
+  /* Pressable things confirm the press instantly. */
+  [data-slot="button"]:not(:disabled):active,
+  .press:not(:disabled):active {
+    transform: scale(0.97);
+    transition-duration: var(--dur-press);
+  }
+
+  body {
+    letter-spacing: -0.006em;
+    font-feature-settings: "cv11", "ss01", "calt";
+    font-optical-sizing: auto;
+    text-rendering: optimizeLegibility;
+    background: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring) / 0.55);
+    outline-offset: 2px;
+  }
+}
+
+/* The window itself: rounded with a hairline, square when maximized. */
+.app-frame {
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.08);
+}
+
+html[data-maximized="true"] .app-frame,
+html[data-fullscreen="true"] .app-frame {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Floating surfaces share one elevation, and grow from their trigger. */
+[data-slot="dropdown-menu-content"],
+[data-slot="context-menu-content"],
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="dropdown-menu-sub-content"] {
+  box-shadow: var(--elev-pop) !important;
+  border-color: transparent !important;
+  transform-origin: var(--radix-popper-transform-origin, var(--radix-dropdown-menu-content-transform-origin, center));
+  --tw-duration: 160ms;
+  --tw-animation-duration: 160ms;
+  --tw-ease: var(--ease-ui);
+}
+
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"] {
+  box-shadow: var(--elev-xl) !important;
+  --tw-animation-duration: 200ms;
+  --tw-ease: var(--ease-ui);
+}
+
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"] {
+  background: hsl(var(--background) / 0.55) !important;
+  backdrop-filter: blur(6px);
+}
+
+[data-slot="tooltip-content"] {
+  box-shadow: var(--elev-md) !important;
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+  --tw-animation-duration: 125ms;
+  --tw-ease: var(--ease-ui);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 ::selection {
@@ -75,8 +203,8 @@ button, a, input, [role="button"] {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -84,12 +212,19 @@ button, a, input, [role="button"] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--foreground) / 8%);
-  border-radius: 3px;
+  background: hsl(var(--foreground) / 12%);
+  background-clip: content-box;
+  border: 3px solid transparent;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--foreground) / 14%);
+  background: hsl(var(--foreground) / 22%);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 
@@ -131,4 +266,58 @@ button, a, input, [role="button"] {
   border-radius: 2px;
   outline: 2px solid hsl(var(--primary));
   outline-offset: 1px;
+}
+
+/* ── Entrances ───────────────────────────────────────────────────────────────
+   One short rise per group, children staggered 35ms apart (capped so long
+   lists never feel slow). Never used for keyboard-driven UI. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 280ms var(--ease-ui) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.rise-children > * {
+  animation: rise 280ms var(--ease-ui) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.rise-children > :nth-child(1) { --i: 0; }
+.rise-children > :nth-child(2) { --i: 1; }
+.rise-children > :nth-child(3) { --i: 2; }
+.rise-children > :nth-child(4) { --i: 3; }
+.rise-children > :nth-child(5) { --i: 4; }
+.rise-children > :nth-child(6) { --i: 5; }
+.rise-children > :nth-child(7) { --i: 6; }
+.rise-children > :nth-child(n + 8) { --i: 7; }
+
+/* Switching between notes / views: a quick fade with a hint of lift. */
+.view-in {
+  animation: view-in 200ms var(--ease-ui) backwards;
+}
+
+kbd {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
 }

@@ -246,7 +246,7 @@ function App() {
 
   if (!isReady) {
     return (
-      <main className="flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
+      <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
       </main>
     );
@@ -254,11 +254,11 @@ function App() {
 
   return (
     <TooltipProvider delayDuration={0} disableHoverableContent>
-      <main className="flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
+      <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
         <TitleBar />
         <div className="flex flex-1 overflow-hidden w-full">
           {currentView !== "settings" && !showWelcome && target?.kind === "folder" && <Sidebar />}
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div key={showWelcome ? "home" : currentView === "settings" ? "settings" : "doc"} className="view-in flex-1 overflow-hidden flex flex-col">
               {currentView === "settings" ? (
                 <SettingsPage />
               ) : showWelcome ? (

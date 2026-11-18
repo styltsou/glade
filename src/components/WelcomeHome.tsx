@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FolderOpen, FileText, ArrowLeft } from "lucide-react";
+import { FolderOpen, FileText, ArrowLeft, Search } from "lucide-react";
 import { useStore } from "@/store";
 import { filterHome, flattenHome } from "@/lib/fuzzy";
 import { HomeSection } from "@/components/HomeList";
@@ -84,41 +84,60 @@ export function WelcomeHome() {
     !home || (home.pinned_folders.length + home.recent_folders.length + home.recent_files.length === 0);
 
   return (
-    <div className="flex flex-1 justify-center overflow-y-auto px-6 py-12" onKeyDown={list.onKeyDown}>
-      <div className="w-full max-w-2xl">
+    <div className="flex flex-1 justify-center overflow-y-auto px-6 pt-[10vh] pb-12" onKeyDown={list.onKeyDown}>
+      <div className="w-full max-w-xl">
         {target && (
           <button
             onClick={hideHome}
-            className="mb-4 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="press mb-5 flex items-center gap-1 rounded-md text-xs text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-3" /> Back to {target.path.split("/").pop()}
           </button>
         )}
-        <input
-          ref={inputRef}
-          autoFocus
-          value={list.query}
-          onChange={(e) => list.setQuery(e.target.value)}
-          placeholder="Filter folders and files…"
-          className="mb-6 h-10 w-full rounded-md border border-border bg-transparent px-3 text-sm outline-none focus:border-ring"
-        />
+
+        <div className="rise mb-7">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-foreground">Glade</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Open a folder or a file, or pick up where you left off.</p>
+        </div>
+
+        <div className="rise relative mb-8" style={{ "--i": 1 } as React.CSSProperties}>
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            autoFocus
+            value={list.query}
+            onChange={(e) => list.setQuery(e.target.value)}
+            placeholder="Filter folders and files…"
+            className="h-11 w-full rounded-xl border border-border/80 bg-card/60 pl-10 pr-4 text-sm shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus:border-ring/60 focus:ring-2 focus:ring-ring/20"
+          />
+        </div>
 
         {empty ? (
-          <p className="mb-6 px-3 text-sm text-muted-foreground">
-            Open a folder or a markdown file to get started. Folders you open will be listed here.
+          <p className="rise mb-8 px-1 text-sm text-muted-foreground" style={{ "--i": 2 } as React.CSSProperties}>
+            Nothing here yet. Folders and files you open will be listed here.
           </p>
         ) : (
-          <HomeLists list={list} />
+          <div className="rise" style={{ "--i": 2 } as React.CSSProperties}>
+            <HomeLists list={list} />
+          </div>
         )}
 
-        <div className="flex flex-col gap-1 border-t border-border pt-4">
-          <button onClick={pickFolder} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent/60">
-            <FolderOpen className="size-4 text-muted-foreground" /> Open folder…
-            <kbd className="ml-auto text-xs text-muted-foreground">{MOD}⇧O</kbd>
+        <div className="rise grid grid-cols-2 gap-2 pt-2" style={{ "--i": 3 } as React.CSSProperties}>
+          <button
+            onClick={pickFolder}
+            className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
+          >
+            <FolderOpen className="size-4 text-muted-foreground" />
+            <span className="flex-1">Open folder</span>
+            <kbd className="text-[11px] text-muted-foreground">{MOD}⇧O</kbd>
           </button>
-          <button onClick={pickFile} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-accent/60">
-            <FileText className="size-4 text-muted-foreground" /> Open file…
-            <kbd className="ml-auto text-xs text-muted-foreground">{MOD}⌥O</kbd>
+          <button
+            onClick={pickFile}
+            className="press flex items-center gap-3 rounded-xl border border-border/70 bg-card/50 px-3.5 py-3 text-left text-sm font-medium transition-colors hover:bg-card hover:border-foreground/15"
+          >
+            <FileText className="size-4 text-muted-foreground" />
+            <span className="flex-1">Open file</span>
+            <kbd className="text-[11px] text-muted-foreground">{MOD}⌥O</kbd>
           </button>
         </div>
       </div>

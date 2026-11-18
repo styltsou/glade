@@ -2,7 +2,8 @@
   --normal-bg: hsl(var(--popover));
   --normal-text: hsl(var(--popover-foreground));
   --normal-border: hsl(var(--border));
-  --border-radius: var(--radius);
+  --border-radius: 12px;
+  --normal-border: hsl(var(--border) / 0.6);
 }
 
 .toaster [data-close-button] {
@@ -19,4 +20,9 @@
 
 .toaster [data-title] {
   color: hsl(var(--popover-foreground));
+}
+.toaster [data-sonner-toast] {
+  box-shadow: var(--elev-lg) !important;
+  font-family: var(--font-sans);
+  letter-spacing: -0.006em;
 }

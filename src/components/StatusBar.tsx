@@ -135,7 +135,7 @@ export function StatusBar() {
   };
 
   return (
-    <div className="flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full border-t border-border">
+    <div className="flex items-center justify-between h-8 shrink-0 bg-background text-[11px] text-muted-foreground w-full border-t border-border/60">
       <div className="flex items-center gap-1.5 pl-2">
         <GitHubLogoIcon className="w-4 h-4" />
         <span>Files changed</span>
@@ -143,7 +143,7 @@ export function StatusBar() {
       <div className="flex items-center">
         <Tooltip>
           <TooltipTrigger asChild>
-            <button className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+            <button className="press size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-50" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
@@ -156,7 +156,7 @@ export function StatusBar() {
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <button className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground">
+            <button className="press size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground">
               <LightningBoltIcon className="w-4 h-4" />
             </button>
           </TooltipTrigger>
@@ -187,7 +187,7 @@ export function StatusBar() {
             </TooltipContent>
           </Tooltip>
           {volumePopoverOpen && (
-            <div className="absolute bottom-full mb-2 right-0 p-3 bg-popover border rounded-md shadow-lg z-[9999]">
+            <div className="absolute bottom-full mb-2 right-0 p-3 bg-popover rounded-xl shadow-[var(--elev-pop)] z-[9999] origin-bottom-right animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
               <div className="space-y-2">
                 {/* Master Controls */}
                 <div className="flex items-center gap-4 pb-2 border-b">
@@ -241,7 +241,7 @@ export function StatusBar() {
           <Tooltip>
             <TooltipTrigger asChild>
             <button 
-              className="size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              className="press size-7 flex items-center justify-center rounded-md transition-colors cursor-pointer text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground"
               onClick={() => openSettingsPage("appearance")}
             >
               <MixerHorizontalIcon className="w-4 h-4" />

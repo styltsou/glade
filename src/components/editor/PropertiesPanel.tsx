@@ -61,7 +61,7 @@ function ListEditor({ entry }: { entry: PropertyEntry }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1 px-1 py-0.5">
       {items.map((item) => (
-        <span key={item} className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs">
+        <span key={item} className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-xs">
           {item}
           <button
             aria-label={`Remove ${item}`}
@@ -120,7 +120,7 @@ export function PropertiesPanel() {
   if (!properties || properties.status === "none") return null;
 
   return (
-    <div className="mb-4 rounded-lg border border-border text-sm">
+    <div className="mb-5 rounded-xl border border-border/70 bg-card/40 text-sm">
       <div className="flex items-center gap-1 px-2 py-1.5">
         <button onClick={toggle} className="flex flex-1 items-center gap-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
           <ChevronRight className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")} />
@@ -146,7 +146,7 @@ export function PropertiesPanel() {
       </div>
 
       {!collapsed && (
-        <div className="border-t border-border px-2 py-1.5">
+        <div className="border-t border-border/60 px-2 py-1.5">
           {properties.status === "invalid" ? (
             <div>
               <p className="mb-1 text-xs text-destructive">Couldn't parse properties. They are shown as written and left untouched.</p>

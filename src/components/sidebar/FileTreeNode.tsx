@@ -142,7 +142,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}
                 className={cn(
-                  "flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
+                  "flex items-center gap-1.5 w-full rounded-lg px-2 py-1.5 text-[13px] font-medium tracking-[-0.005em] transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
                 )}
               >
                 {expanded ? (
@@ -191,11 +191,11 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.1, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
               className="overflow-hidden"
             >
               <div className="ml-[15px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
-                <div className="absolute top-0 bottom-1 left-0 w-[1px] bg-border/80" />
+                <div className="absolute top-0 bottom-1 left-0 w-px bg-border/60" />
                 
                 <div className="flex flex-col gap-0.5">
                   {children.map((child) => (
@@ -228,10 +228,10 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             onMouseDown={handleMouseDown}
             onMouseEnter={() => prefetchNote(entry.path)}
             className={cn(
-              "flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left transition-colors cursor-pointer font-medium",
+              "flex items-center w-full rounded-lg py-1.5 px-2 text-[13px] tracking-[-0.005em] text-left transition-colors cursor-pointer",
               isActive
-                ? "bg-sidebar-accent text-foreground font-medium"
-                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
+                ? "bg-foreground/[0.09] text-foreground font-medium shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
+                : "text-muted-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
             )}
           >
             <span className="truncate pr-1">{entry.name}</span>

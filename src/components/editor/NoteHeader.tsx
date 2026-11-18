@@ -140,7 +140,7 @@ export function NoteHeader({
   }, []);
 
   return (
-    <div className="flex items-center justify-between h-10 shrink-0 select-none border-b relative">
+    <div className="flex items-center justify-between h-10 shrink-0 select-none border-b border-border/60 relative">
       {/* Floating FindBar — positioned absolutely in top-right of the editor */}
       {findVisible && (
         <div className="absolute top-full right-4 z-50 mt-1">
@@ -179,14 +179,15 @@ export function NoteHeader({
 
       <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
         {saveStatus !== "idle" && (
-          <span className="text-muted-foreground">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-in fade-in-0 duration-150">
+            <span className={cn("size-1.5 rounded-full", saveStatus === "saved" ? "bg-emerald-500" : "bg-amber-500")} />
             {saveStatus === "saved" ? "Saved" : "Unsaved"}
           </span>
         )}
 
         <div
           className={cn(
-            "flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium mx-3",
+            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium mx-2 transition-colors duration-200",
             isEditMode
               ? "bg-primary/10 text-primary"
               : "bg-secondary text-secondary-foreground"
@@ -294,15 +295,15 @@ export function NoteHeader({
           </Tooltip>
 
           {exportMenuOpen && (
-            <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
+            <div ref={exportMenuRef} className="absolute right-0 top-full mt-1 z-[110] w-max rounded-xl bg-popover p-1 text-popover-foreground shadow-[var(--elev-pop)] origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">
               <button
-                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                 onClick={() => handleExport("markdown")}
               >
                 Export
               </button>
               <button
-                className="w-full text-left flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                className="w-full text-left flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
                 onClick={() => handleExport("pdf")}
               >
                 Export as PDF

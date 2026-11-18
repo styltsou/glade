@@ -80,8 +80,8 @@ export function Sidebar() {
       <motion.aside
         initial={false}
         animate={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        transition={{ duration: 0.1, ease: "easeOut" }}
-        className="flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border overflow-hidden"
+        transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+        className="flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden"
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">

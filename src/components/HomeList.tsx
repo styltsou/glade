@@ -42,16 +42,16 @@ function Row({ entry, group, selected, onOpen, onHover }: RowProps) {
           onClick={() => onOpen(entry)}
           onMouseMove={onHover}
           className={cn(
-            "flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors",
-            selected ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
+            "flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors",
+            selected
+              ? "bg-foreground/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.05)]"
+              : "hover:bg-foreground/[0.05]",
             !entry.exists && "opacity-50",
           )}
         >
-          {isFolder ? (
-            <Folder className="size-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <FileText className="size-4 shrink-0 text-muted-foreground" />
-          )}
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-foreground/[0.06] text-muted-foreground">
+            {isFolder ? <Folder className="size-3.5" /> : <FileText className="size-3.5" />}
+          </span>
           <span className="truncate text-sm font-medium">{entry.name}</span>
           <span className="ml-auto truncate pl-4 text-xs text-muted-foreground">
             {entry.exists ? shortenPath(entry.path, home) : "Missing — " + shortenPath(entry.path, home)}
@@ -107,8 +107,8 @@ interface SectionProps {
 export function HomeSection({ title, group, entries, offset, selectedIndex, onOpen, onHover }: SectionProps) {
   if (entries.length === 0) return null;
   return (
-    <section className="mb-5">
-      <h2 className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
+    <section className="mb-6">
+      <h2 className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</h2>
       {entries.map((entry, i) => (
         <Row
           key={entry.path}

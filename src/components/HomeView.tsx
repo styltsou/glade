@@ -334,7 +334,7 @@ function findEntryByPath(
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+    <h2 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-[0.08em] mb-4">
       {label}
     </h2>
   );
