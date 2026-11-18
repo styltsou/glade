@@ -11,7 +11,11 @@ import {
 	joinSource,
 	serializeWithFidelity,
 	splitSource,
+	trailingBlankCount,
 } from "./markdownFidelity";
+import { appendTrailingBlanks, countTrailingEmpties, isEmptyParagraph } from "./trailingBlanks";
+
+
 
 const FIXTURE = `
 # Title
@@ -59,7 +63,7 @@ function save(editor: Editor, fidelity: NonNullable<ReturnType<typeof createFide
 	return serializeWithFidelity(fidelity, topLevel(editor), (node) => {
 		const doc = editor.schema.topNodeType.create(null, node as any);
 		return serializer.serialize(doc);
-	});
+	}, isEmptyParagraph);
 }
 
 describe("splitSource", () => {
@@ -128,5 +132,67 @@ describe("serializeWithFidelity", () => {
 		const fidelity = createFidelity(src, topLevel(editor))!;
 		editor.commands.deleteRange({ from: 0, to: editor.state.doc.child(0).nodeSize });
 		expect(save(editor, fidelity)).toBe("second\n");
+	});
+});
+
+describe("blank lines at the end of a note", () => {
+	/** Load like the app does: parse, restore trailing blanks, snapshot. */
+	function load(source: string) {
+		const editor = makeEditor(source);
+		appendTrailingBlanks(editor, source);
+		const fidelity = createFidelity(source, topLevel(editor), isEmptyParagraph)!;
+		return { editor, fidelity };
+	}
+	const addEmpty = (editor: Editor, n: number) => {
+		for (let i = 0; i < n; i++) editor.commands.insertContentAt(editor.state.doc.content.size, { type: "paragraph" });
+	};
+
+	it("counts blank lines after the last block", () => {
+		expect(trailingBlankCount("text\n")).toBe(0);
+		expect(trailingBlankCount("text")).toBe(0);
+		expect(trailingBlankCount("text\n\n\n\n")).toBe(3);
+	});
+
+	it("shows them as empty paragraphs and writes the same bytes back", () => {
+		const source = "text\n\n\n\n";
+		const { editor, fidelity } = load(source);
+		expect(countTrailingEmpties(editor)).toBe(3);
+		expect(save(editor, fidelity)).toBe(source);
+	});
+
+	it("saves extra Enter presses at the end", () => {
+		const source = "# Title\n\ntext\n";
+		const { editor, fidelity } = load(source);
+		addEmpty(editor, 4);
+		const saved = save(editor, fidelity);
+		expect(saved).toBe("# Title\n\ntext\n\n\n\n\n");
+		// ...and reloading that file shows the same four empty paragraphs.
+		const reloaded = load(saved);
+		expect(countTrailingEmpties(reloaded.editor)).toBe(4);
+		expect(save(reloaded.editor, reloaded.fidelity)).toBe(saved);
+	});
+
+	it("removing them again restores a normal ending", () => {
+		const { editor, fidelity } = load("text\n\n\n");
+		expect(countTrailingEmpties(editor)).toBe(2);
+		editor.commands.deleteRange({ from: editor.state.doc.child(0).nodeSize, to: editor.state.doc.content.size });
+		expect(save(editor, fidelity)).toBe("text\n");
+	});
+
+	it("keeps a file without a final newline unchanged until blanks are added", () => {
+		const { editor, fidelity } = load("text");
+		expect(save(editor, fidelity)).toBe("text");
+		addEmpty(editor, 2);
+		expect(save(editor, fidelity)).toBe("text\n\n\n");
+	});
+
+	it("returns the original bytes again after typing and undoing", () => {
+		const { editor, fidelity } = load(FIXTURE);
+		const end = editor.state.doc.child(0).nodeSize + editor.state.doc.child(1).nodeSize - 1;
+		editor.commands.insertContentAt(end, "x");
+		expect(save(editor, fidelity)).not.toBe(FIXTURE);
+		editor.commands.undo();
+		// Same text as was loaded, so the editor sees no change and nothing is saved.
+		expect(save(editor, fidelity)).toBe(FIXTURE);
 	});
 });

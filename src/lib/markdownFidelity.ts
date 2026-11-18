@@ -24,10 +24,25 @@ export interface SourceMap {
 	trailing: string;
 }
 
+/**
+ * Blank lines after the last block, beyond the single line break that ends the
+ * file. The editor shows each as an empty paragraph, so pressing Enter several
+ * times at the end of a note survives a save and reload.
+ */
+export function trailingBlankCount(source: string): number {
+	const map = splitSource(source);
+	if (map.blocks.length === 0) return 0;
+	return Math.max(0, (map.trailing.match(/\n/g)?.length ?? 0) - 1);
+}
+
 export interface Fidelity {
 	source: SourceMap;
+	/** Empty paragraphs at the end of the document as loaded. */
+	extraTrailing: number;
 	/** Top-level nodes as they were right after the source was loaded. */
 	originals: Map<object, number>;
+	/** The same nodes in document order (for structural comparison). */
+	originalList: object[];
 }
 
 const md = new MarkdownIt({ html: true });
@@ -89,14 +104,26 @@ export function joinSource(map: SourceMap): string {
  * source's top-level blocks do not line up with the editor's top-level nodes,
  * in which case callers fall back to plain serialization.
  */
-export function createFidelity(source: string, topLevelNodes: object[]): Fidelity | null {
+export function createFidelity(
+	source: string,
+	topLevelNodes: object[],
+	isEmpty: (node: object) => boolean = () => false,
+): Fidelity | null {
 	const map = splitSource(source);
-	if (map.blocks.length !== topLevelNodes.length) return null;
+	const { core, empties } = splitTrailingEmpties(topLevelNodes, isEmpty);
+	if (map.blocks.length !== core.length) return null;
 	const originals = new Map<object, number>();
-	topLevelNodes.forEach((n, i) => originals.set(n, i));
+	core.forEach((n, i) => originals.set(n, i));
 	// Distinct nodes required; shared instances would make the mapping ambiguous.
-	if (originals.size !== topLevelNodes.length) return null;
-	return { source: map, originals };
+	if (originals.size !== core.length) return null;
+	return { source: map, originals, originalList: core, extraTrailing: empties };
+}
+
+/** Separate the nodes that carry content from empty paragraphs at the end. */
+export function splitTrailingEmpties(nodes: object[], isEmpty: (node: object) => boolean) {
+	let end = nodes.length;
+	while (end > 0 && isEmpty(nodes[end - 1])) end--;
+	return { core: nodes.slice(0, end), empties: nodes.length - end };
 }
 
 /**
@@ -105,11 +132,25 @@ export function createFidelity(source: string, topLevelNodes: object[]): Fidelit
  */
 export function serializeWithFidelity(
 	fidelity: Fidelity,
-	nodes: object[],
+	allNodes: object[],
 	serializeNode: (node: object) => string,
+	isEmpty: (node: object) => boolean = () => false,
 ): string {
-	const { source, originals } = fidelity;
-	const idx = nodes.map((n) => originals.get(n));
+	const { source, originals, originalList } = fidelity;
+	const { core: nodes, empties } = splitTrailingEmpties(allNodes, isEmpty);
+
+	// A node counts as untouched if it is the same object, or structurally equal
+	// to an original (undoing an edit rebuilds the node as an equal copy).
+	const same = (a: any, b: any) => typeof a?.eq === "function" && a.eq(b);
+	const idx: Array<number | undefined> = [];
+	nodes.forEach((node, k) => {
+		const direct = originals.get(node);
+		if (direct !== undefined) return idx.push(direct);
+		const expected = k === 0 ? 0 : idx[k - 1] !== undefined ? idx[k - 1]! + 1 : undefined;
+		if (expected !== undefined && same(originalList[expected], node)) return idx.push(expected);
+		const found = originalList.findIndex((o) => same(o, node));
+		idx.push(found === -1 ? undefined : found);
+	});
 	let out = "";
 
 	nodes.forEach((node, k) => {
@@ -125,7 +166,13 @@ export function serializeWithFidelity(
 
 	const last = idx[idx.length - 1];
 	if (nodes.length > 0) {
-		out += last !== undefined && last === source.blocks.length - 1 ? source.trailing : "\n";
+		const endsAtOriginalEnd = last !== undefined && last === source.blocks.length - 1;
+		if (endsAtOriginalEnd && empties === fidelity.extraTrailing) {
+			out += source.trailing; // nothing changed at the end: keep it byte for byte
+		} else {
+			const eol = source.trailing.includes("\r\n") ? "\r\n" : "\n";
+			out += eol.repeat(empties + 1);
+		}
 	}
 	return out;
 }

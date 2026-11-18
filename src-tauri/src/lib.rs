@@ -1,6 +1,8 @@
 mod commands;
 mod frontmatter;
 mod launch;
+#[cfg(test)]
+mod integration_tests;
 mod links;
 mod migration;
 mod config;
@@ -43,24 +45,12 @@ pub fn run() {
         .register_uri_scheme_protocol("glade-img", |_ctx, request| {
             // Serves local images only (never other file types), so notes can
             // show images from anywhere on disk without broad file access.
-            let raw = request.uri().path().trim_start_matches('/');
-            let path = std::path::PathBuf::from(links::percent_decode(raw));
-            let mime = mime_guess::from_path(&path).first_or_octet_stream();
-            let not_found = || {
-                tauri::http::Response::builder()
-                    .status(404)
-                    .body(Vec::new())
-                    .unwrap()
-            };
-            if mime.type_() != mime_guess::mime::IMAGE || !path.is_file() {
-                return not_found();
-            }
-            match std::fs::read(&path) {
-                Ok(bytes) => tauri::http::Response::builder()
-                    .header("Content-Type", mime.essence_str())
+            match links::read_image(request.uri().path()) {
+                Some((mime, bytes)) => tauri::http::Response::builder()
+                    .header("Content-Type", mime)
                     .body(bytes)
                     .unwrap(),
-                Err(_) => not_found(),
+                None => tauri::http::Response::builder().status(404).body(Vec::new()).unwrap(),
             }
         })
         .setup(|app| {

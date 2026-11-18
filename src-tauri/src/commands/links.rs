@@ -22,12 +22,19 @@ pub async fn classify_links(window: tauri::Window, from: String, hrefs: Vec<Stri
 #[tauri::command]
 pub async fn create_linked_note(window: tauri::Window, from: String, href: String, confirmed: bool) -> Result<String, AppError> {
     let root = root_for(&window)?;
-    let from_abs = resolve_markdown(&root, &from)?;
-    let base = from_abs.parent().unwrap_or(&root);
-    let target = links::resolve_href(base, &href)
+    let target = create_note_for_link(&root, &from, &href, confirmed)?;
+    vault::invalidate_vault_cache();
+    Ok(target)
+}
+
+/// Core of `create_linked_note`, separated so it can be tested.
+pub fn create_note_for_link(root: &Path, from: &str, href: &str, confirmed: bool) -> Result<String, AppError> {
+    let from_abs = resolve_markdown(root, from)?;
+    let base = from_abs.parent().unwrap_or(root);
+    let target = links::resolve_href(base, href)
         .filter(|p| vault::is_markdown(p))
         .ok_or_else(|| AppError::InvalidPath(format!("Not a markdown link: {}", href)))?;
-    if !target.starts_with(&root) && !confirmed {
+    if !target.starts_with(root) && !confirmed {
         return Err(AppError::InvalidPath("Creating a file outside the open folder needs confirmation".into()));
     }
     if target.exists() {
@@ -37,8 +44,36 @@ pub async fn create_linked_note(window: tauri::Window, from: String, href: Strin
         fs::create_dir_all(parent)?;
     }
     crate::watch::write_file(&target, "")?;
-    vault::invalidate_vault_cache();
     Ok(target.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn creating_a_missing_link_target() {
+        let outer = tempfile::tempdir().unwrap();
+        let root = outer.path().join("root");
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("a.md"), "[x](new/todo.md) [o](../outside.md)").unwrap();
+
+        // Inside the root: created (with its folder), no confirmation needed.
+        let made = create_note_for_link(&root, "a.md", "new/todo.md", false).unwrap();
+        assert!(Path::new(&made).is_file());
+        assert!(made.ends_with("root/new/todo.md"));
+        // Not overwritten when it already exists.
+        assert!(create_note_for_link(&root, "a.md", "new/todo.md", false).is_err());
+
+        // Outside the root: refused until confirmed.
+        assert!(create_note_for_link(&root, "a.md", "../outside.md", false).is_err());
+        assert!(!outer.path().join("outside.md").exists());
+        create_note_for_link(&root, "a.md", "../outside.md", true).unwrap();
+        assert!(outer.path().join("outside.md").is_file());
+
+        // Only markdown targets.
+        assert!(create_note_for_link(&root, "a.md", "run.sh", true).is_err());
+    }
 }
 
 #[derive(Serialize)]

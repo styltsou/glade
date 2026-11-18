@@ -136,6 +136,17 @@ pub fn classify(root: &Path, base_dir: &Path, href: &str) -> LinkInfo {
     mk(if abs.exists() { "file" } else { "missing" }, Some(&abs), rel)
 }
 
+/// What the `glade-img://` protocol serves for a request path: the file's
+/// MIME type and bytes, only for images that exist. Anything else is refused.
+pub fn read_image(raw_request_path: &str) -> Option<(String, Vec<u8>)> {
+    let path = PathBuf::from(percent_decode(raw_request_path.trim_start_matches('/')));
+    let mime = mime_guess::from_path(&path).first_or_octet_stream();
+    if mime.type_() != mime_guess::mime::IMAGE || !path.is_file() {
+        return None;
+    }
+    std::fs::read(&path).ok().map(|bytes| (mime.essence_str().to_string(), bytes))
+}
+
 /// A link's destination inside the source text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkSpan {
@@ -297,6 +308,29 @@ pub fn backlinks(root: &Path, target: &Path) -> Result<Vec<PathBuf>, crate::erro
 mod tests {
     use super::*;
     use std::fs;
+
+    #[test]
+    fn image_protocol_serves_images_only() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("pic.png"), [1u8, 2, 3]).unwrap();
+        fs::write(dir.path().join("my pic.svg"), "<svg/>").unwrap();
+        fs::write(dir.path().join("secret.txt"), "nope").unwrap();
+        fs::write(dir.path().join("run.sh"), "#!/bin/sh").unwrap();
+
+        // The frontend sends the whole absolute path as one encoded URL segment
+        // (convertFileSrc), so slashes arrive as %2F.
+        let req = |name: &str| {
+            let abs = dir.path().join(name).to_string_lossy().to_string();
+            format!("/{}", percent_encoding::utf8_percent_encode(&abs, percent_encoding::NON_ALPHANUMERIC))
+        };
+        let (mime, bytes) = read_image(&req("pic.png")).unwrap();
+        assert_eq!(mime, "image/png");
+        assert_eq!(bytes, vec![1, 2, 3]);
+        assert_eq!(read_image(&req("my pic.svg")).unwrap().0, "image/svg+xml");
+        assert!(read_image(&req("secret.txt")).is_none());
+        assert!(read_image(&req("run.sh")).is_none());
+        assert!(read_image(&req("missing.png")).is_none());
+    }
 
     #[test]
     fn resolves_relative_to_the_containing_file() {
