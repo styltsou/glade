@@ -700,7 +700,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     setConflict(null);
     lastSavedContentRef.current = latestContentRef.current;
     const store = useStore.getState();
-    store.focusPane(paneIndexRef.current);
+    store.focusGroup(paneIndexRef.current);
     store.setFocusedPathNull();
   }, []);
 

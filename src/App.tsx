@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
-import { activeGroup, activeTab } from "@/lib/tabs";
+import { focusedGroup, activeTab } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
@@ -242,28 +242,28 @@ function App() {
         }
         if (key === "w" && !e.shiftKey) {
           e.preventDefault();
-          st.closeTab(activeTab(st.tabsState).id);
+          st.closeTab(st.tabsState.focused, activeTab(st.tabsState).id);
           return;
         }
         if (e.key === "\\") {
           e.preventDefault();
-          if (st.tabsState.groups.length > 1) st.closePane(st.tabsState.focused);
+          if (st.tabsState.groups.length > 1) st.closeTab(st.tabsState.focused, focusedGroup(st.tabsState).activeId);
           else st.splitActive();
           return;
         }
         if (e.key === "Tab") {
           e.preventDefault();
-          const { tabs, activeId } = activeGroup(st.tabsState);
+          const { tabs, activeId } = focusedGroup(st.tabsState);
           const i = tabs.findIndex((t) => t.id === activeId);
           const next = tabs[(i + (e.shiftKey ? -1 : 1) + tabs.length) % tabs.length];
-          st.activateTab(next.id);
+          st.activateTab(st.tabsState.focused, next.id);
           return;
         }
         if (/^[1-9]$/.test(e.key) && !e.shiftKey) {
-          const tab = activeGroup(st.tabsState).tabs[Number(e.key) - 1];
+          const tab = focusedGroup(st.tabsState).tabs[Number(e.key) - 1];
           if (tab) {
             e.preventDefault();
-            st.activateTab(tab.id);
+            st.activateTab(st.tabsState.focused, tab.id);
             return;
           }
         }

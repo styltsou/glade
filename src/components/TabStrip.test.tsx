@@ -39,10 +39,11 @@ beforeEach(() => {
   root = createRoot(host);
   useStore.setState({
     ...initial,
-    activateTab: (id) => useStore.setState((s) => ({ tabsState: T.activateTab(s.tabsState, id) })),
-    closeTab: (id) => useStore.setState((s) => ({ tabsState: T.closeTab(s.tabsState, id) })),
-    newTab: (pane) => useStore.setState((s) => ({ tabsState: T.openInNewTab(pane === undefined ? s.tabsState : T.focusPane(s.tabsState, pane), null) })),
-    splitActive: () => useStore.setState((s) => ({ tabsState: T.split(s.tabsState) })),
+    activateTab: (group, id) => useStore.setState((s) => ({ tabsState: T.activateTab(s.tabsState, group, id) })),
+    closeTab: (group, id) => useStore.setState((s) => ({ tabsState: T.closeTab(s.tabsState, group, id) })),
+    focusGroup: (index) => useStore.setState((s) => ({ tabsState: T.focusGroup(s.tabsState, index) })),
+    newTab: () => useStore.setState((s) => ({ tabsState: T.newTab(s.tabsState) })),
+    splitActive: () => useStore.setState((s) => ({ tabsState: T.splitActive(s.tabsState) })),
   });
 });
 
@@ -58,7 +59,7 @@ afterEach(() => {
 function render(paths: string[]) {
   let state = T.initialTabs(paths[0]);
   paths.slice(1).forEach((path) => { state = T.openInNewTab(state, path); });
-  state = T.activateTab(state, state.groups[0].tabs[0].id);
+  state = T.activateTab(state, 0, state.groups[0].tabs[0].id);
   useStore.setState({ tabsState: state });
   act(() => root.render(<TabStrip />));
   return () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
@@ -100,7 +101,7 @@ describe("editor tab controls", () => {
     const lists = host.querySelectorAll('[role="tablist"]');
     expect(lists).toHaveLength(2);
     act(() => (lists[0].querySelector('[role="tab"]') as HTMLButtonElement).click());
-    expect(T.groupTab(useStore.getState().tabsState.groups[1]).path).toBe("right-b.md");
+    expect(T.activeTabOf(useStore.getState().tabsState.groups[1]).path).toBe("right-b.md");
     const add = host.querySelectorAll<HTMLButtonElement>('[aria-label="New tab"]');
     act(() => add[1].click());
     expect(useStore.getState().tabsState.groups.map((g) => g.tabs.length)).toEqual([2, 3]);
@@ -115,12 +116,12 @@ describe("editor tab controls", () => {
     expect(event.defaultPrevented).toBe(false);
   });
 
-  it("can close the last file with its close button, returning to Overview", () => {
+  it("can close the last file with its close button, returning to the new tab page", () => {
     const controls = render(["a.md"]);
     const close = host.querySelector<HTMLButtonElement>('[aria-label="Close a.md"]')!;
     act(() => close.click());
     expect(controls()).toHaveLength(1);
-    expect(controls()[0].getAttribute("aria-label")).toBe("Overview");
+    expect(controls()[0].getAttribute("aria-label")).toBe("New tab");
   });
 
   it("Delete closes a tab and focuses the selected neighbour", async () => {

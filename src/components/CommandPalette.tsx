@@ -207,7 +207,7 @@ export function CommandPalette() {
           newTab();
           break;
         case "close-tab":
-          closeTab(activeTab(useStore.getState().tabsState).id);
+          { const ts = useStore.getState().tabsState; closeTab(ts.focused, activeTab(ts).id); }
           break;
         case "split-right":
           splitActive();

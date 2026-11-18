@@ -1,6 +1,6 @@
 import { lazy, Suspense, useRef } from "react";
 import { useStore } from "@/store";
-import { groupTab } from "@/lib/tabs";
+import { activeTabOf } from "@/lib/tabs";
 import { HomeView } from "@/components/HomeView";
 import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ const Editor = lazy(() => import("@/components/Editor").then((m) => ({ default: 
 export function PaneArea() {
   const state = useStore((s) => s.tabsState);
   const targetKind = useStore((s) => s.target?.kind);
-  const focusPane = useStore((s) => s.focusPane);
+  const focusGroup = useStore((s) => s.focusGroup);
   const setTabRatio = useStore((s) => s.setTabRatio);
   const containerRef = useRef<HTMLDivElement>(null);
   const split = state.groups.length > 1;
@@ -27,7 +27,7 @@ export function PaneArea() {
     let frame = 0;
     const onMove = (e: PointerEvent) => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setTabRatio(state.groups[0].id, (e.clientX - rect.left) / rect.width));
+      frame = requestAnimationFrame(() => setTabRatio((e.clientX - rect.left) / rect.width));
     };
     const onUp = () => {
       delete handle.dataset.dragging;
@@ -44,7 +44,7 @@ export function PaneArea() {
   return (
     <div ref={containerRef}  className="flex min-h-0 flex-1 overflow-hidden">
       {state.groups.map((group, index) => {
-        const pane = groupTab(group);
+        const pane = activeTabOf(group);
         return (
         <div key={group.id} className="flex min-w-0 flex-1" style={split ? { flex: `${index === 0 ? state.ratio : 1 - state.ratio} 1 0%` } : undefined}>
           {index === 1 && (
@@ -60,7 +60,7 @@ export function PaneArea() {
           <div
             id={`editor-workspace-${group.id}`} role="tabpanel" aria-labelledby={`file-tab-${pane.id}`}
             className={cn("flex min-w-0 flex-1 flex-col overflow-hidden", split && state.focused !== index && "opacity-[0.97]")}
-            onMouseDownCapture={() => split && state.focused !== index && focusPane(index)}
+            onMouseDownCapture={() => split && state.focused !== index && focusGroup(index)}
           >
             {pane.path ? (
               <Suspense fallback={<EditorSkeleton />}>
@@ -69,7 +69,7 @@ export function PaneArea() {
                   paneIndex={index}
                   split={split}
                   focused={state.focused === index}
-                  onFocus={() => state.focused !== index && focusPane(index)}
+                  onFocus={() => state.focused !== index && focusGroup(index)}
                 />
               </Suspense>
             ) : targetKind === "file" ? (

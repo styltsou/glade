@@ -97,7 +97,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       });
       const idToPath = get().idToPath;
       const restored = T.fromSaved(
-        { tabs: ui.tabs ?? [], active: ui.active_tab ?? 0, focused: ui.focused_pane ?? 0, version: ui.tab_layout_version, activeTabs: ui.active_tabs, ratio: ui.split_ratio },
+        { groups: ui.tabs ?? [], activeIndex: ui.active_tabs ?? [], focused: ui.focused_pane ?? 0, ratio: ui.split_ratio || 0.5 },
         (p) => !!idToPath[p],
       );
       if (restored && !T.focusedPath(get().tabsState) && get().tabsState.groups.length === 1 && get().tabsState.groups[0].tabs.length === 1) {
@@ -118,14 +118,14 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       Object.fromEntries(Object.entries(m).filter(([k]) => !k.startsWith("/") && !/^[A-Za-z]:[\\/]/.test(k)));
     const last = activeNote && !activeNote.path.startsWith("/") ? activeNote.path : null;
     const saved = T.toSaved(get().tabsState);
-    const relativeGroups = saved.groups.map((tabs) => tabs.map((p) => (p && !p.startsWith("/") ? p : null)));
+    const relativeTabs = saved.groups.map((tabs) => tabs.map((p) => (p && !p.startsWith("/") ? p : null)));
     await invoke("save_workspace_ui", {
       ui: {
         tabs: relativeTabs,
-        tab_layout_version: saved.version,
-        active_tabs: saved.activeTabs,
+        tab_layout_version: 3,
+        active_tabs: saved.activeIndex,
         split_ratio: saved.ratio,
-        active_tab: saved.active,
+        active_tab: saved.activeIndex[saved.focused] ?? 0,
         focused_pane: saved.focused,
         expanded_folders: expandedFolders,
         last_file: last,
