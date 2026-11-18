@@ -66,7 +66,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 ### 🎨 Appearance
 
-- **Themes** — Claude, Everforest, Rose Pine, and Monochrome — each with light and dark variants. Toggle between light, dark, or system-follow mode.
+- **Themes** — Glade (neutral, the default), Claude, Everforest and Rosé Pine, each in light and dark, or following the system. `Cmd/Ctrl+,` opens a theme picker in the command palette that previews each theme as you move through it; the workspace menu has the same choices. There is no settings page.
 - **Resizable Panels** — Sidebar, tag panel, pinned section, and table of contents are all resizable and collapsible.
 
 ### ⚡ Performance
@@ -93,7 +93,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 | `Cmd/Ctrl + O` | Open recent |
 | `Cmd/Ctrl + Shift + O` / `Alt + O` | Open folder / open file |
 | `Cmd/Ctrl + Shift + H` | Home |
-| `Cmd/Ctrl + ,` | Settings |
+| `Cmd/Ctrl + ,` | Change theme or mode |
 | `Cmd/Ctrl + S` | Save note |
 | `Alt + C` | Search: case-sensitive toggle |
 | `Alt + W` | Search: whole-word toggle |

@@ -36,7 +36,7 @@ Developers, technical writers and people who keep markdown in folders (repos, Ob
 
 ### Opening and Home
 - Open a folder or a single file; one window per root, several windows at once.
-- Home lists pinned folders, recent folders and recent files, searchable and keyboard-driven. `Cmd/Ctrl+O` switches folder; `Cmd/Ctrl+Shift+H` opens Home.
+- Home lists pinned folders, recent folders and recent files; arrow keys and Enter work without a search box. The `Cmd/Ctrl+O` switcher has a filter. `Cmd/Ctrl+O` switches folder; `Cmd/Ctrl+Shift+H` opens Home.
 - Last session is restored on launch. Missing folders offer "Locate" or "Remove".
 
 ### Editor

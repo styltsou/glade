@@ -53,10 +53,10 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
           </ContextMenuTrigger><ContextMenuContent className="min-w-48">
             <ContextMenuItem onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>
             {group.tabs.length > 1 && <ContextMenuItem onSelect={() => group.tabs.filter((t) => t.id !== tab.id).forEach((t) => close(index, t.id))}>Close other tabs</ContextMenuItem>}
-            {(split || group.tabs.length > 1) && <ContextMenuSeparator />}
+            <ContextMenuSeparator />
             {split
               ? <ContextMenuItem onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
-              : group.tabs.length > 1 && <ContextMenuItem onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>}
+              : <ContextMenuItem onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>}
           </ContextMenuContent></ContextMenu>
         </Reorder.Item>;
       })}

@@ -170,6 +170,32 @@ html[data-fullscreen="true"] .app-frame {
   --tw-ease: var(--ease-ui);
 }
 
+/* How floating surfaces enter. They stay anchored to their trigger, but the
+   scale is barely there and a short move away from the trigger carries the
+   motion, so a menu drops out of its button instead of growing diagonally
+   from a corner. Exits are quicker than entries. (Unlayered, so these win
+   over the slide/zoom utilities on the components.) */
+[data-slot="dropdown-menu-content"],
+[data-slot="context-menu-content"],
+[data-slot="popover-content"],
+[data-slot="select-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="tooltip-content"] {
+  --tw-enter-scale: 0.98;
+  --tw-exit-scale: 0.98;
+  --tw-enter-translate-x: 0;
+  --tw-exit-translate-x: 0;
+  --tw-enter-translate-y: 0;
+  --tw-exit-translate-y: 0;
+}
+[data-slot][data-side="bottom"] { --tw-enter-translate-y: -4px; --tw-exit-translate-y: -4px; }
+[data-slot][data-side="top"] { --tw-enter-translate-y: 4px; --tw-exit-translate-y: 4px; }
+[data-slot][data-side="right"] { --tw-enter-translate-x: -4px; --tw-exit-translate-x: -4px; }
+[data-slot][data-side="left"] { --tw-enter-translate-x: 4px; --tw-exit-translate-x: 4px; }
+[data-slot$="-content"][data-state="closed"] {
+  --tw-animation-duration: 90ms;
+}
+
 [data-slot="dialog-content"],
 [data-slot="alert-dialog-content"] {
   box-shadow: var(--elev-xl) !important;

@@ -8,7 +8,6 @@ import { ExportDialog } from "@/components/editor/ExportDialog";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
 import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
-import { SettingsDialog } from "@/components/SettingsDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WelcomeHome } from "@/components/WelcomeHome";
 import { PaneArea } from "@/components/PaneArea";
@@ -19,7 +18,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
 import { AddPropertyDialog, EditFrontmatterDialog } from "@/components/editor/PropertyDialogs";
 import { relativeTo } from "@/lib/paths";
-import { SettingsPage } from "@/components/SettingsPage";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { useStore } from "@/store";
@@ -45,8 +43,6 @@ function SharedDialogs() {
   const createFolderParentPath = useStore((state) => state.createFolderParentPath);
   const closeCreateFolder = useStore((state) => state.closeCreateFolder);
 
-  const settingsOpen = useStore((state) => state.settingsOpen);
-  const closeSettings = useStore((state) => state.closeSettings);
 
   const createFolder = useStore((state) => state.createFolder);
   const renameNote = useStore((state) => state.renameNote);
@@ -97,7 +93,6 @@ function SharedDialogs() {
           createFolder(newPath);
         }}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={(open) => { if (!open) closeSettings(); }} />
       <ErrorBoundary>
         <FolderSwitcher />
       </ErrorBoundary>
@@ -116,15 +111,8 @@ function App() {
   const homeOpen = useStore((state) => state.homeOpen);
   const rootMissing = useStore((state) => state.rootMissing);
   const restoring = useStore((state) => state.target?.kind === "folder" && state.uiLoadedFor !== state.target.path);
-  const currentView = useStore((state) => state.currentView);
-  const openSettingsPage = useStore((state) => state.openSettingsPage);
   const selectNote = useStore((state) => state.selectNote);
   const openPath = useStore((state) => state.openPath);
-  const showHome = useStore((state) => state.showHome);
-  const hideHome = useStore((state) => state.hideHome);
-  const openSwitcher = useStore((state) => state.openSwitcher);
-  const pickFolder = useStore((state) => state.pickFolder);
-  const pickFile = useStore((state) => state.pickFile);
   const isReady = workspaceReady;
   const showWelcome = !target || homeOpen;
 
@@ -240,7 +228,7 @@ function App() {
 
       // Tabs and splits (only when a folder or file is open).
       const st = useStore.getState();
-      if (st.target && !st.homeOpen && st.currentView !== "settings" && !e.altKey) {
+      if (st.target && !st.homeOpen && !e.altKey) {
         if (e.key === "Tab") {
           e.preventDefault();
           const { tabs, activeId } = focusedGroup(st.tabsState);
@@ -262,7 +250,7 @@ function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [openSettingsPage, showHome, hideHome, openSwitcher, pickFolder, pickFile]);
+  }, []);
 
   if (!isReady) {
     return (
@@ -278,11 +266,9 @@ function App() {
       <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
         <TitleBar />
         <div className="flex flex-1 overflow-hidden w-full">
-          {currentView !== "settings" && !showWelcome && target?.kind === "folder" && <Sidebar />}
-          <div key={showWelcome ? "home" : currentView === "settings" ? "settings" : "doc"} className="flex-1 overflow-hidden flex flex-col">
-              {currentView === "settings" ? (
-                <SettingsPage />
-              ) : showWelcome ? (
+          {!showWelcome && target?.kind === "folder" && <Sidebar />}
+          <div key={showWelcome ? "home" : "doc"} className="flex-1 overflow-hidden flex flex-col">
+              {showWelcome ? (
                 <WelcomeHome />
               ) : rootMissing ? (
                 <RootMissing />

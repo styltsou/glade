@@ -122,7 +122,7 @@ export function HomeView() {
           {(hasData || !isLoadingAny) && (
             <section>
               <SectionHeader label="Folders" />
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
                 {shouldShowFolderSkeletons
                   ? [...Array(4)].map((_, i) => <FolderCardSkeleton key={i} />)
                   : subFolders.map((folder) => <FolderCard key={folder.path} folder={folder} />)}

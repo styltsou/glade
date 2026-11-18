@@ -12,7 +12,6 @@ export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const target = useStore((state) => state.target);
   const homeOpen = useStore((state) => state.homeOpen);
-  const currentView = useStore((state) => state.currentView);
   const sidebarWidth = useStore((s) => s.sidebarWidth);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
@@ -32,7 +31,7 @@ export function TitleBar() {
     };
   }, []);
 
-  const folderOpen = target?.kind === "folder" && !homeOpen && currentView !== "settings";
+  const folderOpen = target?.kind === "folder" && !homeOpen;
   const sidebarVisible = folderOpen && !sidebarCollapsed;
   // Animate only when the sidebar opens or closes, not while it is being resized.
   const wasVisible = useRef(sidebarVisible);
@@ -83,7 +82,7 @@ export function TitleBar() {
       <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
       </motion.div>
-      {target && !homeOpen && currentView !== "settings" ? <TabStrip trailingInset={112} /> : <div className="h-full flex-1" />}
+      {target && !homeOpen ? <TabStrip trailingInset={112} /> : <div className="h-full flex-1" />}
       <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
 
 

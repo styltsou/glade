@@ -1,31 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FolderOpen, FileText, ArrowLeft, Search } from "lucide-react";
+import { FolderOpen, FileText, ArrowLeft } from "lucide-react";
+import { bindingFor, formatShortcut, isEditableTarget } from "@/lib/keybindings";
 import { useStore } from "@/store";
 import { filterHome, flattenHome } from "@/lib/fuzzy";
 import { HomeSection } from "@/components/HomeList";
 import type { HomeData, HomeEntry } from "@/types";
 
 const EMPTY: HomeData = { pinned_folders: [], recent_folders: [], recent_files: [] };
-const isMac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);
-const MOD = isMac ? "⌘" : "Ctrl+";
 
 /** Filter box + grouped lists. Shared by the Home screen and the quick switcher. */
-export function useHomeList(active: boolean, afterOpen?: () => void) {
+export function useHomeList(active: boolean, afterOpen?: () => void, highlightFirst = true) {
   const home = useStore((s) => s.home) ?? EMPTY;
   const openPath = useStore((s) => s.openPath);
   const [query, setQuery] = useState("");
   const [index, setIndex] = useState(0);
   // While the pointer drives the list, hover styling comes from CSS alone, so it
   // clears when the pointer leaves; only keyboard navigation draws a "selected" row.
-  const [pointer, setPointer] = useState(false);
+  const [pointer, setPointer] = useState(!highlightFirst);
 
   const filtered = useMemo(() => filterHome(home, query), [home, query]);
   const flat = useMemo(() => flattenHome(filtered), [filtered]);
 
   useEffect(() => {
     setIndex(0);
-    setPointer(false);
-  }, [query]);
+    setPointer(!highlightFirst);
+  }, [query, highlightFirst]);
   useEffect(() => {
     if (active) setQuery("");
   }, [active]);
@@ -36,16 +35,16 @@ export function useHomeList(active: boolean, afterOpen?: () => void) {
     openPath(entry.path);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown") {
+  const onKeyDown = (e: { key: string; preventDefault(): void }) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
-      setPointer(false);
-      setIndex((i) => Math.min(i + 1, flat.length - 1));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setPointer(false);
-      setIndex((i) => Math.max(i - 1, 0));
-    } else if (e.key === "Enter" && flat[index]) {
+      // The first arrow press just shows where the keyboard is.
+      if (pointer) {
+        setPointer(false);
+        return;
+      }
+      setIndex((i) => (e.key === "ArrowDown" ? Math.min(i + 1, flat.length - 1) : Math.max(i - 1, 0)));
+    } else if (e.key === "Enter" && !pointer && flat[index]) {
       e.preventDefault();
       open(flat[index]);
     }
@@ -86,18 +85,27 @@ export function WelcomeHome() {
   const pickFolder = useStore((s) => s.pickFolder);
   const pickFile = useStore((s) => s.pickFile);
   const home = useStore((s) => s.home);
-  const list = useHomeList(true);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const list = useHomeList(true, undefined, false);
 
+  // No filter box: the lists are short. Arrow keys and Enter still work
+  // anywhere on Home, unless something else (a dialog, an input) has the keyboard.
+  const onKeyDownRef = useRef(list.onKeyDown);
+  onKeyDownRef.current = list.onKeyDown;
   useEffect(() => {
-    inputRef.current?.focus();
+    const handler = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || isEditableTarget(e)) return;
+      if (document.querySelector('[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"]')) return;
+      onKeyDownRef.current(e);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [homeOpen]);
 
   const empty =
     !home || (home.pinned_folders.length + home.recent_folders.length + home.recent_files.length === 0);
 
   return (
-    <div className="flex flex-1 justify-center overflow-y-auto px-6 pt-[10vh] pb-12" onKeyDown={list.onKeyDown}>
+    <div className="flex flex-1 justify-center overflow-y-auto px-6 pt-[10vh] pb-12">
       <div className="w-full max-w-xl">
         {target && (
           <button
@@ -108,21 +116,9 @@ export function WelcomeHome() {
           </button>
         )}
 
-        <div className="mb-7">
+        <div className="mb-8">
           <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.03em] text-foreground">Glade</h1>
           <p className="mt-1 text-sm text-muted-foreground">Open a folder or a file, or pick up where you left off.</p>
-        </div>
-
-        <div className="relative mb-8">
-          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            ref={inputRef}
-            autoFocus
-            value={list.query}
-            onChange={(e) => list.setQuery(e.target.value)}
-            placeholder="Filter folders and files…"
-            className="h-11 w-full rounded-lg border border-border/80 bg-card/60 pl-10 pr-4 text-sm shadow-xs outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground focus:border-ring/60 focus:ring-2 focus:ring-ring/20"
-          />
         </div>
 
         {empty ? (
@@ -142,7 +138,7 @@ export function WelcomeHome() {
           >
             <FolderOpen className="size-4 text-muted-foreground" />
             <span className="flex-1">Open folder</span>
-            <kbd className="text-[11px] text-muted-foreground">{MOD}⇧O</kbd>
+            <kbd className="text-xs text-muted-foreground">{formatShortcut(bindingFor("open-folder")!)}</kbd>
           </button>
           <button
             onClick={pickFile}
@@ -150,7 +146,7 @@ export function WelcomeHome() {
           >
             <FileText className="size-4 text-muted-foreground" />
             <span className="flex-1">Open file</span>
-            <kbd className="text-[11px] text-muted-foreground">{MOD}⌥O</kbd>
+            <kbd className="text-xs text-muted-foreground">{formatShortcut(bindingFor("open-file")!)}</kbd>
           </button>
         </div>
       </div>

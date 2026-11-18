@@ -1,16 +1,6 @@
 import { StateCreator } from "zustand";
 
 export interface DialogSlice {
-  // Current view
-  currentView: "home" | "settings";
-  setCurrentView: (view: "home" | "settings") => void;
-
-  // Settings page
-  settingsSection: "appearance" | "about";
-  setSettingsSection: (section: "appearance" | "about") => void;
-  openSettingsPage: (section?: "appearance" | "about") => void;
-  closeSettingsPage: () => void;
-
   // Rename dialog
   renameOpen: boolean;
   renamePath: string | null;
@@ -34,9 +24,6 @@ export interface DialogSlice {
   closeDelete: () => void;
 
   // Settings dialog
-  settingsOpen: boolean;
-  openSettings: () => void;
-  closeSettings: () => void;
 
 
 }
@@ -69,21 +56,4 @@ export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = 
   closeDelete: () =>
     set({ deleteOpen: false, deletePath: null, deleteName: "", deleteIsFolder: false }),
 
-  settingsOpen: false,
-  openSettings: () => set({ settingsOpen: true }),
-  closeSettings: () => set({ settingsOpen: false }),
-
-
-
-  currentView: "home",
-  setCurrentView: (view) => set({ currentView: view }),
-
-  settingsSection: "appearance",
-  setSettingsSection: (section) => set({ settingsSection: section }),
-  openSettingsPage: (section) => set({ 
-    currentView: "settings", 
-    settingsSection: section || "appearance",
-    settingsOpen: false 
-  }),
-  closeSettingsPage: () => set({ currentView: "home" }),
 });

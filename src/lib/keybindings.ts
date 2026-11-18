@@ -43,6 +43,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "new-folder", code: "KeyN", mod: true, shiftKey: true },
   { command: "delete", code: "KeyD", mod: true },
   { command: "open-settings", key: ",", mod: true },
+  { command: "open-settings", code: "Comma", mod: true },
   { command: "toggle-sidebar", code: "KeyB", mod: true },
   { command: "toggle-toc", code: "KeyT", mod: true, shiftKey: true },
   { command: "toggle-edit-mode", code: "KeyE", mod: true },
@@ -50,6 +51,8 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "new-tab", code: "KeyT", mod: true },
   { command: "close-tab", code: "KeyW", mod: true },
   { command: "split-right", key: "\\", mod: true },
+  // WebKitGTK reports Ctrl+\ as a control character, so match the physical key too.
+  { command: "split-right", code: "Backslash", mod: true },
   { command: "toggle-home", code: "KeyH", mod: true, shiftKey: true },
   { command: "open-recent", code: "KeyO", mod: true },
   { command: "open-folder", code: "KeyO", mod: true, shiftKey: true },
