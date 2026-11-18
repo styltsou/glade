@@ -27,10 +27,12 @@
     "@tauri-apps/plugin-opener": "^2",
     "@tiptap/extension-code-block": "^3.20.0",
     "@tiptap/extension-code-block-lowlight": "^3.20.1",
+    "@tiptap/extension-drag-handle": "3.22.3",
     "@tiptap/extension-horizontal-rule": "^3.20.0",
     "@tiptap/extension-image": "^3.20.0",
     "@tiptap/extension-link": "^3.20.0",
     "@tiptap/extension-mention": "^3.20.0",
+    "@tiptap/extension-node-range": "3.22.3",
     "@tiptap/extension-placeholder": "^3.20.0",
     "@tiptap/extension-table": "^3.20.0",
     "@tiptap/extension-table-cell": "^3.20.0",
@@ -80,5 +82,12 @@
     "typescript": "~5.6.2",
     "vite": "^6.0.3",
     "vitest": "^5.1.1"
+  },
+  "patchedDependencies": {
+    "@tiptap/extension-drag-handle@3.22.3": "patches/@tiptap%2Fextension-drag-handle@3.22.3.patch"
+  },
+  "overrides": {
+    "@tiptap/core": "3.22.3",
+    "@tiptap/pm": "3.22.3"
   }
 }

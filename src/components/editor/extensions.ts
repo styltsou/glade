@@ -18,15 +18,26 @@ import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { MermaidBlock } from "./extensions/MermaidBlock";
 import { LinkBehavior } from "./extensions/LinkBehavior";
+import { NoteTableView } from "./tables/tableView";
+import { TableActiveCell } from "./tables/tableActiveCell";
 import { LocalImage } from "./extensions/LocalImage";
 import { isAllowedLinkHref } from "@/lib/links";
 
 const lowlight = createLowlight(all);
 
+// Column resizing stays off (markdown can't store widths), so TipTap would not
+// install a custom table node view on its own; register ours directly.
+const NoteTable = Table.extend({
+  addNodeView() {
+    return ({ node }) => new NoteTableView(node, this.options.cellMinWidth) as never;
+  },
+});
+
 export const extensions = [
-  Table.configure({
+  NoteTable.configure({
     resizable: false,
   }),
+  TableActiveCell,
   TableRow,
   TableHeader,
   TableCell,

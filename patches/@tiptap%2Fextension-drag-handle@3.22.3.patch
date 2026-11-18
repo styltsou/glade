@@ -1,0 +1,122 @@
+diff --git a/dist/index.cjs b/dist/index.cjs
+index 123e40d63bca06f42e7873261864227330926149..1e72129b71784e9409700ea15df27f6cf2a0703c 100644
+--- a/dist/index.cjs
++++ b/dist/index.cjs
+@@ -739,18 +739,28 @@ var DragHandlePlugin = ({
+               return;
+             }
+             let domNode = view.nodeDOM(currentNodePos);
+-            domNode = getOuterDomNode(view, domNode);
++            if (!(nestedOptions == null ? void 0 : nestedOptions.enabled)) {
++              domNode = getOuterDomNode(view, domNode);
++            }
+             if (domNode === view.dom) {
+               return;
+             }
+             if ((domNode == null ? void 0 : domNode.nodeType) !== 1) {
+               return;
+             }
+-            const domNodePos = view.posAtDOM(domNode, 0);
+-            const outerNode = getOuterNode(editor.state.doc, domNodePos);
+-            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos);
+-            currentNode = outerNode;
+-            currentNodePos = outerNodePos;
++            if (nestedOptions == null ? void 0 : nestedOptions.enabled) {
++              currentNode = editor.state.doc.nodeAt(currentNodePos);
++              if (!currentNode) {
++                hideHandle();
++                currentNodePos = -1;
++                onNodeChange == null ? void 0 : onNodeChange({ editor, node: null, pos: -1 });
++                return;
++              }
++            } else {
++              const domNodePos = view.posAtDOM(domNode, 0);
++              currentNode = getOuterNode(editor.state.doc, domNodePos);
++              currentNodePos = getOuterNodePos(editor.state.doc, domNodePos);
++            }
+             currentNodeRelPos = getRelativePos(view.state, currentNodePos);
+             onNodeChange == null ? void 0 : onNodeChange({ editor, node: currentNode, pos: currentNodePos });
+             repositionDragHandle(domNode);
+diff --git a/dist/index.js b/dist/index.js
+index d50c956280b83ae3e0ad2cea93a6caf5af073ac3..68b11f64bf86dbd4bec7c624f8cf8060e9a9fec0 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -711,18 +711,28 @@ var DragHandlePlugin = ({
+               return;
+             }
+             let domNode = view.nodeDOM(currentNodePos);
+-            domNode = getOuterDomNode(view, domNode);
++            if (!(nestedOptions == null ? void 0 : nestedOptions.enabled)) {
++              domNode = getOuterDomNode(view, domNode);
++            }
+             if (domNode === view.dom) {
+               return;
+             }
+             if ((domNode == null ? void 0 : domNode.nodeType) !== 1) {
+               return;
+             }
+-            const domNodePos = view.posAtDOM(domNode, 0);
+-            const outerNode = getOuterNode(editor.state.doc, domNodePos);
+-            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos);
+-            currentNode = outerNode;
+-            currentNodePos = outerNodePos;
++            if (nestedOptions == null ? void 0 : nestedOptions.enabled) {
++              currentNode = editor.state.doc.nodeAt(currentNodePos);
++              if (!currentNode) {
++                hideHandle();
++                currentNodePos = -1;
++                onNodeChange == null ? void 0 : onNodeChange({ editor, node: null, pos: -1 });
++                return;
++              }
++            } else {
++              const domNodePos = view.posAtDOM(domNode, 0);
++              currentNode = getOuterNode(editor.state.doc, domNodePos);
++              currentNodePos = getOuterNodePos(editor.state.doc, domNodePos);
++            }
+             currentNodeRelPos = getRelativePos(view.state, currentNodePos);
+             onNodeChange == null ? void 0 : onNodeChange({ editor, node: currentNode, pos: currentNodePos });
+             repositionDragHandle(domNode);
+diff --git a/src/drag-handle-plugin.ts b/src/drag-handle-plugin.ts
+index 24f491aa3f63fc66e5fa0e85503bc8c3e644e746..98f511270911653cba8e8087a7d77d4236c3f4b7 100644
+--- a/src/drag-handle-plugin.ts
++++ b/src/drag-handle-plugin.ts
+@@ -292,7 +292,12 @@ export const DragHandlePlugin = ({
+ 
+             // Since old element could have been wrapped, we need to find
+             // the outer node and take its position and node data.
+-            domNode = getOuterDomNode(view, domNode)
++            // In nested mode the mapped position is the target itself. Walking
++            // to the outer node here makes the handle jump to an ancestor after
++            // every document change.
++            if (!nestedOptions?.enabled) {
++              domNode = getOuterDomNode(view, domNode)
++            }
+ 
+             // Skip if domNode is editor dom.
+             if (domNode === view.dom) {
+@@ -304,12 +309,19 @@ export const DragHandlePlugin = ({
+               return
+             }
+ 
+-            const domNodePos = view.posAtDOM(domNode, 0)
+-            const outerNode = getOuterNode(editor.state.doc, domNodePos)
+-            const outerNodePos = getOuterNodePos(editor.state.doc, domNodePos) // TODO: needed?
+-
+-            currentNode = outerNode
+-            currentNodePos = outerNodePos
++            if (nestedOptions?.enabled) {
++              currentNode = editor.state.doc.nodeAt(currentNodePos)
++              if (!currentNode) {
++                hideHandle()
++                currentNodePos = -1
++                onNodeChange?.({ editor, node: null, pos: -1 })
++                return
++              }
++            } else {
++              const domNodePos = view.posAtDOM(domNode, 0)
++              currentNode = getOuterNode(editor.state.doc, domNodePos)
++              currentNodePos = getOuterNodePos(editor.state.doc, domNodePos)
++            }
+ 
+             // Memorize relative position to retrieve absolute position in case of collaboration
+             currentNodeRelPos = getRelativePos(view.state, currentNodePos)

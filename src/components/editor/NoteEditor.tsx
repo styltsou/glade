@@ -36,6 +36,7 @@ import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { Backlinks } from "./Backlinks";
+import { TableControls } from "./tables/TableControls";
 import { MentionList, MentionListHandle } from "./MentionList";
 import {
 	SlashCommandMenu,
@@ -371,7 +372,7 @@ export function NoteEditor({
 		<div
 			ref={scrollRef as React.RefObject<HTMLDivElement>}
 			onScroll={onScroll}
-			className="flex-1 overflow-auto px-10 py-8 note-scroll"
+			className="flex-1 overflow-auto px-24 py-8 note-scroll"
 		>
 			<div className="max-w-187.5 mx-auto">
 				{editor && (
@@ -547,8 +548,10 @@ export function NoteEditor({
 						readOnly={false}
 					/>
 				) : (
-					<EditorContent editor={editor} />
+					<EditorContent editor={editor} className="tiptap-editor-host" />
 				)}
+
+				{editor && isEditMode && !isRawMode && <TableControls editor={editor} />}
 
 				<Backlinks />
 

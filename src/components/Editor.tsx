@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -17,6 +18,9 @@ import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
 import { useSaveNote } from "@/hooks/useSaveNote";
 import { useMarkdownFidelity } from "@/hooks/useMarkdownFidelity";
+import { createBlockDragHandleExtension } from "@/components/editor/blocks/blockDragHandle";
+import { BlockHandles } from "@/components/editor/blocks/BlockHandles";
+import { PreviewRail } from "@/components/editor/PreviewRail";
 import { ConflictBanner } from "@/components/editor/ConflictBanner";
 import { isAbsolutePath } from "@/lib/links";
 
@@ -95,9 +99,13 @@ export function Editor() {
     blockedRef: conflictRef,
   });
 
+  // One set of gutter controls (+ and drag grip) per editor instance.
+  const blockControls = useMemo(createBlockDragHandleExtension, []);
+
   const editor = useEditor({
     extensions: [
       ...extensions,
+      blockControls.extension,
       SearchHighlight.configure({
         query: "",
         activeIndex: 0,
@@ -742,6 +750,10 @@ export function Editor() {
 
       <div className="flex flex-1 overflow-hidden relative">
         <div id="note-overlay-portal" className="absolute inset-0 pointer-events-none z-40 overflow-hidden" />
+        {editor && !isRawMode && <BlockHandles editor={editor} blockControls={blockControls} />}
+        {editor && !isRawMode && activeNote && (
+          <PreviewRail editor={editor} scrollContainerRef={scrollRef} noteKey={activeNote.path} />
+        )}
         <NoteEditor
           activeNote={activeNote}
           editor={editor}

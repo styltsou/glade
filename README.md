@@ -23,7 +23,9 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 - **Rich Text Editing** — Powered by [TipTap 2](https://tiptap.dev/) with real-time markdown rendering, slash commands (`/`), and a floating bubble menu for quick formatting.
 - **Mermaid Diagrams** — Write ```` ```mermaid ```` code blocks to render flowcharts, sequence diagrams, Gantt charts, and more. Dedicated full-screen editor with live preview, zoom, and **PNG export**.
-- **Tables** — Full table support with insert, delete, and (optionally) header rows.
+- **Tables** — Rounded, scrollable tables with hover controls: click or drag the bars at the right and bottom edge to add or remove columns and rows, and drag the grip above a column or beside a row to move it (arrow keys work too).
+- **Block handles** — Hover any block, including list items and other nested blocks, for a `+` (click to add below, Alt-click to add above) and a grip to drag it to a new place.
+- **Preview rail** — Long notes get a slim rail of heading marks on the left edge; hover it for a clickable outline, or click a mark to jump to that section.
 - **Task / Checkbox Lists** — Checkable to-do items within your notes.
 - **Code Blocks** — Syntax-highlighted code blocks (all languages via `lowlight`) with a language label and one-click copy button.
 - **Images & Links** — Embed images inline; add hyperlinks with click-to-navigate in read mode.
