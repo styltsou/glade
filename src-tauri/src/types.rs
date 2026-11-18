@@ -70,8 +70,6 @@ pub struct NoteMeta {
     pub tags: Vec<String>,
     /// `created`/`date` frontmatter value, if the file already has one.
     pub created: Option<String>,
-    /// `updated`/`lastmod` frontmatter value, if the file already has one.
-    pub updated: Option<String>,
 }
 
 /// A lightweight card representation used in the home view.

@@ -214,7 +214,6 @@ pub fn parse_frontmatter(content: &str) -> (NoteMeta, String) {
         title: if title.is_empty() { None } else { Some(title) },
         tags: frontmatter::get_tags(content),
         created: frontmatter::get_scalar_string(content, &["created", "date", "created_at"]),
-        updated: frontmatter::get_scalar_string(content, &["updated", "lastmod", "updated_at"]),
     };
     (meta, frontmatter::body_of(content).to_string())
 }

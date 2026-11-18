@@ -55,6 +55,7 @@ pub async fn read_note(window: tauri::Window, path: String) -> Result<NoteData, 
 
 /// Write a note's body, keeping its existing frontmatter text exactly as is.
 /// Returns false (and touches nothing) when the file would be byte-identical.
+#[cfg(test)]
 pub fn write_body(full_path: &Path, content: &str) -> Result<bool, AppError> {
     write_body_checked(full_path, content, false)
 }
