@@ -26,17 +26,12 @@ import { isAllowedLinkHref } from "@/lib/links";
 
 const lowlight = createLowlight(all);
 
-// Column resizing stays off (markdown can't store widths), so TipTap would not
-// install a custom table node view on its own; register ours directly.
-const NoteTable = Table.extend({
-  addNodeView() {
-    return ({ node }) => new NoteTableView(node, this.options.cellMinWidth) as never;
-  },
-});
-
 export const extensions = [
-  NoteTable.configure({
-    resizable: false,
+  // Column resizing is on (as in the mnemee editor); its plugin installs our
+  // scrolling node view. Widths live for the session: markdown can't store them.
+  Table.configure({
+    resizable: true,
+    View: NoteTableView as never,
   }),
   TableActiveCell,
   TableRow,

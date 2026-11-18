@@ -73,11 +73,35 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 			pointer = { x: event.clientX, y: event.clientY };
 		};
 
+		// The editor column is narrower than the scroll area: hovering the empty
+		// margins beside a line should still reveal that line's handles. Forward
+		// such moves to the editor as if the pointer were just inside its edge.
+		const scroller = editor.view.dom.closest<HTMLElement>(".note-scroll");
+		let forwardFrame = 0;
+		const onScrollerMove = (event: MouseEvent) => {
+			if (!event.isTrusted || suppressed) return;
+			const target = event.target;
+			if (!(target instanceof Node) || editor.view.dom.contains(target) || blockControls.controls.contains(target)) return;
+			if (target instanceof Element && target.closest("[data-slot], button, input, [role=dialog]")) return;
+			const rect = editor.view.dom.getBoundingClientRect();
+			if (event.clientY < rect.top || event.clientY > rect.bottom) return;
+			if (event.clientX >= rect.left && event.clientX <= rect.right) return;
+			const clientX = event.clientX < rect.left ? rect.left + 4 : rect.right - 4;
+			const clientY = event.clientY;
+			cancelAnimationFrame(forwardFrame);
+			forwardFrame = requestAnimationFrame(() => {
+				editor.view.dom.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX, clientY }));
+			});
+		};
+		scroller?.addEventListener("mousemove", onScrollerMove);
+
 		document.addEventListener("mousemove", onMouseMove, true);
 		document.addEventListener("mousedown", rememberPointer, true);
 		document.addEventListener("wheel", rememberPointer, true);
 		window.addEventListener("scroll", onScroll, true);
 		return () => {
+			scroller?.removeEventListener("mousemove", onScrollerMove);
+			cancelAnimationFrame(forwardFrame);
 			document.removeEventListener("mousemove", onMouseMove, true);
 			document.removeEventListener("mousedown", rememberPointer, true);
 			document.removeEventListener("wheel", rememberPointer, true);

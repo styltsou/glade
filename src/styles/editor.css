@@ -656,3 +656,28 @@
 .tiptap-editor ul[data-type="taskList"] li > label input[type="checkbox"]:active {
   transform: scale(0.9);
 }
+
+/* Column resizing: a thin handle on the cell edge, with a wider hit area. */
+.tiptap-editor .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -1px;
+  z-index: 20;
+  width: 2px;
+  background: hsl(var(--primary) / 0.5);
+  pointer-events: auto !important;
+  cursor: col-resize !important;
+}
+
+.tiptap-editor .column-resize-handle::after {
+  content: "";
+  position: absolute;
+  inset: 0 -8px;
+  cursor: col-resize;
+}
+
+.tiptap-editor.resize-cursor,
+.tiptap-editor .resize-cursor {
+  cursor: col-resize;
+}
