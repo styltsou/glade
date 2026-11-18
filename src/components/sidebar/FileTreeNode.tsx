@@ -144,7 +144,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}
                 className={cn(
-                  "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
+                  "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-sidebar-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
                 )}
               >
                 {expanded ? (
@@ -227,7 +227,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm tracking-[-0.005em] text-left transition-colors cursor-pointer",
               isActive
                 ? "bg-foreground/[0.09] text-foreground font-medium shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
-                : "text-muted-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
+                : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
             )}
           >
             <span className="truncate pr-1">{entry.name}</span>

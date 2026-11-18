@@ -1,11 +1,17 @@
 import { useEffect } from "react";
 import { useStore } from "@/store";
 import { resolveMode, applyToDOM } from "@/store/slices/themeSlice";
+import { knownTheme } from "@/themes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useStore((state) => state.theme);
   const mode = useStore((state) => state.mode);
   const setResolvedMode = useStore((state) => state.setResolvedMode);
+
+  // A saved theme that no longer exists (e.g. "monochrome") becomes the default.
+  useEffect(() => {
+    if (knownTheme(theme) !== theme) useStore.getState().setTheme(knownTheme(theme));
+  }, [theme]);
 
   useEffect(() => {
     // Determine the actual light/dark mode based on user preference or system

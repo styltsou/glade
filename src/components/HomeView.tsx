@@ -3,11 +3,10 @@ import { useEffect, useRef } from "react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderCard } from "@/components/FolderCard";
 import { NoteCard } from "@/components/NoteCard";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import type { VaultEntry } from "@/types";
 
 function NoteCardSkeleton() {
@@ -78,6 +77,7 @@ export function HomeView() {
     : entries.filter((e) => !e.is_dir).length; // Depending on how home notes are fetched, this might just be 0 if home only shows pinned, but we'll assume folder notes if any exist. Just for skeletons.
 
   const hasData = hasNotes || hasFolders || expectedNoteCount > 0;
+  const isLoadingAny = isVaultLoading || isHomeLoading || isFolderNotesLoading;
 
   // Show skeletons only while data is actively loading, never when vault is confirmed empty.
   const shouldShowFolderSkeletons = isVaultLoading && subFolders.length === 0;
@@ -96,41 +96,6 @@ export function HomeView() {
           </div>
 
           <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
-            {hasData && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground"
-                      onClick={() => openCreateFolder(currentFolder)}
-                    >
-                      <FolderPlus className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>New Folder (Ctrl+F)</p>
-                  </TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground"
-                      onClick={() => createNote(currentFolder)}
-                    >
-                      <PlusIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>New Note (Ctrl+N)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            )}
           </div>
         </div>
       )}
@@ -150,167 +115,51 @@ export function HomeView() {
                 </p>
               )}
             </div>
-            {!currentFolder && hasData && (
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openCreateFolder(undefined)}
-                      className="shadow-sm font-semibold"
-                    >
-                      <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
-                      New folder
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>New Folder (Ctrl+F)</p>
-                  </TooltipContent>
-                </Tooltip>
-                
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="sm"
-                      onClick={() => createNote(undefined)}
-                      className="shadow-md font-semibold"
-                    >
-                      <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-                      New note
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p>New Note (Ctrl+N)</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
           </div>
 
         <div className="space-y-12">
           {/* Folders section */}
-          {(subFolders.length > 0 || shouldShowFolderSkeletons) && (
+          {(hasData || !isLoadingAny) && (
             <section>
               <SectionHeader label="Folders" />
-              {shouldShowFolderSkeletons ? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
-                  {[...Array(4)].map((_, i) => (
-                    <FolderCardSkeleton key={i} />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
-                  {subFolders.map((folder) => (
-                    <FolderCard key={folder.path} folder={folder} />
-                  ))}
-                </div>
-              )}
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13rem),1fr))] gap-4">
+                {shouldShowFolderSkeletons
+                  ? [...Array(4)].map((_, i) => <FolderCardSkeleton key={i} />)
+                  : subFolders.map((folder) => <FolderCard key={folder.path} folder={folder} />)}
+                {!shouldShowFolderSkeletons && (
+                  <CreateCard
+                    icon={<FolderPlus className="size-4" />}
+                    label="New folder"
+                    shortcut={formatShortcut(bindingFor("new-folder")!)}
+                    onClick={() => openCreateFolder(currentFolder || undefined)}
+                  />
+                )}
+              </div>
             </section>
           )}
 
           {/* Notes section */}
-          {(hasNotes || shouldShowNoteSkeletons) && (
+          {(hasData || !isLoadingAny) && (
             <section>
               <SectionHeader label="Notes" />
-              {shouldShowNoteSkeletons ? (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
-                  {[
-                    ...Array(
-                      Math.min(6, !isVaultLoading ? expectedNoteCount : 6),
-                    ),
-                  ].map((_, i) => (
-                    <NoteCardSkeleton key={i} />
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
-                  {[...folderNotes]
-                    .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.title.localeCompare(b.title))
-                    .map((card) => (
-                      <NoteCard key={card.path} card={card} />
-                    ))}
-                </div>
-              )}
-            </section>
-          )}
-
-          {/* Empty state */}
-          {!hasData &&
-            !isVaultLoading &&
-            !isHomeLoading &&
-            !isFolderNotesLoading && (
-              <div className="flex-1 flex flex-col items-center justify-center gap-6 text-center max-w-md mx-auto py-12">
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-bold tracking-tight">
-                    {currentFolder
-                      ? "This folder is empty"
-                      : "Your vault is ready"}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {currentFolder
-                      ? "Start by creating a note or a subfolder here."
-                      : "Capture your thoughts, plan projects, or just babble. Everything is stored locally."}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openCreateFolder(currentFolder || undefined)}
-                        className="shadow-sm font-semibold"
-                      >
-                        <FolderPlus className="mr-2 h-4 w-4" strokeWidth={2} />
-                        New folder
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>New Folder (Ctrl+F)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="sm"
-                        onClick={() => createNote(currentFolder || undefined)}
-                        className="shadow-md font-semibold"
-                      >
-                        <PlusIcon className="mr-2 h-4 w-4" strokeWidth={3} />
-                        New note
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom">
-                      <p>New Note (Ctrl+N)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                {!currentFolder && (
-                  <div className="pt-4 grid grid-cols-2 gap-4 w-full">
-                    <div className="p-4 rounded-lg border border-border bg-card/50 space-y-1">
-                      <div className="text-xs font-medium text-muted-foreground">
-                        Organize
-                      </div>
-                      <p className="text-xs text-muted-foreground/80">
-                        Use folders and #tags to keep things tidy.
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-lg border border-border bg-card/50 space-y-1">
-                      <div className="text-xs font-medium text-muted-foreground">
-                        Search
-                      </div>
-                      <p className="text-xs text-muted-foreground/80">
-                        Ctrl + P to find anything instantly.
-                      </p>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
+                {shouldShowNoteSkeletons
+                  ? [...Array(Math.min(6, !isVaultLoading ? expectedNoteCount : 6))].map((_, i) => <NoteCardSkeleton key={i} />)
+                  : [...folderNotes]
+                      .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.title.localeCompare(b.title))
+                      .map((card) => <NoteCard key={card.path} card={card} />)}
+                {!shouldShowNoteSkeletons && (
+                  <CreateCard
+                    icon={<PlusIcon className="size-4" />}
+                    label="New note"
+                    shortcut={formatShortcut(bindingFor("new-note")!)}
+                    onClick={() => createNote(currentFolder || undefined)}
+                    tall
+                  />
                 )}
               </div>
-            )}
+            </section>
+          )}
         </div>
       </div>
     </div>
@@ -330,6 +179,35 @@ function findEntryByPath(
     }
   }
   return null;
+}
+
+/** A dashed card at the end of a grid that creates a new item there. */
+function CreateCard({
+  icon,
+  label,
+  shortcut,
+  onClick,
+  tall = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  shortcut: string;
+  onClick: () => void;
+  tall?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`press group flex h-full w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground hover:border-foreground/25 hover:bg-foreground/[0.03] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
+        tall ? "min-h-28" : "min-h-[4.5rem]"
+      }`}
+    >
+      {icon}
+      <span className="font-medium">{label}</span>
+      <span className="ml-1 text-xs text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">{shortcut}</span>
+    </button>
+  );
 }
 
 function SectionHeader({ label }: { label: string }) {

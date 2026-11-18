@@ -171,7 +171,7 @@ function PinnedItem({
               "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm text-left transition-colors cursor-pointer",
               active
                 ? "bg-sidebar-accent text-foreground font-medium"
-                : "text-muted-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
+                : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
             )}
           >
             <span className="truncate">{name}</span>

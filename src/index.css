@@ -1,11 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@import "@/styles/tokens.css";
 @import "@/styles/globals.css";
 @import "@/styles/sonner.css";
 @import "@/styles/editor.css";
 @import "@/styles/mermaid-block.css";
-@import "@/styles/themes/monochrome.css";
 @import "@/styles/themes/claude.css";
 @import "@/styles/themes/everforest.css";
 @import "@/styles/themes/rose-pine.css";

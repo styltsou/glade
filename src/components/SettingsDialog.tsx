@@ -1,5 +1,6 @@
 import { useStore } from "@/store";
-import { themes, type ThemeId, type ThemeMode } from "@/themes";
+import { themes, type ThemeMode } from "@/themes";
+import { ThemeCard } from "@/components/SettingsPage/AppearanceSection";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ const modeOptions: { value: ThemeMode; label: string }[] = [
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const theme = useStore((state) => state.theme);
   const mode = useStore((state) => state.mode);
+  const resolvedMode = useStore((state) => state.resolvedMode);
   const setTheme = useStore((state) => state.setTheme);
   const setMode = useStore((state) => state.setMode);
 
@@ -45,7 +47,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   key={t.id}
                   id={t.id}
                   label={t.label}
-                  previewColors={t.previewColors}
+                  mode={resolvedMode}
                   isActive={theme === t.id}
                   onClick={() => setTheme(t.id)}
                 />
@@ -84,46 +86,3 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 }
 
 /* ── Theme Card ─────────────────────────────────────────── */
-
-interface ThemeCardProps {
-  id: ThemeId;
-  label: string;
-  previewColors: string[];
-  isActive: boolean;
-  onClick: () => void;
-}
-
-function ThemeCard({
-  id: _id,
-  label,
-  previewColors,
-  isActive,
-  onClick,
-}: ThemeCardProps) {
-  return (
-    <button
-      onClick={onClick}
-      className={`
-        group relative flex flex-col items-center gap-2.5 rounded-lg border-2 p-4
-        transition-colors duration-100 cursor-pointer
-        ${
-          isActive
-            ? "border-primary bg-accent"
-            : "border-border hover:border-primary hover:bg-muted"
-        }
-      `}
-    >
-      {/* Color swatches */}
-      <div className="flex items-center gap-1.5">
-        {previewColors.map((color, i) => (
-          <span
-            key={i}
-            className="h-5 w-5 rounded-full border border-border"
-            style={{ backgroundColor: color }}
-          />
-        ))}
-      </div>
-      <span className="text-xs font-medium text-foreground">{label}</span>
-    </button>
-  );
-}

@@ -1,5 +1,5 @@
 import { StateCreator } from "zustand";
-import type { ThemeId, ThemeMode } from "@/themes";
+import { knownTheme, type ThemeId, type ThemeMode } from "@/themes";
 
 export interface ThemeSlice {
   theme: ThemeId;
@@ -20,14 +20,14 @@ export function resolveMode(mode: ThemeMode): "light" | "dark" {
 
 export function applyToDOM(theme: ThemeId, resolvedMode: "light" | "dark") {
   const el = document.documentElement;
-  el.setAttribute("data-theme", theme);
+  el.setAttribute("data-theme", knownTheme(theme));
   el.setAttribute("data-mode", resolvedMode);
 }
 
 import type { StoreState } from "../index";
 
 export const createThemeSlice: StateCreator<StoreState, [], [], ThemeSlice> = (set) => ({
-  theme: "claude",
+  theme: "glade",
   mode: "dark",
   resolvedMode: "dark",
 

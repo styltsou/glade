@@ -10,41 +10,42 @@ const modeOptions: { value: ThemeMode; label: string }[] = [
 interface ThemeCardProps {
   id: ThemeId;
   label: string;
-  previewColors: string[];
+  mode: "light" | "dark";
   isActive: boolean;
   onClick: () => void;
 }
 
-function ThemeCard({
-  id: _id,
-  label,
-  previewColors,
-  isActive,
-  onClick,
-}: ThemeCardProps) {
+/** A small live render of the theme: the tokens apply to this subtree. */
+export function ThemeCard({ id, label, mode, isActive, onClick }: ThemeCardProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`
-        group relative flex flex-col items-center gap-2.5 rounded-lg border-2 p-4
-        transition-colors duration-100 cursor-pointer
-        ${
-          isActive
-            ? "border-primary bg-accent"
-            : "border-border hover:border-primary hover:bg-muted"
-        }
-      `}
+      aria-pressed={isActive}
+      className="group flex flex-col gap-2 text-left outline-none"
     >
-      <div className="flex items-center gap-1.5">
-        {previewColors.map((color, i) => (
-          <span
-            key={i}
-            className="h-5 w-5 rounded-full border border-border"
-            style={{ backgroundColor: color }}
-          />
-        ))}
+      <div
+        data-theme={id}
+        data-mode={mode}
+        className={`flex h-24 w-full overflow-hidden rounded-lg border bg-background transition-shadow duration-100 ${
+          isActive ? "border-transparent ring-2 ring-foreground/70" : "border-border group-hover:ring-2 group-hover:ring-foreground/15"
+        }`}
+        style={{ colorScheme: mode }}
+      >
+        <div className="flex w-1/3 flex-col gap-1.5 border-r border-sidebar-border bg-sidebar p-2">
+          <span className="h-1.5 w-3/4 rounded-full bg-sidebar-foreground/70" />
+          <span className="h-3 w-full rounded bg-sidebar-accent" />
+          <span className="h-1.5 w-2/3 rounded-full bg-sidebar-foreground/40" />
+          <span className="h-1.5 w-1/2 rounded-full bg-sidebar-foreground/40" />
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+          <span className="h-2 w-2/3 rounded-full bg-foreground/85" />
+          <span className="h-1.5 w-full rounded-full bg-muted-foreground/45" />
+          <span className="h-1.5 w-5/6 rounded-full bg-muted-foreground/45" />
+          <span className="mt-auto h-3 w-8 rounded bg-primary" />
+        </div>
       </div>
-      <span className="text-xs font-medium text-foreground">{label}</span>
+      <span className={`text-[13px] ${isActive ? "font-medium text-foreground" : "text-muted-foreground"}`}>{label}</span>
     </button>
   );
 }
@@ -54,6 +55,7 @@ export function AppearanceSection() {
   const mode = useStore((state) => state.mode);
   const setTheme = useStore((state) => state.setTheme);
   const setMode = useStore((state) => state.setMode);
+  const resolvedMode = useStore((state) => state.resolvedMode);
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -72,7 +74,7 @@ export function AppearanceSection() {
               key={t.id}
               id={t.id}
               label={t.label}
-              previewColors={t.previewColors}
+              mode={resolvedMode}
               isActive={theme === t.id}
               onClick={() => setTheme(t.id)}
             />

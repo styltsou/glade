@@ -49,3 +49,13 @@ Tab state (`lib/tabs.ts`) is a pure data model: up to two panes, each with its o
 - Background prefetch of notes on hover, an in-memory note cache, and scroll restoration.
 - Optimistic updates (rename, move, pin, tag changes) with rollback on error.
 - Restrained motion: keyboard actions and high-frequency surfaces do not animate; interactions use short, interruptible transitions.
+
+## Color tokens and themes
+
+All colors come from `src/styles/tokens.css`:
+
+- A 12-step grey scale per mode, where each step has one job (1 app background, 2 subtle surfaces, 3–5 element states, 6–8 borders, 9–10 solids, 11–12 text). Light and dark use the same step for the same role, so they stay consistent.
+- Semantic tokens (`--background`, `--muted-foreground`, `--border`, ...) map roles onto steps. Components use only these.
+- A theme (`src/styles/themes/*.css`) sets only knobs: tint hue and saturation, a separate ink hue for text, how far surfaces sink (light) or lift (dark), a brand color, and optional syntax colors. The default "Glade" theme is neutral grey with a black/white brand and has no theme file.
+
+The tokens apply to any element with `data-theme` and `data-mode`, so the settings cards render each theme live. Every built-in theme meets WCAG AA for body, sidebar and muted text in both modes.

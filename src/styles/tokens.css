@@ -1,0 +1,160 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Color tokens
+
+   Three layers:
+
+   1. A 12-step grey scale, `--gray-1` … `--gray-12`, one per mode. Each step has
+      one job, so light and dark stay consistent with each other:
+
+        1  app background           7  borders, inputs
+        2  subtle surface (sidebar, 8  strong borders, focus
+           cards)                   9  solid fills
+        3  element background       10 hovered solid fills
+        4  hovered element          11 secondary text
+        5  pressed / selected       12 primary text
+        6  subtle borders, dividers
+
+      Steps are written as bare HSL triplets (`H S% L%`) so they work with
+      `hsl(var(--x) / alpha)` everywhere.
+
+   2. Semantic tokens (`--background`, `--muted-foreground`, `--border`, ...)
+      that map roles onto scale steps. Components only use these.
+
+   3. Themes (src/styles/themes/*.css). A theme does not restate any of the
+      above. It sets a handful of knobs and everything else follows:
+
+        --tint-h, --tint-s   hue and saturation of the grey scale
+        --ink-h, --ink-s     hue and saturation of text (steps 9–12);
+                             defaults to the tint
+        --surface-lift       raises the dark surfaces (steps 1–8)
+        --surface-sink       lowers the light surfaces (steps 1–8)
+        --brand, --brand-foreground   accent color for primary actions
+        --syntax-*           code highlighting (optional)
+
+      Values can differ per mode with [data-theme="x"][data-mode="dark"].
+
+   The tokens also apply to any element carrying data-theme (and data-mode), so
+   a theme can be previewed inside another one, as the settings cards do.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme] {
+  --tint-h: 0;
+  --tint-s: 0%;
+  --ink-h: var(--tint-h);
+  --ink-s: var(--tint-s);
+  --surface-sink: 0%;
+  --surface-lift: 0%;
+
+  --gray-1:  var(--tint-h) var(--tint-s) calc(100% - var(--surface-sink));
+  --gray-2:  var(--tint-h) var(--tint-s) calc(98% - var(--surface-sink));
+  --gray-3:  var(--tint-h) var(--tint-s) calc(95.5% - var(--surface-sink));
+  --gray-4:  var(--tint-h) var(--tint-s) calc(93% - var(--surface-sink));
+  --gray-5:  var(--tint-h) var(--tint-s) calc(90.5% - var(--surface-sink));
+  --gray-6:  var(--tint-h) var(--tint-s) calc(87.5% - var(--surface-sink));
+  --gray-7:  var(--tint-h) var(--tint-s) calc(83% - var(--surface-sink));
+  --gray-8:  var(--tint-h) var(--tint-s) calc(74% - var(--surface-sink));
+  --gray-9:  var(--ink-h) var(--ink-s) 55%;
+  --gray-10: var(--ink-h) var(--ink-s) 50%;
+  --gray-11: var(--ink-h) var(--ink-s) 38%;
+  /* Between 11 and 12: quiet but fully legible text (sidebar rows, labels). */
+  --gray-11-5: var(--ink-h) var(--ink-s) 24%;
+  --gray-12: var(--ink-h) var(--ink-s) 11%;
+
+  --brand: var(--gray-12);
+  --brand-foreground: var(--gray-1);
+
+  --danger: 0 72% 50%;
+  --danger-foreground: 0 0% 100%;
+
+  /* Code highlighting: readable defaults, themes may override. */
+  --syntax-keyword: 270 45% 45%;
+  --syntax-string: 145 40% 32%;
+  --syntax-comment: var(--tint-h) 8% 52%;
+  --syntax-number: 30 70% 38%;
+  --syntax-function: 210 60% 42%;
+  --syntax-parameter: var(--gray-12);
+}
+
+[data-mode="dark"] {
+  --gray-1:  var(--tint-h) var(--tint-s) calc(7% + var(--surface-lift));
+  --gray-2:  var(--tint-h) var(--tint-s) calc(9.5% + var(--surface-lift));
+  --gray-3:  var(--tint-h) var(--tint-s) calc(12.5% + var(--surface-lift));
+  --gray-4:  var(--tint-h) var(--tint-s) calc(15% + var(--surface-lift));
+  --gray-5:  var(--tint-h) var(--tint-s) calc(17.5% + var(--surface-lift));
+  --gray-6:  var(--tint-h) var(--tint-s) calc(21% + var(--surface-lift));
+  --gray-7:  var(--tint-h) var(--tint-s) calc(26% + var(--surface-lift));
+  --gray-8:  var(--tint-h) var(--tint-s) calc(35% + var(--surface-lift));
+  --gray-9:  var(--ink-h) var(--ink-s) 45%;
+  --gray-10: var(--ink-h) var(--ink-s) 51%;
+  --gray-11: var(--ink-h) var(--ink-s) 68%;
+  --gray-11-5: var(--ink-h) var(--ink-s) 81%;
+  --gray-12: var(--ink-h) var(--ink-s) 93%;
+
+  --danger: 0 72% 62%;
+  --danger-foreground: 0 0% 8%;
+
+  --syntax-keyword: 270 60% 75%;
+  --syntax-string: 140 35% 65%;
+  --syntax-comment: var(--tint-h) 8% 52%;
+  --syntax-number: 30 70% 68%;
+  --syntax-function: 205 65% 70%;
+}
+
+/* ── Semantic roles ─────────────────────────────────────────────────────────── */
+:root,
+[data-theme] {
+  --background: var(--gray-1);
+  --foreground: var(--gray-12);
+
+  --card: var(--gray-2);
+  --card-foreground: var(--gray-12);
+  /* Floating surfaces sit on the app background in light mode, and one step
+     above it in dark mode, where shadows alone can't show elevation. */
+  --popover: var(--gray-1);
+  --popover-foreground: var(--gray-12);
+
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+
+  --secondary: var(--gray-3);
+  --secondary-foreground: var(--gray-12);
+
+  --muted: var(--gray-3);
+  --muted-foreground: var(--gray-11);
+  --subtle-foreground: var(--gray-11-5);
+
+  --accent: var(--gray-4);
+  --accent-foreground: var(--gray-12);
+
+  --destructive: var(--danger);
+  --destructive-foreground: var(--danger-foreground);
+
+  --border: var(--gray-6);
+  --input: var(--gray-7);
+  --ring: var(--gray-8);
+
+  --sidebar: var(--gray-2);
+  --sidebar-foreground: var(--gray-11-5);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: var(--gray-4);
+  --sidebar-accent-foreground: var(--gray-12);
+  --sidebar-border: var(--gray-6);
+  --sidebar-ring: var(--gray-8);
+
+  --editor-bg: var(--gray-1);
+  --editor-text: var(--gray-12);
+
+  --chart-1: var(--brand);
+  --chart-2: var(--gray-11);
+  --chart-3: var(--gray-9);
+  --chart-4: var(--gray-8);
+  --chart-5: var(--gray-6);
+
+  --radius: 0.5rem;
+}
+
+[data-mode="dark"] {
+  --popover: var(--gray-2);
+}
