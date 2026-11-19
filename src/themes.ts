@@ -1,4 +1,14 @@
-export type ThemeId = "glade" | "claude" | "everforest" | "rose-pine";
+export type ThemeId =
+  | "glade"
+  | "vercel"
+  | "linear"
+  | "claude"
+  | "vesper"
+  | "tokyo-night"
+  | "catppuccin"
+  | "gruvbox"
+  | "everforest"
+  | "rose-pine";
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface ThemeMeta {
@@ -12,8 +22,32 @@ export const themes: ThemeMeta[] = [
     label: "Glade",
   },
   {
+    id: "vercel",
+    label: "Vercel",
+  },
+  {
+    id: "linear",
+    label: "Linear",
+  },
+  {
     id: "claude",
     label: "Claude",
+  },
+  {
+    id: "vesper",
+    label: "Vesper",
+  },
+  {
+    id: "tokyo-night",
+    label: "Tokyo Night",
+  },
+  {
+    id: "catppuccin",
+    label: "Catppuccin",
+  },
+  {
+    id: "gruvbox",
+    label: "Gruvbox",
   },
   {
     id: "everforest",

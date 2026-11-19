@@ -1,0 +1,25 @@
+/* Linear-inspired: cool, almost-black surfaces and indigo accent. */
+[data-theme="linear"] {
+  --tint-h: 230;
+  --tint-s: 12%;
+  --ink-s: 14%;
+  --brand: 234 56% 56%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 250 55% 52%;
+  --syntax-string: 160 45% 32%;
+  --syntax-number: 25 75% 42%;
+  --syntax-function: 215 65% 45%;
+}
+
+[data-theme="linear"][data-mode="dark"] {
+  --tint-h: 230;
+  --tint-s: 8%;
+  --ink-s: 8%;
+  --surface-lift: -2.5%;
+  --brand: 236 85% 72%;
+  --brand-foreground: 230 20% 8%;
+  --syntax-keyword: 250 85% 78%;
+  --syntax-string: 160 45% 66%;
+  --syntax-number: 25 85% 70%;
+  --syntax-function: 215 85% 74%;
+}

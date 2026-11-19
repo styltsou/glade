@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/store";
 import type { VaultEntry } from "@/types";
 import {
@@ -102,6 +103,24 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
   const isOverFolder = dropTarget === entry.path;
   const isPinned = !entry.is_dir && pinnedNotePaths.includes(entry.path);
 
+  // Children stay mounted while they animate closed, and mount one frame
+  // before they animate open, so the transition has a start and an end.
+  const [childrenMounted, setChildrenMounted] = useState(expanded);
+  const [childrenOpen, setChildrenOpen] = useState(expanded);
+  const unmountTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => {
+    clearTimeout(unmountTimer.current);
+    if (expanded) {
+      setChildrenMounted(true);
+      const frame = requestAnimationFrame(() => requestAnimationFrame(() => setChildrenOpen(true)));
+      return () => cancelAnimationFrame(frame);
+    }
+    setChildrenOpen(false);
+    // Fallback in case transitionend never fires (reduced motion, no support).
+    unmountTimer.current = setTimeout(() => setChildrenMounted(false), 200);
+    return () => clearTimeout(unmountTimer.current);
+  }, [expanded]);
+
   const handleClick = (e?: React.MouseEvent) => {
     if (entry.is_dir) {
       toggleFolderExpanded(entry.path);
@@ -187,9 +206,19 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           </ContextMenuContent>
         </ContextMenu>
 
-        {/* Expanding a folder is frequent, so it is instant. */}
-        {expanded && children.length > 0 && (
-            <div>
+        {/* Expanding a folder is frequent, so it is quick: 110ms, ease-out,
+            on grid rows and opacity (no per-frame measuring). */}
+        {childrenMounted && children.length > 0 && (
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows,opacity] duration-[110ms] ease-[var(--ease-ui)]",
+                childrenOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+              )}
+              onTransitionEnd={(e) => {
+                if (e.target === e.currentTarget && !expanded) setChildrenMounted(false);
+              }}
+            >
+              <div className="min-h-0 overflow-hidden">
               <div className="ml-[17px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
                 <div className="absolute top-0 bottom-1 left-0 w-px bg-border/60" />
                 
@@ -205,6 +234,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                     />
                   ))}
                 </div>
+              </div>
               </div>
             </div>
           )}

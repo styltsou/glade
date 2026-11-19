@@ -1,0 +1,24 @@
+/* Vesper: neutral black, peach accent, mint strings. Light mode keeps the
+   same character with a deeper peach for contrast on white. */
+[data-theme="vesper"] {
+  --tint-h: 0;
+  --tint-s: 0%;
+  --brand: 26 85% 37%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 0 0% 38%;
+  --syntax-string: 164 60% 28%;
+  --syntax-number: 26 80% 40%;
+  --syntax-function: 26 80% 40%;
+  --syntax-comment: 0 0% 55%;
+}
+
+[data-theme="vesper"][data-mode="dark"] {
+  --surface-lift: -0.5%;
+  --brand: 28 100% 80%;
+  --brand-foreground: 0 0% 6%;
+  --syntax-keyword: 0 0% 63%;
+  --syntax-string: 164 100% 80%;
+  --syntax-number: 28 100% 80%;
+  --syntax-function: 28 100% 80%;
+  --syntax-comment: 0 0% 50%;
+}

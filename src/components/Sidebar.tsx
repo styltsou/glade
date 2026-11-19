@@ -52,11 +52,14 @@ export function Sidebar() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     document.body.style.cursor = "col-resize";
+    // Width follows the pointer directly while dragging (see .sidebar-motion).
+    document.documentElement.dataset.resizing = "sidebar";
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
       document.body.style.cursor = "default";
+      delete document.documentElement.dataset.resizing;
     };
   }, [isResizing, setSidebarWidth]);
 
@@ -64,7 +67,7 @@ export function Sidebar() {
     <div className="relative h-full flex shrink-0">
       <aside
         style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        className={`flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden ${isResizing ? "" : "transition-[width] duration-[180ms] ease-[var(--ease-ui)]"} ${sidebarCollapsed ? "border-r-0" : ""}`}
+        className={`flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden sidebar-motion ${sidebarCollapsed ? "border-r-0" : ""}`}
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">

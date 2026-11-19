@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
+import { baseName } from "@/lib/paths";
 
 const appWindow = getCurrentWindow();
 
@@ -33,10 +33,17 @@ export function TitleBar() {
 
   const folderOpen = target?.kind === "folder" && !homeOpen;
   const sidebarVisible = folderOpen && !sidebarCollapsed;
-  // Animate only when the sidebar opens or closes, not while it is being resized.
-  const wasVisible = useRef(sidebarVisible);
-  const toggled = wasVisible.current !== sidebarVisible;
-  useEffect(() => { wasVisible.current = sidebarVisible; }, [sidebarVisible]);
+  // The left section is as wide as the sidebar when it is open, and just fits
+  // the toggle and the folder name when it is closed. Both widths are plain
+  // pixels so CSS can transition between them in step with the sidebar itself.
+  const label = folderOpen && target ? baseName(target.path) : "Glade";
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [labelWidth, setLabelWidth] = useState(80);
+  useLayoutEffect(() => {
+    if (measureRef.current) setLabelWidth(Math.ceil(measureRef.current.getBoundingClientRect().width));
+  }, [label]);
+  // padding 6 + toggle 32 + gap 2 + menu (padding 20, gap 8, chevron 14, text ≤ 118) + padding 6
+  const collapsedWidth = 6 + (folderOpen ? 34 : 0) + Math.min(42 + labelWidth, 160) + 6;
 
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
@@ -61,11 +68,12 @@ export function TitleBar() {
       className="relative flex h-10 shrink-0 items-center border-b border-border/70 bg-background select-none"
       onMouseDown={handleDragStart}
     >
-      <motion.div
-        initial={false}
-        animate={{ width: sidebarVisible ? sidebarWidth : "auto" }}
-        transition={toggled ? { duration: 0.18, ease: [0.23, 1, 0.32, 1] } : { duration: 0 }}
-        className={`flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 transition-colors duration-150 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
+      <span ref={measureRef} aria-hidden className="pointer-events-none invisible absolute whitespace-nowrap text-[13px] font-semibold tracking-[-0.01em]">
+        {label}
+      </span>
+      <div
+        style={{ width: sidebarVisible ? sidebarWidth : collapsedWidth }}
+        className={`sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
       >
       {/* Sidebar toggle */}
       {folderOpen && <button
@@ -81,7 +89,7 @@ export function TitleBar() {
       </button>}
       <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
-      </motion.div>
+      </div>
       {target && !homeOpen ? <TabStrip trailingInset={112} /> : <div className="h-full flex-1" />}
       <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
 

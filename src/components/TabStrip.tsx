@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Reorder } from "motion/react";
+import { AnimatePresence, Reorder, useReducedMotion } from "motion/react";
 import { FileText, Folder, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
@@ -20,6 +20,14 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   const reorder = useStore((s) => s.reorderTabs);
   const rootName = useStore((s) => (s.target ? baseName(s.target.path) : "Overview"));
   const viewport = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Siblings only animate their position while a tab is being dragged. At any
+  // other time a layout animation would fight the open/close width animation.
+  const [dragging, setDragging] = useState(false);
+  const dragEndTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // Tabs open and close like a browser's: they grow from and shrink to nothing,
+  // and the neighbours follow the width as it changes.
+  const tabMotion = reduceMotion ? { duration: 0 } : { duration: 0.14, ease: [0.23, 1, 0.32, 1] as const };
   useLayoutEffect(() => { viewport.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" }); }, [group.activeId, group.tabs.length]);
   useEffect(() => {
     const element = viewport.current;
@@ -33,14 +41,29 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   }, []);
   const action = "press flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground";
   return <div className="flex h-full min-w-0 items-center gap-0.5 px-1" style={{ paddingLeft: inset || undefined, paddingRight: trailing || undefined }}>
-    <Reorder.Group ref={viewport} as="div" role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} axis="x" values={group.tabs} layoutScroll data-no-drag className="overlay-scroll flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden" style={{ flex: "0 1 auto" }}
+    <Reorder.Group ref={viewport} as="div" role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} axis="x" values={group.tabs} layoutScroll data-no-drag className="overlay-scroll flex h-full min-w-0 items-center overflow-x-auto overflow-y-hidden" style={{ flex: "0 1 auto" }}
       onReorder={(next: Tab[]) => { const from = group.tabs.findIndex((t, i) => next[i]?.id !== t.id); if (from >= 0) reorder(index, from, next.findIndex((t) => t.id === group.tabs[from].id)); }}>
+      <AnimatePresence initial={false}>
       {group.tabs.map((tab) => {
         const active = tab.id === group.activeId;
         const label = tab.path ? baseName(tab.path) : typeof tab.folder === "string" ? baseName(tab.folder) : tab.folder === null ? rootName : "New tab";
-        return <Reorder.Item key={tab.id} value={tab} as="div" initial={false} layout="position" layoutDependency={group.tabs} className="h-8 min-w-28 max-w-56 shrink-0" whileDrag={{ zIndex: 20 }}>
+        return <Reorder.Item
+          key={tab.id}
+          value={tab}
+          as="div"
+          layout="position"
+          layoutDependency={dragging ? group.tabs : "idle"}
+          initial={{ width: 0, opacity: 0, marginRight: 0 }}
+          animate={{ width: "auto", opacity: 1, marginRight: 4 }}
+          exit={{ width: 0, opacity: 0, marginRight: 0 }}
+          transition={tabMotion}
+          onDragStart={() => { clearTimeout(dragEndTimer.current); setDragging(true); }}
+          onDragEnd={() => { dragEndTimer.current = setTimeout(() => setDragging(false), 250); }}
+          className="h-8 shrink-0 overflow-hidden"
+          whileDrag={{ zIndex: 20 }}
+        >
           <ContextMenu><ContextMenuTrigger asChild>
-            <div className={cn("group flex h-full items-center rounded-lg transition-colors duration-100", active ? focused ? "bg-foreground/[0.10] text-foreground" : "bg-foreground/[0.07] text-foreground/80" : "bg-foreground/[0.05] text-muted-foreground hover:bg-foreground/[0.10] hover:text-foreground")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
+            <div className={cn("group flex h-full w-max min-w-28 max-w-56 items-center rounded-lg transition-colors duration-100", active ? focused ? "bg-foreground/[0.10] text-foreground" : "bg-foreground/[0.07] text-foreground/80" : "bg-foreground/[0.05] text-muted-foreground hover:bg-foreground/[0.10] hover:text-foreground")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
               <button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} title={tab.path ?? (typeof tab.folder === "string" ? tab.folder : tab.folder === null ? rootName : "New tab")} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-1.5 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-ring/50" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
                 if (e.altKey || e.ctrlKey || e.metaKey) return;
                 const at = group.tabs.findIndex((t) => t.id === tab.id);
@@ -60,6 +83,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
           </ContextMenuContent></ContextMenu>
         </Reorder.Item>;
       })}
+      </AnimatePresence>
     </Reorder.Group>
     <div className="flex shrink-0 items-center" data-no-drag>
       <button type="button" aria-label="New tab" title="New tab (Ctrl+T)" onClick={() => { focusGroup(index); newTab(); }} className={action}><Plus className="size-4" /></button>

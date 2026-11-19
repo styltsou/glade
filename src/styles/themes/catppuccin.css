@@ -1,0 +1,30 @@
+/* Catppuccin: Latte in light mode, Mocha in dark mode, mauve accent. */
+[data-theme="catppuccin"] {
+  --tint-h: 220;
+  --tint-s: 23%;
+  --ink-h: 234;
+  --ink-s: 16%;
+  --surface-sink: 4.5%;
+  --brand: 266 85% 58%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 266 85% 55%;
+  --syntax-string: 109 58% 34%;
+  --syntax-number: 22 90% 44%;
+  --syntax-function: 220 91% 50%;
+  --syntax-comment: 231 10% 55%;
+}
+
+[data-theme="catppuccin"][data-mode="dark"] {
+  --tint-h: 240;
+  --tint-s: 21%;
+  --ink-h: 226;
+  --ink-s: 64%;
+  --surface-lift: 8%;
+  --brand: 267 84% 81%;
+  --brand-foreground: 240 21% 15%;
+  --syntax-keyword: 267 84% 81%;
+  --syntax-string: 115 54% 76%;
+  --syntax-number: 23 92% 75%;
+  --syntax-function: 217 92% 76%;
+  --syntax-comment: 230 13% 55%;
+}

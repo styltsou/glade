@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import {
   ArrowDown as ArrowDownIcon,
@@ -24,7 +25,6 @@ import {
   Palette as PaletteIcon,
   PanelLeft as PanelLeftIcon,
   Pencil as PencilIcon,
-  Plus as PlusIcon,
   Search as SearchIcon,
   Sun as SunIcon,
   Trash2 as TrashIcon,
@@ -41,6 +41,7 @@ import { baseName } from "@/lib/paths";
 import {
   KEYBINDINGS,
   bindingFor,
+  formatShortcut,
   isMac,
   matchesShortcut,
   shortcutKeys,
@@ -94,21 +95,13 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
     ],
   },
   {
-    heading: "Tabs",
-    items: [
-      { id: "new-tab", label: "New tab", icon: PlusIcon },
-      { id: "close-tab", label: "Close tab", icon: XIcon },
-      { id: "split-right", label: "Split right", icon: Columns2Icon },
-    ],
-  },
-  {
     heading: "View",
     items: [
       { id: "toggle-sidebar", label: "Toggle sidebar", icon: PanelLeftIcon },
+      { id: "split-right", label: "Split right", icon: Columns2Icon },
       { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
       { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
       { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
-      { id: "toggle-appearance", label: "Toggle light and dark mode", icon: MoonIcon },
       { id: "change-theme", label: "Change theme…", icon: PaletteIcon },
     ],
   },
@@ -285,6 +278,9 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [selectedCommand, setSelectedCommand] = useState("");
   const [selectedTheme, setSelectedTheme] = useState("");
+  // Delete asks again inline: the row turns into its own confirmation.
+  const [confirmDelete, setConfirmDelete] = useState<"click" | "key" | null>(null);
+  const pointerSelect = useRef(false);
   // Re-render on store changes so labels and availability stay current.
   useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.noteEditMode]));
 
@@ -303,12 +299,32 @@ export function CommandPalette() {
       setQuery("");
       setSelectedCommand("");
       setSelectedTheme("");
+      setConfirmDelete(null);
       clearSearch();
       // Drop any theme preview: show what is actually chosen.
       const st = useStore.getState();
       applyToDOM(st.theme, resolveMode(st.mode));
     }
   }
+
+  function deleteTargetName(): string {
+    const { note, s } = commandContext();
+    return note ? note.title : s.currentFolder ? baseName(s.currentFolder) : "";
+  }
+
+  function deleteNow() {
+    const { note, s } = commandContext();
+    const path = note?.path ?? s.currentFolder;
+    if (!path) return;
+    const name = deleteTargetName();
+    handleOpenChange(false);
+    void s.deleteEntry(path);
+    toast(`Moved “${name}” to the trash`);
+  }
+  const deleteNowRef = useRef(deleteNow);
+  deleteNowRef.current = deleteNow;
+  const confirmDeleteRef = useRef(confirmDelete);
+  confirmDeleteRef.current = confirmDelete;
 
   function openThemes() {
     const st = useStore.getState();
@@ -348,7 +364,14 @@ export function CommandPalette() {
         else setOpen(true);
         return;
       }
-      if (open) return;
+      if (open) {
+        // Ctrl+D confirms a delete that is waiting in the palette.
+        if (match.command === "delete" && confirmDeleteRef.current) {
+          event.preventDefault();
+          deleteNowRef.current();
+        }
+        return;
+      }
       if (runCommand(match.command)) event.preventDefault();
     };
     window.addEventListener("keydown", onKeyDown);
@@ -425,6 +448,13 @@ export function CommandPalette() {
       <DialogContent
         data-command-palette
         showCloseButton={false}
+        onEscapeKeyDown={(event) => {
+          // Esc first cancels a pending delete, then closes.
+          if (confirmDelete) {
+            event.preventDefault();
+            setConfirmDelete(null);
+          }
+        }}
         className="top-[13vh] w-[min(44rem,calc(100%-2rem))] max-w-none translate-y-0 gap-0 overflow-hidden p-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
       >
         <DialogTitle className="sr-only">{mode === "search" ? "Search notes" : mode === "themes" ? "Theme" : "Actions"}</DialogTitle>
@@ -456,6 +486,7 @@ export function CommandPalette() {
             }
             if (mode !== "commands") return;
             if (query.trim() && defaultFilter(value, query.trim()) <= 0) return;
+            if (value !== "Delete") setConfirmDelete(null);
             setSelectedCommand(value);
           }}
         >
@@ -476,6 +507,7 @@ export function CommandPalette() {
               maxLength={200}
               onValueChange={(value) => {
                 setQuery(value);
+                setConfirmDelete(null);
                 if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
               }}
               placeholder={mode === "search" ? "Search notes…" : mode === "themes" ? "Pick a theme…" : "Search actions…"}
@@ -551,19 +583,35 @@ export function CommandPalette() {
                             key={item.id}
                             value={item.label}
                             keywords={[liveLabel(item)]}
+                            onPointerDown={() => { pointerSelect.current = true; }}
                             onSelect={() => {
+                              const byPointer = pointerSelect.current;
+                              pointerSelect.current = false;
                               if (item.id === "change-theme") {
                                 openThemes();
+                                return;
+                              }
+                              if (item.id === "delete") {
+                                if (confirmDelete) deleteNow();
+                                else setConfirmDelete(byPointer ? "click" : "key");
                                 return;
                               }
                               handleOpenChange(false);
                               runCommand(item.id);
                             }}
-                            className={cn(itemClass, item.id === "delete" && "text-destructive data-[selected=true]:text-destructive")}
+                            className={cn(
+                              itemClass,
+                              item.id === "delete" && "text-destructive data-[selected=true]:text-destructive",
+                              item.id === "delete" && confirmDelete && "bg-destructive/10 data-[selected=true]:bg-destructive/15",
+                            )}
                           >
-                            <Icon className="size-[18px] shrink-0 text-muted-foreground [[data-selected=true]_&]:text-foreground" />
-                            <span className="truncate">{liveLabel(item)}</span>
-                            {binding ? <KbdGroup keys={shortcutKeys(binding)} className="ml-auto" /> : null}
+                            <Icon className={cn("size-[18px] shrink-0", item.id === "delete" ? "text-destructive" : "text-muted-foreground [[data-selected=true]_&]:text-foreground")} />
+                            <span className="truncate">
+                              {item.id === "delete" && confirmDelete
+                                ? `${confirmDelete === "click" ? "Click" : `Press Enter or ${formatShortcut(bindingFor("delete")!)}`} again to move “${deleteTargetName()}” to the trash`
+                                : liveLabel(item)}
+                            </span>
+                            {binding && !(item.id === "delete" && confirmDelete) ? <KbdGroup keys={shortcutKeys(binding)} className="ml-auto" /> : null}
                           </CommandPrimitive.Item>
                         );
                       })}

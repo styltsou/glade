@@ -11,13 +11,14 @@ vi.mock("motion/react", async () => {
   const React = await import("react");
   return {
     useReducedMotion: () => true,
+    AnimatePresence: ({ children }: any) => React.createElement(React.Fragment, null, children),
     Reorder: {
       Group: React.forwardRef<HTMLDivElement, any>((props, ref) => {
         const { as, axis, layoutScroll, values, onReorder, ...rest } = props;
         return React.createElement("div", { ...rest, ref });
       }),
       Item: (props: any) => {
-        const { as, value, layout, initial, transition, whileDrag, ...rest } = props;
+        const { as, value, layout, layoutDependency, initial, animate, exit, transition, whileDrag, onDragStart, onDragEnd, ...rest } = props;
         return React.createElement("div", rest);
       },
     },

@@ -301,3 +301,15 @@ kbd {
   font-family: var(--font-sans);
   letter-spacing: 0;
 }
+
+/* The sidebar and the title-bar section above it open and close together:
+   same property, duration and curve. While the sidebar is being resized they
+   follow the pointer instead. */
+.sidebar-motion {
+  transition-property: width, background-color, border-color;
+  transition-duration: 180ms;
+  transition-timing-function: var(--ease-ui);
+}
+[data-resizing] .sidebar-motion {
+  transition: none;
+}

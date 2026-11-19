@@ -66,7 +66,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 ### 🎨 Appearance
 
-- **Themes** — Glade (neutral, the default), Claude, Everforest and Rosé Pine, each in light and dark, or following the system. `Cmd/Ctrl+,` opens a theme picker in the command palette that previews each theme as you move through it; the workspace menu has the same choices. There is no settings page.
+- **Themes** — Glade (neutral, the default), Vercel, Linear, Claude, Vesper, Tokyo Night, Catppuccin, Gruvbox, Everforest and Rosé Pine, each in light and dark (Tokyo Night uses Day/Night, Catppuccin Latte/Mocha), or following the system. All meet WCAG AA contrast. `Cmd/Ctrl+,` opens a theme picker in the command palette that previews each theme as you move through it; the workspace menu has the same choices. There is no settings page.
 - **Resizable Panels** — Sidebar, tag panel, pinned section, and table of contents are all resizable and collapsible.
 
 ### ⚡ Performance

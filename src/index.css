@@ -6,6 +6,12 @@
 @import "@/styles/sonner.css";
 @import "@/styles/editor.css";
 @import "@/styles/mermaid-block.css";
+@import "@/styles/themes/vercel.css";
+@import "@/styles/themes/linear.css";
 @import "@/styles/themes/claude.css";
+@import "@/styles/themes/vesper.css";
+@import "@/styles/themes/tokyo-night.css";
+@import "@/styles/themes/catppuccin.css";
+@import "@/styles/themes/gruvbox.css";
 @import "@/styles/themes/everforest.css";
 @import "@/styles/themes/rose-pine.css";

@@ -1,0 +1,30 @@
+/* Gruvbox: retro cream and charcoal, burnt orange accent. */
+[data-theme="gruvbox"] {
+  --tint-h: 48;
+  --tint-s: 75%;
+  --ink-h: 20;
+  --ink-s: 6%;
+  --surface-sink: 8%;
+  --brand: 19 97% 35%;
+  --brand-foreground: 48 87% 95%;
+  --syntax-keyword: 358 100% 31%;
+  --syntax-string: 56 79% 26%;
+  --syntax-number: 323 39% 40%;
+  --syntax-function: 36 80% 36%;
+  --syntax-comment: 30 12% 45%;
+}
+
+[data-theme="gruvbox"][data-mode="dark"] {
+  --tint-h: 30;
+  --tint-s: 6%;
+  --ink-h: 43;
+  --ink-s: 50%;
+  --surface-lift: 8%;
+  --brand: 27 99% 55%;
+  --brand-foreground: 0 0% 10%;
+  --syntax-keyword: 6 96% 59%;
+  --syntax-string: 61 66% 44%;
+  --syntax-number: 344 47% 68%;
+  --syntax-function: 42 95% 58%;
+  --syntax-comment: 30 12% 51%;
+}
