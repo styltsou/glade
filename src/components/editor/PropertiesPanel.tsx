@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ChevronRight, Plus, X, FileCode } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronRight, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { usePaneNote } from "./PaneContext";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ function ScalarEditor({ entry }: { entry: PropertyEntry }) {
         }
       }}
       className={cn(
-        "h-7 w-full min-w-0 rounded bg-transparent px-2 text-sm outline-none hover:bg-accent/50 focus:bg-accent/50",
+        "h-8 w-full min-w-0 rounded bg-transparent px-2 text-sm outline-none hover:bg-accent/50 focus:bg-accent/50",
         error && "ring-1 ring-destructive",
       )}
     />
@@ -64,7 +64,7 @@ function ListEditor({ entry }: { entry: PropertyEntry }) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1 px-1 py-0.5">
       {items.map((item) => (
-        <span key={item} className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.07] px-2.5 py-0.5 text-xs">
+        <span key={item} className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.07] px-3 py-1 text-sm">
           {item}
           <button
             aria-label={`Remove ${item}`}
@@ -88,101 +88,171 @@ function ListEditor({ entry }: { entry: PropertyEntry }) {
           }
         }}
         placeholder="Add…"
-        className="h-6 min-w-16 flex-1 bg-transparent px-1 text-xs outline-none"
+        className="h-7 min-w-16 flex-1 bg-transparent px-1 text-sm outline-none"
       />
     </div>
   );
 }
 
 function ReadOnlyValue({ entry }: { entry: PropertyEntry }) {
-  const setEditFrontmatterOpen = useStore((s) => s.setEditFrontmatterOpen);
   return (
-    <div className="flex min-w-0 items-center gap-2 px-2">
-      <code className="truncate text-xs text-muted-foreground" title={entry.raw}>
+    <div className="flex min-w-0 items-center px-2">
+      <code className="truncate text-sm text-muted-foreground" title={`${entry.raw}\n\nEdit this in raw markdown.`}>
         {entry.raw.replace(/^[^:]*:\s*/, "").trim() || "(complex value)"}
       </code>
-      <button
-        onClick={() => setEditFrontmatterOpen(true)}
-        className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      >
-        Edit as text
-      </button>
     </div>
   );
 }
 
-/** Frontmatter shown above the title; collapsible, edits only the lines it touches. */
+/** A new property typed in place: name, then value. Enter saves, Escape or leaving it empty cancels. */
+function NewPropertyRow({ notePath, onDone }: { notePath?: string; onDone: () => void }) {
+  const setProperty = useStore((s) => s.setProperty);
+  const [key, setKey] = useState("");
+  const [value, setValue] = useState("");
+  const [error, setError] = useState(false);
+  const valueRef = useRef<HTMLInputElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  const submit = async () => {
+    const name = key.trim();
+    if (!name) return onDone();
+    try {
+      await setProperty(name, { kind: "scalar", value }, notePath);
+      onDone();
+    } catch {
+      setError(true);
+    }
+  };
+
+  const base = "h-8 min-w-0 rounded bg-transparent px-2 text-sm outline-none focus:bg-accent/50";
+  return (
+    <div
+      ref={rowRef}
+      className="flex items-start gap-3 py-0.5"
+      onBlur={(e) => {
+        if (!rowRef.current?.contains(e.relatedTarget as Node) && !key.trim()) onDone();
+      }}
+    >
+      <input
+        autoFocus
+        value={key}
+        placeholder="Name"
+        onChange={(e) => {
+          setKey(e.target.value);
+          setError(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === ":") {
+            e.preventDefault();
+            if (key.trim()) valueRef.current?.focus();
+          } else if (e.key === "Escape") onDone();
+        }}
+        className={cn(base, "w-32 shrink-0 text-muted-foreground placeholder:text-muted-foreground/50", error && "ring-1 ring-destructive")}
+      />
+      <input
+        ref={valueRef}
+        value={value}
+        placeholder="Value"
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void submit();
+          else if (e.key === "Escape") onDone();
+        }}
+        className={cn(base, "flex-1 placeholder:text-muted-foreground/50")}
+      />
+    </div>
+  );
+}
+
+/** A quiet "Properties" subtitle after the tags. Collapsed by default; edits only the lines it touches. Tags have their own UI, so they are left out. */
 export function PropertiesPanel() {
   const paneNote = usePaneNote();
   const properties = paneNote?.properties;
-  const collapsed = useStore((s) => s.propertiesCollapsed);
+  const open = useStore((s) => s.propertiesOpen);
   const toggle = useStore((s) => s.toggleProperties);
   const removeProperty = useStore((s) => s.removeProperty);
-  const setAddPropertyOpen = useStore((s) => s.setAddPropertyOpen);
-  const setEditFrontmatterOpen = useStore((s) => s.setEditFrontmatterOpen);
+  const addRequested = useStore((s) => s.addPropertyOpen);
+  const setAddRequested = useStore((s) => s.setAddPropertyOpen);
+  const [adding, setAdding] = useState(false);
 
-  if (!properties || properties.status === "none") return null;
+  // "Add property" from the command palette opens the section with a fresh row.
+  useEffect(() => {
+    if (!addRequested) return;
+    setAddRequested(false);
+    if (!useStore.getState().propertiesOpen) toggle();
+    setAdding(true);
+  }, [addRequested, setAddRequested, toggle]);
+
+  if (!properties) return null;
+  const entries = properties.status === "ok" ? properties.entries.filter((e) => e.key.toLowerCase() !== "tags") : [];
 
   return (
-    <div className="mb-5 rounded-lg border border-border/70 bg-card/40 text-sm">
-      <div className="flex items-center gap-1 px-2 py-1.5">
-        <button onClick={toggle} className="flex flex-1 items-center gap-1 text-left text-xs font-medium text-muted-foreground hover:text-foreground">
-          <ChevronRight className={cn("size-3.5 transition-transform", !collapsed && "rotate-90")} />
-          Properties
-          {properties.status === "ok" && <span className="font-normal">({properties.entries.length})</span>}
-        </button>
-        <button
-          onClick={() => setEditFrontmatterOpen(true)}
-          title="Edit as text"
-          className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <FileCode className="size-3.5" />
-        </button>
-        {properties.status === "ok" && (
-          <button
-            onClick={() => setAddPropertyOpen(true)}
-            title="Add property"
-            className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <Plus className="size-3.5" />
-          </button>
-        )}
-      </div>
+    <div className="mt-5">
+      <button
+        onClick={toggle}
+        aria-expanded={open}
+        className="flex items-center gap-1.5 rounded text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ChevronRight className={cn("size-4 transition-transform duration-[120ms] ease-[var(--ease-ui)]", open && "rotate-90")} />
+        Properties
+        {entries.length > 0 && <span className="font-normal opacity-60">{entries.length}</span>}
+      </button>
 
-      {!collapsed && (
-        <div className="border-t border-border/60 px-2 py-1.5">
-          {properties.status === "invalid" ? (
-            <div>
-              <p className="mb-1 text-xs text-destructive">Couldn't parse properties. They are shown as written and left untouched.</p>
-              <pre className="overflow-x-auto rounded bg-muted p-2 text-xs">{properties.yaml}</pre>
-            </div>
-          ) : (
-            properties.entries.map((entry) => (
-              <div key={entry.key} className="group flex items-start gap-2 py-0.5">
-                <span className="w-28 shrink-0 truncate pt-1 text-xs text-muted-foreground" title={entry.key}>
-                  {entry.key}
-                </span>
-                <div className="min-w-0 flex-1">
-                  {!entry.editable ? (
-                    <ReadOnlyValue entry={entry} />
-                  ) : Array.isArray(entry.value) ? (
-                    <ListEditor key={JSON.stringify(entry.value)} entry={entry} />
-                  ) : (
-                    <ScalarEditor key={asText(entry.value)} entry={entry} />
-                  )}
-                </div>
-                <button
-                  aria-label={`Remove ${entry.key}`}
-                  onClick={() => removeProperty(entry.key, paneNote?.path)}
-                  className="mt-1 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100"
-                >
-                  <X className="size-3.5" />
-                </button>
+      {/* Same grid-rows trick as the sidebar folders, so the note below slides instead of jumping. */}
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows,opacity] duration-[120ms] ease-[var(--ease-ui)]",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+        {...({ inert: open ? undefined : "" } as object)}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="pt-2 pl-1 text-sm">
+            {properties.status === "invalid" ? (
+              <div>
+                <p className="mb-1 text-xs text-destructive">Couldn't parse properties. They are shown as written and left untouched. Fix them in raw markdown.</p>
+                <pre className="overflow-x-auto rounded bg-muted p-2 text-xs">{properties.yaml}</pre>
               </div>
-            ))
-          )}
+            ) : (
+              <>
+                {entries.map((entry) => (
+                  <div key={entry.key} className="group flex items-start gap-3 py-0.5">
+                    <span className="w-32 shrink-0 truncate px-2 pt-[7px] text-sm text-muted-foreground" title={entry.key}>
+                      {entry.key}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {!entry.editable ? (
+                        <ReadOnlyValue entry={entry} />
+                      ) : Array.isArray(entry.value) ? (
+                        <ListEditor key={JSON.stringify(entry.value)} entry={entry} />
+                      ) : (
+                        <ScalarEditor key={asText(entry.value)} entry={entry} />
+                      )}
+                    </div>
+                    <button
+                      aria-label={`Remove ${entry.key}`}
+                      onClick={() => removeProperty(entry.key, paneNote?.path)}
+                      className="mt-1.5 rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                ))}
+                {adding ? (
+                  <NewPropertyRow notePath={paneNote?.path} onDone={() => setAdding(false)} />
+                ) : (
+                  <button
+                    onClick={() => setAdding(true)}
+                    className="mt-0.5 flex items-center gap-1.5 rounded px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <Plus className="size-4" /> Add property
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

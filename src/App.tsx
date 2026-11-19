@@ -17,7 +17,6 @@ import { MissingLinkDialog } from "@/components/MissingLinkDialog";
 import { RootMissing } from "@/components/RootMissing";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
-import { AddPropertyDialog, EditFrontmatterDialog } from "@/components/editor/PropertyDialogs";
 import { relativeTo } from "@/lib/paths";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -98,8 +97,6 @@ function SharedDialogs() {
         <FolderSwitcher />
       </ErrorBoundary>
       <MissingLinkDialog />
-      <AddPropertyDialog />
-      <EditFrontmatterDialog />
     </>
   );
 }

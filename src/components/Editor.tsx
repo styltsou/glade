@@ -441,6 +441,20 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     }
   }, [editor, isRawModeMap, rawContent, activeNote, saveNow, toggleRawModeFromStore]);
 
+  // Raw markdown is toggled from the command palette or its shortcut.
+  const toggleRawRef = useRef(handleToggleRawMode);
+  toggleRawRef.current = handleToggleRawMode;
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent<{ path: string; handled: boolean }>).detail;
+      if (detail.handled || detail.path !== activeNote?.path) return;
+      detail.handled = true;
+      void toggleRawRef.current();
+    };
+    window.addEventListener("glade:toggle-raw", onToggle);
+    return () => window.removeEventListener("glade:toggle-raw", onToggle);
+  }, [activeNote?.path]);
+
   const onRawChange = useCallback(
     (value: string) => {
       setRawContent(value);
@@ -729,8 +743,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
-        onToggleRaw={(isRaw) => { if (isRaw !== isRawMode) handleToggleRawMode(); }}
-        isRawMode={isRawMode}
         findVisible={findVisible}
         findQuery={findQuery}
         onFindQueryChange={handleFindQueryChange}

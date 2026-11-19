@@ -136,11 +136,11 @@ export function TagInput() {
   );
 
   return (
-    <div className="relative flex items-center gap-1.5 flex-wrap">
+    <div className="relative flex items-center gap-2 flex-wrap">
       {tags.map((tag: string) => (
         <span
           key={tag}
-          className="group inline-flex items-center h-7 px-2.5 rounded-full bg-foreground/[0.06] text-[12px] font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.1] hover:text-foreground cursor-default select-none"
+          className="group inline-flex items-center h-8 px-3.5 rounded-full border border-transparent bg-foreground/[0.06] text-[13px] font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.1] hover:text-foreground cursor-default select-none"
         >
           {tag}
           <button
@@ -155,10 +155,7 @@ export function TagInput() {
       <div className="relative" ref={containerRef}>
         <input
           ref={inputRef}
-          className="bg-foreground/[0.04] px-3 rounded-full border border-transparent hover:bg-foreground/[0.07] focus:border-border focus:bg-transparent outline-none text-[12px] h-7 text-muted-foreground font-medium placeholder:text-muted-foreground/50 min-w-[90px] focus:ring-0 focus:text-foreground transition-all"
-          style={{
-            width: `${Math.max(inputValue.length * 8 + 20, 90)}px`,
-          }}
+          className="bg-foreground/[0.06] px-3.5 rounded-full border border-transparent hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent outline-none text-[13px] h-8 text-muted-foreground font-medium placeholder:text-muted-foreground/60 w-28 focus:ring-0 focus:text-foreground transition-all"
           value={inputValue}
           onChange={(e) => {
             const val = e.target.value;

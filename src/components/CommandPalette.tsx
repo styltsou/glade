@@ -200,6 +200,7 @@ function runCommand(id: CommandId): boolean {
       if (note) void s.duplicateNote(note.path);
       break;
     case "add-property":
+      if (!s.propertiesOpen) s.toggleProperties();
       s.setAddPropertyOpen(true);
       break;
     case "export-note":
@@ -216,7 +217,12 @@ function runCommand(id: CommandId): boolean {
       if (note) s.setNoteEditMode(note.path, !(s.noteEditMode[note.path] ?? false));
       break;
     case "toggle-raw-mode":
-      if (note) s.toggleRawMode(note.path);
+      if (note) {
+        // The editor converts between rich text and source, so it does the toggling.
+        const detail = { path: note.path, handled: false };
+        window.dispatchEvent(new CustomEvent("glade:toggle-raw", { detail }));
+        if (!detail.handled) s.toggleRawMode(note.path);
+      }
       break;
     case "toggle-sidebar":
       s.toggleSidebarCollapsed();
@@ -293,7 +299,7 @@ export function CommandPalette() {
   const [confirmDelete, setConfirmDelete] = useState<"click" | "key" | null>(null);
   const pointerSelect = useRef(false);
   // Re-render on store changes so labels and availability stay current.
-  useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.noteEditMode]));
+  useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.propertiesOpen, s.noteEditMode]));
 
   const entries = useStore((s) => s.entries);
   const recentFiles = useStore((s) => s.home?.recent_files);

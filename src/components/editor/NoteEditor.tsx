@@ -376,7 +376,7 @@ export function NoteEditor({
 			onScroll={onScroll}
 			className="flex-1 overflow-auto px-16 @[46rem]/pane:px-24 py-8 note-scroll"
 		>
-			<div className="max-w-187.5 mx-auto">
+			<div className="max-w-215 mx-auto">
 				{editor && (
 					<BubbleMenu editor={editor}>
 						<div
@@ -521,8 +521,6 @@ export function NoteEditor({
 					</BubbleMenu>
 				)}
 
-				<PropertiesPanel />
-
 				<EditableTitle
 					beforeRename={beforeRename}
 					title={activeNote.title}
@@ -539,6 +537,7 @@ export function NoteEditor({
 
 				<div className="mb-8">
 					<TagInput />
+					<PropertiesPanel />
 				</div>
 
 				{isRawMode ? (

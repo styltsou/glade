@@ -44,7 +44,7 @@ export const useStore = create<StoreState>()(
         sidebarWidth: state.sidebarWidth,
         pinnedHeight: state.pinnedHeight,
         pinnedNotePaths: state.pinnedNotePaths,
-        propertiesCollapsed: state.propertiesCollapsed,
+        propertiesOpen: state.propertiesOpen,
       }),
     }
   )

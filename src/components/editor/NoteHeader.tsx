@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, FileText, Code, Copy, Check, BookOpen } from "lucide-react";
+import { Clock, Copy, Check, BookOpen, PencilOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,6 @@ interface NoteHeaderProps {
   hasHeadings?: boolean;
   isTocOpen?: boolean;
   onToggleToc?: () => void;
-  onToggleRaw?: (isRaw: boolean) => void;
-  isRawMode?: boolean;
   findVisible?: boolean;
   findQuery?: string;
   onFindQueryChange?: (query: string) => void;
@@ -58,8 +56,6 @@ export function NoteHeader({
   hasHeadings = false,
   isTocOpen = false,
   onToggleToc,
-  onToggleRaw,
-  isRawMode = false,
   findVisible = false,
   findQuery = "",
   onFindQueryChange,
@@ -167,7 +163,7 @@ export function NoteHeader({
                 onClick={() => setNoteEditMode(notePath, true)}
                 className="press flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors hover:text-foreground"
               >
-                <BookOpen className="size-3.5" />
+                <PencilOff className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
@@ -203,30 +199,6 @@ export function NoteHeader({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Table of Contents (Ctrl+Shift+T)</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className={cn(
-                "text-muted-foreground",
-                isRawMode && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-              )}
-              onClick={() => onToggleRaw?.(!isRawMode)}
-              disabled={!notePath}
-            >
-              {isRawMode ? (
-                <FileText className="h-4 w-4" />
-              ) : (
-                <Code className="h-4 w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            <p>{isRawMode ? "Switch to rich text" : "Switch to raw markdown"}</p>
           </TooltipContent>
         </Tooltip>
 
