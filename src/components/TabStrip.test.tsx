@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { useStore } from "@/store";
 import * as T from "@/lib/tabs";
 import { TabStrip } from "./TabStrip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 // Motion's layout measurements need a browser; exercise the real tab controls
 // and store transitions here, with only those measurement wrappers replaced.
@@ -59,7 +60,7 @@ function render(paths: string[]) {
   paths.slice(1).forEach((path) => { state = T.openInNewTab(state, path); });
   state = T.activateTab(state, 0, state.groups[0].tabs[0].id);
   useStore.setState({ tabsState: state });
-  act(() => root.render(<TabStrip />));
+  act(() => root.render(<TooltipProvider><TabStrip /></TooltipProvider>));
   return () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
 }
 
@@ -68,11 +69,10 @@ function key(element: HTMLElement, value: string) {
 }
 
 describe("editor tab controls", () => {
-  it("uses filenames and disambiguates repeated names by their parent folder", () => {
+  it("labels tabs by filename and shows the full path in our tooltip, not a native title", () => {
     const controls = render(["drafts/plan.md", "archive/plan.md"]);
     expect(controls().map((tab) => tab.getAttribute("aria-label"))).toEqual(["plan.md", "plan.md"]);
-    expect(controls()[0].title).toBe("drafts/plan.md");
-    expect(controls()[1].title).toBe("archive/plan.md");
+    expect(controls().every((tab) => !tab.title && tab.dataset.slot === "tooltip-trigger")).toBe(true);
   });
 
   it("moves focus and selection with arrows and Home/End, wrapping at the ends", () => {
@@ -95,7 +95,7 @@ describe("editor tab controls", () => {
     state = T.openToTheSide(state, "right-a.md");
     state = T.openInNewTab(state, "right-b.md");
     useStore.setState({ tabsState: state });
-    act(() => root.render(<TabStrip />));
+    act(() => root.render(<TooltipProvider><TabStrip /></TooltipProvider>));
     const lists = host.querySelectorAll('[role="tablist"]');
     expect(lists).toHaveLength(2);
     act(() => (lists[0].querySelector('[role="tab"]') as HTMLButtonElement).click());

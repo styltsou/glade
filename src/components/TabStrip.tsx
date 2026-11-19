@@ -6,6 +6,7 @@ import { baseName } from "@/lib/paths";
 import { type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
 import { dragGhost, hitTest, sameDrop } from "@/lib/paneDnd";
 import { cn } from "@/lib/utils";
+import { Tip } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
@@ -191,7 +192,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
             <div onPointerDown={(e) => startTabDrag(e, tab, label)} className={cn("group relative flex h-full w-full items-center rounded-lg transition-colors duration-100 has-[[role=tab]:focus-visible]:ring-1 has-[[role=tab]:focus-visible]:ring-inset has-[[role=tab]:focus-visible]:ring-ring/50", active ? focused ? "bg-[hsl(var(--gray-5))] text-foreground" : "bg-accent text-subtle-foreground" : "bg-muted/50 text-muted-foreground/70 hover:bg-[hsl(var(--gray-5))] hover:text-foreground",
               // The tab being dragged keeps a solid fill; a dashed outline marks where it came from.
               draggingId === tab.id && "text-muted-foreground outline-1 outline-dashed outline-border -outline-offset-1")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
-              <button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} title={tab.path ?? (typeof tab.folder === "string" ? tab.folder : rootName)} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
+              <Tip label={draggingId ? null : tab.path ?? (typeof tab.folder === "string" ? tab.folder : rootName)} align="start"><button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
                 if (e.altKey || e.ctrlKey || e.metaKey) return;
                 const at = group.tabs.findIndex((t) => t.id === tab.id);
                 const next = e.key === "ArrowRight" ? group.tabs[(at + 1) % group.tabs.length] : e.key === "ArrowLeft" ? group.tabs[(at - 1 + group.tabs.length) % group.tabs.length] : e.key === "Home" ? group.tabs[0] : e.key === "End" ? group.tabs[group.tabs.length - 1] : null;
@@ -206,7 +207,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
                 // (no ellipsis). On a narrow tab the close button sits over the
                 // end of the name, so the fade starts further in.
                 "[mask-image:linear-gradient(to_left,transparent,black_20px)]",
-                active ? "@max-[100px]/tab:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]" : "@max-[100px]/tab:group-hover:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]")}>{label}</span></button>
+                active ? "@max-[100px]/tab:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]" : "@max-[100px]/tab:group-hover:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]")}>{label}</span></button></Tip>
               <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/70 transition-[color,opacity] duration-100 hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
                 // Narrow inactive tabs show their close button only on hover, like a browser's.
                 active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}><X className="size-3.5" /></button>
@@ -232,7 +233,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
       {dropHere && <span aria-hidden className="pointer-events-none absolute top-1.5 bottom-1.5 z-10 w-0.5 -translate-x-[3px] rounded-full bg-primary" style={{ left: dropHere.x }} />}
     </div>
     <div className="flex shrink-0 items-center" data-no-drag>
-      <button type="button" aria-label="New tab" title="New tab (Ctrl+T)" onClick={() => { focusGroup(index); newTab(); }} className={action}><Plus className="size-4" /></button>
+      <Tip label="New tab (Ctrl+T)"><button type="button" aria-label="New tab" onClick={() => { focusGroup(index); newTab(); }} className={action}><Plus className="size-4" /></button></Tip>
     </div><div className="h-full min-w-1 flex-1" />
   </div>;
 }

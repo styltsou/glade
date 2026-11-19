@@ -20,7 +20,7 @@ import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { MermaidCanvas } from './MermaidCanvas'
 import { toast } from 'sonner'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 import { renderMermaid, renderMermaidForExport, svgToPng, onMermaidThemeChange } from '@/lib/mermaid'
 
@@ -323,32 +323,32 @@ export function MermaidBlockView({
             </button>
 
             <div className="flex items-center ml-auto">
-              <button
+              <Tip label="Copy source" className="z-[110]"><button
                 type="button"
                 className="mermaid-full-action-btn"
                 onClick={() => handleCopySource(draft)}
-                title="Copy source"
+                aria-label="Copy source"
               >
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </button>
+              </button></Tip>
 
-              <button
+              <Tip label="Export as PNG" className="z-[110]"><button
                 type="button"
                 className="mermaid-full-action-btn"
                 onClick={handleExportPng}
-                title="Export as PNG"
+                aria-label="Export as PNG"
               >
                 <Download className="size-4" />
-              </button>
+              </button></Tip>
 
-              <button
+              <Tip label="Close (Esc)" className="z-[110]"><button
                 type="button"
                 className="mermaid-full-close ml-1"
                 onClick={closeFullView}
-                title="Close (Esc)"
+                aria-label="Close"
               >
                 <X className="size-4" />
-              </button>
+              </button></Tip>
             </div>
           </div>
 

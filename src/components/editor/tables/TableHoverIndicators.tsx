@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { TextSelection } from "@tiptap/pm/state";
 import { moveTableColumn, moveTableRow, TableMap } from "@tiptap/pm/tables";
+import { Tip } from "@/components/ui/tooltip";
 
 type Axis = "row" | "column";
 type Hovered = {
@@ -240,10 +241,9 @@ export function TableHoverIndicators({ editor }: { editor: Editor }) {
         : { left: tableLeft + 0.5, top: rowCenter };
     return (
       <Fragment key={axis}>
-        <button
+        <Tip label={`Drag to move ${axis}; use arrow keys to move`} side="top"><button
           type="button"
           aria-label={`Move ${axis} ${index + 1}`}
-          title={`Drag to move ${axis}; use arrow keys to move`}
           className={`note-table-hover-indicator note-table-hover-indicator-${axis}`}
           style={position}
           onPointerDown={(event) => {
@@ -363,7 +363,7 @@ export function TableHoverIndicators({ editor }: { editor: Editor }) {
             <circle cx="7" cy="8" r="1" />
             <circle cx="11" cy="8" r="1" />
           </svg>
-        </button>
+        </button></Tip>
         <span
           aria-hidden="true"
           className={`note-table-indicator-dash note-table-indicator-dash-${axis}`}

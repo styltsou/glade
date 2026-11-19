@@ -5,6 +5,7 @@ import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { cn } from "@/lib/utils";
+import { Tip } from "@/components/ui/tooltip";
 
 interface NoteActionButtonsProps {
   isRawMode: boolean;
@@ -81,18 +82,18 @@ export function NoteActionButtons({
     <div className="flex items-center">
       <div className="h-10 w-px bg-border" />
 
-      <Button
+      <Tip label="Table of Contents (Ctrl+Shift+T)"><Button
         variant="ghost"
         className={cn(
           "h-10 w-10 rounded-none",
           isTocOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
         )}
-        title="Table of Contents (Ctrl+Shift+T)"
+        aria-label="Table of Contents"
         onClick={onToggleToc}
         disabled={!hasHeadings}
       >
         <BookOpen className="h-4 w-4" />
-      </Button>
+      </Button></Tip>
 
       <div className="h-10 w-px bg-border" />
 
@@ -129,19 +130,19 @@ export function NoteActionButtons({
       <div className="h-10 w-px bg-border" />
 
       <div className="relative" ref={exportMenuRef}>
-        <Button
+        <Tip label="Export"><Button
           variant="ghost"
           className={cn(
             "h-10 w-10 rounded-none",
             exportMenuOpen && "bg-accent"
           )}
-          title="Export"
+          aria-label="Export"
           disabled={!notePath}
           onClick={() => setExportMenuOpen((v) => !v)}
           id="export-button"
         >
           <Download className="h-4 w-4" />
-        </Button>
+        </Button></Tip>
 
         {exportMenuOpen && (
           <div className="absolute right-0 top-full mt-1 z-[110] w-max rounded-md border bg-popover p-1 text-popover-foreground shadow-md origin-top-right animate-in fade-in zoom-in-95 whitespace-nowrap">

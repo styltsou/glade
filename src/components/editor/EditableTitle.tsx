@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useStore } from "@/store";
 import { formatTooltipDate } from "@/lib/dates";
+import { Tip } from "@/components/ui/tooltip";
 
 interface EditableTitleProps {
   beforeRename?: () => Promise<void>;
@@ -69,15 +70,16 @@ export function EditableTitle({ title, path, created, beforeRename }: EditableTi
           />
         </div>
       ) : (
-        <div 
-          className="group relative flex items-center w-fit border border-transparent rounded-lg -ml-3 px-3 py-2 cursor-pointer active:scale-[0.99] hover:bg-muted/30 hover:border-border"
-          onClick={handleStartEditing}
-          title={created ? `Created ${formatTooltipDate(created)}` : undefined}
-        >
-          <h1 className="text-[32px] font-bold font-sans text-foreground tracking-tight leading-none select-none">
-            {title}
-          </h1>
-        </div>
+        <Tip label={created ? `Created ${formatTooltipDate(created)}` : undefined} align="start">
+          <div
+            className="group relative flex items-center w-fit border border-transparent rounded-lg -ml-3 px-3 py-2 cursor-pointer active:scale-[0.99] hover:bg-muted/30 hover:border-border"
+            onClick={handleStartEditing}
+          >
+            <h1 className="text-[32px] font-bold font-sans text-foreground tracking-tight leading-none select-none">
+              {title}
+            </h1>
+          </div>
+        </Tip>
       )}
     </div>
   );

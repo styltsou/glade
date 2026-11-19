@@ -266,7 +266,7 @@ function App() {
   }
 
   return (
-    <TooltipProvider delayDuration={0} disableHoverableContent>
+    <TooltipProvider disableHoverableContent>
       <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
         <TitleBar />
         <div className="flex flex-1 overflow-hidden w-full">

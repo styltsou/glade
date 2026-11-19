@@ -5,6 +5,7 @@ import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
 import { baseName } from "@/lib/paths";
+import { Tip } from "@/components/ui/tooltip";
 
 const appWindow = getCurrentWindow();
 
@@ -78,9 +79,9 @@ export function TitleBar() {
         className={`sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
       >
       {/* Sidebar toggle */}
-      {folderOpen && <button
+      {folderOpen && <Tip label="Toggle sidebar (Ctrl+B)"><button
         onClick={toggleSidebarCollapsed}
-        title="Toggle sidebar (Ctrl+B)"
+        aria-label="Toggle sidebar"
         className={iconButton}
       >
         {sidebarCollapsed ? (
@@ -88,7 +89,7 @@ export function TitleBar() {
         ) : (
           <PanelLeftClose className="h-4 w-4" />
         )}
-      </button>}
+      </button></Tip>}
       <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
       </div>
@@ -98,23 +99,23 @@ export function TitleBar() {
 
       {/* Window controls */}
       <div className="flex shrink-0 items-center gap-0.5">
-        <button onClick={handleMinimize} title="Minimize" className={iconButton}>
+        <Tip label="Minimize"><button onClick={handleMinimize} aria-label="Minimize" className={iconButton}>
           <Minus className="h-4 w-4" />
-        </button>
-        <button
+        </button></Tip>
+        <Tip label={isMaximized ? "Restore" : "Maximize"}><button
           onClick={handleMaximize}
-          title={isMaximized ? "Restore" : "Maximize"}
+          aria-label={isMaximized ? "Restore" : "Maximize"}
           className={iconButton}
         >
           {isMaximized ? <Square className="h-3 w-3" /> : <Maximize2 className="h-3.5 w-3.5" />}
-        </button>
-        <button
+        </button></Tip>
+        <Tip label="Close" align="end"><button
           onClick={handleClose}
-          title="Close"
+          aria-label="Close"
           className="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
         >
           <X className="h-4 w-4" />
-        </button>
+        </button></Tip>
       </div>
       </div>
     </div>

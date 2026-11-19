@@ -15,7 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { baseName, dirName, shortenPath } from "@/lib/paths";
 import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Ellipsis, Folder } from "lucide-react";
 
 interface BreadcrumbsProps {
@@ -42,13 +42,13 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
   return (
     <div className={cn("flex items-center gap-3 select-none overflow-hidden text-[14px]", className)}>
       {canGoBack && (
-        <button className="shrink-0 text-muted-foreground hover:text-foreground" onClick={goBack} title="Back (Alt+Left)">
+        <Tip label="Back (Alt+Left)"><button className="shrink-0 text-muted-foreground hover:text-foreground" onClick={goBack} aria-label="Back">
           <ArrowLeft className="size-4" />
-        </button>
+        </button></Tip>
       )}
-      <span className="truncate text-muted-foreground" title={filePath}>
+      <Tip label={filePath}><span className="truncate text-muted-foreground">
         {shortenPath(dir, home)}/<span className="font-semibold text-foreground">{baseName(filePath)}</span>
-      </span>
+      </span></Tip>
       <button className="shrink-0 text-xs text-muted-foreground hover:text-foreground" onClick={() => openPath(dir)}>
         Open containing folder
       </button>
@@ -204,7 +204,7 @@ function CollapsingCrumbs({
                           onClick={() => onNavigate(c.folderPath ?? null)}
                           className="flex w-full items-center rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
-                          <span className="truncate" title={c.label}>{c.label}</span>
+                          <span className="truncate">{c.label}</span>
                         </button>
                       ))}
                     </HoverCard.Content>

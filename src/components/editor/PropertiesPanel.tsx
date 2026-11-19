@@ -3,6 +3,7 @@ import { ChevronRight, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { usePaneNote } from "./PaneContext";
 import { cn } from "@/lib/utils";
+import { Tip } from "@/components/ui/tooltip";
 import type { PropertyEntry } from "@/types";
 
 function asText(value: unknown): string {
@@ -97,9 +98,9 @@ function ListEditor({ entry }: { entry: PropertyEntry }) {
 function ReadOnlyValue({ entry }: { entry: PropertyEntry }) {
   return (
     <div className="flex min-w-0 items-center px-2">
-      <code className="truncate text-sm text-muted-foreground" title={`${entry.raw}\n\nEdit this in raw markdown.`}>
+      <Tip label={<><pre className="font-mono whitespace-pre-wrap">{entry.raw}</pre><div className="mt-1 text-background/70">Edit this in raw markdown.</div></>} align="start"><code className="truncate text-sm text-muted-foreground">
         {entry.raw.replace(/^[^:]*:\s*/, "").trim() || "(complex value)"}
-      </code>
+      </code></Tip>
     </div>
   );
 }
@@ -217,9 +218,9 @@ export function PropertiesPanel() {
               <>
                 {entries.map((entry) => (
                   <div key={entry.key} className="group flex items-start gap-3 py-0.5">
-                    <span className="w-32 shrink-0 truncate px-2 pt-[7px] text-sm text-muted-foreground" title={entry.key}>
+                    <Tip label={entry.key} side="left"><span className="w-32 shrink-0 truncate px-2 pt-[7px] text-sm text-muted-foreground">
                       {entry.key}
-                    </span>
+                    </span></Tip>
                     <div className="min-w-0 flex-1">
                       {!entry.editable ? (
                         <ReadOnlyValue entry={entry} />

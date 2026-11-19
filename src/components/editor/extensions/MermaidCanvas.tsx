@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Maximize, ZoomIn, ZoomOut } from "lucide-react";
+import { Tip } from "@/components/ui/tooltip";
 
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 8;
@@ -143,15 +144,15 @@ export function MermaidCanvas({ svg, empty }: { svg: string | null; empty: strin
       </div>
 
       <div className="mermaid-full-zoom-controls">
-        <button type="button" onClick={() => zoomCenter(1.25)} title="Zoom in">
+        <Tip label="Zoom in" side="left" className="z-[110]"><button type="button" aria-label="Zoom in" onClick={() => zoomCenter(1.25)}>
           <ZoomIn className="size-4" />
-        </button>
-        <button type="button" onClick={() => zoomCenter(0.8)} title="Zoom out">
+        </button></Tip>
+        <Tip label="Zoom out" side="left" className="z-[110]"><button type="button" aria-label="Zoom out" onClick={() => zoomCenter(0.8)}>
           <ZoomOut className="size-4" />
-        </button>
-        <button type="button" onClick={fit} title="Fit to view (double-click)">
+        </button></Tip>
+        <Tip label="Fit to view (double-click)" side="left" className="z-[110]"><button type="button" aria-label="Fit to view" onClick={fit}>
           <Maximize className="size-4" />
-        </button>
+        </button></Tip>
         <span className="pt-1 text-center text-[10px] tabular-nums text-muted-foreground">{Math.round(view.scale * 100)}%</span>
       </div>
     </div>
