@@ -201,11 +201,13 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
                 // When the close button shows, it takes the icon's place on a tiny tab.
                 const iconClass = cn("size-3.5 shrink-0 opacity-60", active ? "@max-[60px]/tab:hidden" : "@max-[60px]/tab:group-hover:hidden");
                 return !tab.path ? <Folder className={iconClass} /> : <FileText className={iconClass} />;
-              })()}<span className={cn("min-w-0 flex-1 truncate text-left @max-[60px]/tab:hidden",
-                // On a narrow tab the close button sits over the end of the
-                // name, which fades out beneath it.
+              })()}<span className={cn("min-w-0 flex-1 overflow-hidden whitespace-nowrap text-left @max-[60px]/tab:hidden",
+                // Like Chrome, a long name is clipped and fades out at the end
+                // (no ellipsis). On a narrow tab the close button sits over the
+                // end of the name, so the fade starts further in.
+                "[mask-image:linear-gradient(to_left,transparent,black_20px)]",
                 active ? "@max-[100px]/tab:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]" : "@max-[100px]/tab:group-hover:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]")}>{label}</span></button>
-              <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/70 transition-[color,opacity] duration-100 hover:bg-foreground/[0.07] hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
+              <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/70 transition-[color,opacity] duration-100 hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
                 // Narrow inactive tabs show their close button only on hover, like a browser's.
                 active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}><X className="size-3.5" /></button>
             </div>
