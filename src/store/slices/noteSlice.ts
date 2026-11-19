@@ -49,13 +49,6 @@ export interface NoteSlice {
   toggleProperties: () => void;
   addPropertyOpen: boolean;
   setAddPropertyOpen: (open: boolean) => void;
-  /**
-   * Live text of a note being edited, published by the editor you are typing
-   * in, so another pane showing the same note can mirror it. `from` is the
-   * publishing editor; it never applies its own draft.
-   */
-  drafts: Record<string, { body: string; from: string }>;
-  publishDraft: (path: string, body: string, from: string) => void;
   /** The export dialog for the active note (opened from the command palette). */
   exportOpen: boolean;
   setExportOpen: (open: boolean) => void;
@@ -131,14 +124,10 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
   reloadNote: async (path: string) => {
     try {
       const note = await invoke<NoteData>("read_note", { path });
-      set((state: StoreState) => {
-        const { [path]: _stale, ...drafts } = state.drafts;
-        return {
-          noteCache: { ...state.noteCache, [path]: note },
-          activeNote: state.activeNote?.path === path ? note : state.activeNote,
-          drafts,
-        };
-      });
+      set((state: StoreState) => ({
+        noteCache: { ...state.noteCache, [path]: note },
+        activeNote: state.activeNote?.path === path ? note : state.activeNote,
+      }));
     } catch {
       // Gone or unreadable; the external-change handling reports removal.
     }
@@ -149,18 +138,11 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       await invoke("write_note", { path, content, force: force ?? false });
       const note = await invoke<NoteData>("read_note", { path });
       
-      set((state: StoreState) => {
-        // The file now holds this text; a draft that matches it is spent.
-        const drafts = state.drafts[path]?.body === content
-          ? (({ [path]: _spent, ...rest }) => rest)(state.drafts)
-          : state.drafts;
-        return {
-          activeNote: state.activeNote?.path === path ? note : state.activeNote,
-          noteCache: { ...state.noteCache, [path]: note },
-          vaultError: null,
-          drafts,
-        };
-      });
+      set((state: StoreState) => ({
+        activeNote: state.activeNote?.path === path ? note : state.activeNote,
+        noteCache: { ...state.noteCache, [path]: note },
+        vaultError: null
+      }));
     } catch (e) {
       set({ vaultError: String(e) });
       // The file changed on disk since it was loaded: let the editor offer
@@ -483,9 +465,6 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
   toggleProperties: () => set((s: StoreState) => ({ propertiesCollapsed: !s.propertiesCollapsed })),
   addPropertyOpen: false,
   setAddPropertyOpen: (open: boolean) => set({ addPropertyOpen: open }),
-  drafts: {},
-  publishDraft: (path: string, body: string, from: string) =>
-    set((state: StoreState) => ({ drafts: { ...state.drafts, [path]: { body, from } } })),
   exportOpen: false,
   setExportOpen: (open: boolean) => set({ exportOpen: open }),
   editFrontmatterOpen: false,

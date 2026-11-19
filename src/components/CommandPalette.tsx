@@ -53,7 +53,8 @@ import { themes, type ThemeId, type ThemeMode } from "@/themes";
 import { applyToDOM, resolveMode } from "@/store/slices/themeSlice";
 import { ThemeSwatch } from "@/components/ThemeSwatch";
 
-type PaletteMode = "search" | "commands" | "themes";
+type PaletteMode = "search" | "commands" | "themes" | "modes";
+const isPicker = (m: PaletteMode) => m === "themes" || m === "modes";
 
 type CommandId =
   | Exclude<GlobalCommand, "toggle-command-palette">
@@ -62,7 +63,8 @@ type CommandId =
   | "export-note"
   | "close-folder"
   | "toggle-appearance"
-  | "change-theme";
+  | "change-theme"
+  | "change-mode";
 
 type Icon = typeof FileTextIcon;
 
@@ -103,6 +105,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
       { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
       { id: "change-theme", label: "Change theme…", icon: PaletteIcon },
+      { id: "change-mode", label: "Light, dark or system…", icon: MoonIcon },
     ],
   },
   {
@@ -247,6 +250,10 @@ function runCommand(id: CommandId): boolean {
     case "change-theme":
       paletteControls.openThemes();
       break;
+    case "open-mode-picker":
+    case "change-mode":
+      paletteControls.openModes();
+      break;
     case "toggle-appearance":
       s.toggleAppearance();
       break;
@@ -255,7 +262,7 @@ function runCommand(id: CommandId): boolean {
 }
 
 /** Set by the mounted palette, so commands can open it in a given mode. */
-const paletteControls = { openThemes: () => {} };
+const paletteControls = { openThemes: () => {}, openModes: () => {} };
 
 const MODE_OPTIONS: { id: ThemeMode; label: string; icon: Icon }[] = [
   { id: "light", label: "Light", icon: SunIcon },
@@ -334,6 +341,15 @@ export function CommandPalette() {
     setOpen(true);
   }
   paletteControls.openThemes = openThemes;
+
+  function openModes() {
+    const st = useStore.getState();
+    setQuery("");
+    setSelectedTheme(`mode:${st.mode}`);
+    setMode("modes");
+    setOpen(true);
+  }
+  paletteControls.openModes = openModes;
 
   /** Show the highlighted theme or mode on the whole app without saving it. */
   function previewTheme(value: string) {
@@ -424,7 +440,7 @@ export function CommandPalette() {
   }
 
   function changeMode(next: PaletteMode) {
-    if (mode === "themes") {
+    if (isPicker(mode)) {
       const st = useStore.getState();
       applyToDOM(st.theme, resolveMode(st.mode));
     }
@@ -457,13 +473,13 @@ export function CommandPalette() {
         }}
         className="top-[13vh] w-[min(44rem,calc(100%-2rem))] max-w-none translate-y-0 gap-0 overflow-hidden p-0 data-[state=closed]:animate-none data-[state=open]:animate-none"
       >
-        <DialogTitle className="sr-only">{mode === "search" ? "Search notes" : mode === "themes" ? "Theme" : "Actions"}</DialogTitle>
+        <DialogTitle className="sr-only">{mode === "search" ? "Search notes" : mode === "themes" ? "Theme" : mode === "modes" ? "Mode" : "Actions"}</DialogTitle>
         <DialogDescription className="sr-only">
-          {mode === "search" ? "Search notes in this folder." : mode === "themes" ? "Pick a theme or mode. Moving through the list previews it." : "Search app actions."}
+          {mode === "search" ? "Search notes in this folder." : mode === "themes" ? "Pick a theme. Moving through the list previews it." : mode === "modes" ? "Pick light, dark or system. Moving through the list previews it." : "Search app actions."}
         </DialogDescription>
         <CommandPrimitive
           key={mode}
-          value={mode === "commands" ? selectedCommand : mode === "themes" ? selectedTheme : undefined}
+          value={mode === "commands" ? selectedCommand : isPicker(mode) ? selectedTheme : undefined}
           shouldFilter={mode !== "search"}
           loop
           className="flex flex-col"
@@ -475,11 +491,11 @@ export function CommandPalette() {
             }
             if (event.key === "Backspace" && mode !== "search" && query.length === 0) {
               event.preventDefault();
-              changeMode(mode === "themes" ? "commands" : "search");
+              changeMode(isPicker(mode) ? "commands" : "search");
             }
           }}
           onValueChange={(value) => {
-            if (mode === "themes") {
+            if (isPicker(mode)) {
               setSelectedTheme(value);
               previewTheme(value);
               return;
@@ -493,10 +509,10 @@ export function CommandPalette() {
           <div className="flex h-14 items-center gap-2.5 border-b border-border/50 px-4">
             {mode !== "search" ? (
               <span
-                aria-label={mode === "themes" ? "Theme mode. Press Backspace with an empty query to go back to actions." : "Actions mode. Press Backspace with an empty query to search notes."}
+                aria-label={isPicker(mode) ? "Picker. Press Backspace with an empty query to go back to actions." : "Actions mode. Press Backspace with an empty query to search notes."}
                 className="inline-flex h-7 shrink-0 items-center rounded-md border border-border/70 bg-muted/70 px-2.5 text-[13px] font-medium text-foreground"
               >
-                {mode === "themes" ? "Theme" : "Actions"}
+                {mode === "themes" ? "Theme" : mode === "modes" ? "Mode" : "Actions"}
               </span>
             ) : (
               <SearchIcon aria-hidden className="size-[18px] shrink-0 text-muted-foreground" />
@@ -510,7 +526,7 @@ export function CommandPalette() {
                 setConfirmDelete(null);
                 if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
               }}
-              placeholder={mode === "search" ? "Search notes…" : mode === "themes" ? "Pick a theme…" : "Search actions…"}
+              placeholder={mode === "search" ? "Search notes…" : mode === "themes" ? "Pick a theme…" : mode === "modes" ? "Light, dark or system…" : "Search actions…"}
               className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
               onKeyDown={(event) => {
                 if (mode !== "search" || event.key !== "Enter") return;
@@ -562,6 +578,8 @@ export function CommandPalette() {
                   })}
                 </CommandPrimitive.Group>
               )
+            ) : mode === "modes" ? (
+              <ModeList currentMode={useStore.getState().mode} onSelect={commitTheme} />
             ) : mode === "themes" ? (
               <ThemeList
                 current={useStore.getState().theme}
@@ -577,7 +595,7 @@ export function CommandPalette() {
                     <CommandPrimitive.Group heading={group.heading} className={groupClass}>
                       {group.items.map((item) => {
                         const Icon = liveIcon(item);
-                        const binding = bindingFor((item.id === "change-theme" ? "open-settings" : item.id) as GlobalCommand);
+                        const binding = bindingFor((item.id === "change-theme" ? "open-settings" : item.id === "change-mode" ? "open-mode-picker" : item.id) as GlobalCommand);
                         return (
                           <CommandPrimitive.Item
                             key={item.id}
@@ -589,6 +607,10 @@ export function CommandPalette() {
                               pointerSelect.current = false;
                               if (item.id === "change-theme") {
                                 openThemes();
+                                return;
+                              }
+                              if (item.id === "change-mode") {
+                                openModes();
                                 return;
                               }
                               if (item.id === "delete") {
@@ -629,7 +651,7 @@ export function CommandPalette() {
               <Kbd>Tab</Kbd>
               <span>for actions</span>
             </span>
-          ) : mode === "themes" ? (
+          ) : isPicker(mode) ? (
             <span className="inline-flex items-center gap-1">
               <Kbd aria-label="Backspace">
                 <DeleteKeyIcon aria-hidden />
@@ -693,7 +715,15 @@ function ThemeList({ current, currentMode, onSelect }: { current: ThemeId; curre
           </CommandPrimitive.Item>
         ))}
       </CommandPrimitive.Group>
-      <CommandPrimitive.Separator className="mx-2 my-1.5 h-px bg-border/60" />
+    </>
+  );
+}
+
+/** Light, dark or system. Highlighting one previews it; Enter keeps it. */
+function ModeList({ currentMode, onSelect }: { currentMode: ThemeMode; onSelect: (value: string) => void }) {
+  return (
+    <>
+      <CommandPrimitive.Empty className="py-10 text-center text-[14px] text-muted-foreground">No modes found.</CommandPrimitive.Empty>
       <CommandPrimitive.Group heading="Mode" className={groupClass}>
         {MODE_OPTIONS.map((m) => (
           <CommandPrimitive.Item key={m.id} value={`mode:${m.id}`} keywords={[m.label, "appearance"]} onSelect={onSelect} className={itemClass}>

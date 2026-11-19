@@ -9,6 +9,7 @@ export type GlobalCommand =
   | "new-folder"
   | "delete"
   | "open-settings"
+  | "open-mode-picker"
   | "toggle-sidebar"
   | "toggle-toc"
   | "toggle-edit-mode"
@@ -44,6 +45,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "delete", code: "KeyD", mod: true },
   { command: "open-settings", key: ",", mod: true },
   { command: "open-settings", code: "Comma", mod: true },
+  { command: "open-mode-picker", code: "Comma", mod: true, shiftKey: true },
   { command: "toggle-sidebar", code: "KeyB", mod: true },
   { command: "toggle-toc", code: "KeyT", mod: true, shiftKey: true },
   { command: "toggle-edit-mode", code: "KeyE", mod: true },

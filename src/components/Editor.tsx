@@ -96,18 +96,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const latestContentRef = useRef<string>("");
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const skipUpdateRef = useRef(false);
-  // Identity of this editor, for mirroring the same note across panes.
-  const editorIdRef = useRef(`ed-${Math.random().toString(36).slice(2)}`);
-  const publishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Share the latest text with other panes showing this note (trailing, ~120ms). */
-  const schedulePublish = useCallback(() => {
-    if (publishTimerRef.current) return;
-    publishTimerRef.current = setTimeout(() => {
-      publishTimerRef.current = null;
-      const p = currentPathRef.current;
-      if (p) useStore.getState().publishDraft(p, latestContentRef.current, editorIdRef.current);
-    }, 120);
-  }, []);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
@@ -189,7 +177,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
 
       cursorPositionRef.current = editor.state.selection.from;
       latestContentRef.current = markdown;
-      schedulePublish();
 
       if (markdown !== lastSavedContentRef.current) {
         if (savedTimeoutRef.current) {
@@ -406,38 +393,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     noteScrollPositions,
   ]);
 
-  // The same note open in another pane: follow what is typed there. The text
-  // counts as saved here, so only the pane being typed in ever writes it.
-  const draft = useStore((state) => (activeNote ? state.drafts[activeNote.path] : undefined));
-  // A draft that already existed when this note was loaded here is history:
-  // only follow drafts published while this pane shows the note.
-  const seenDraftRef = useRef<typeof draft>(draft);
-  useEffect(() => {
-    seenDraftRef.current = useStore.getState().drafts[activeNote?.path ?? ""];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeNote?.path]);
-  useEffect(() => {
-    if (!editor || !draft || !activeNote || draft === seenDraftRef.current) return;
-    seenDraftRef.current = draft;
-    if (draft.from === editorIdRef.current || editor.isFocused) return;
-    if (currentPathRef.current !== activeNote.path || draft.body === latestContentRef.current) return;
-    const scrollTop = scrollRef.current?.scrollTop;
-    isLoadingRef.current = true;
-    skipUpdateRef.current = true;
-    latestContentRef.current = draft.body;
-    lastSavedContentRef.current = draft.body;
-    const title = splitNoteTitle(draft.body);
-    editor.commands.setContent(title.body, { emitUpdate: false });
-    snapshotFidelity(editor, draft.body);
-    rawTitleRef.current = title;
-    setRawContent(title.body);
-    isLoadingRef.current = false;
-    skipUpdateRef.current = false;
-    if (scrollRef.current && scrollTop !== undefined) scrollRef.current.scrollTop = scrollTop;
-    setSaveStatusWithRef("idle");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft]);
-
   // Switching tabs or closing a pane unmounts this editor: never lose unsaved edits.
   const paneIndexRef = useRef(paneIndex);
   paneIndexRef.current = paneIndex;
@@ -490,7 +445,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     (value: string) => {
       setRawContent(value);
       latestContentRef.current = restoreNoteTitle(rawTitleRef.current, value);
-      schedulePublish();
       if (activeNote && latestContentRef.current !== lastSavedContentRef.current) {
         if (savedTimeoutRef.current) {
           clearTimeout(savedTimeoutRef.current);

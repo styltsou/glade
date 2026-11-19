@@ -17,6 +17,9 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   const newTab = useStore((s) => s.newTab);
   const splitActive = useStore((s) => s.splitActive);
   const moveToOther = useStore((s) => s.moveTabToOtherGroup);
+  const otherGroup = useStore((s) => s.tabsState.groups[index === 0 ? 1 : 0]);
+  /** The other pane already shows this note, so there is nothing to move. */
+  const otherHas = (path: string) => !!otherGroup?.tabs.some((t) => t.path === path);
   const reorder = useStore((s) => s.reorderTabs);
   const rootName = useStore((s) => (s.target ? baseName(s.target.path) : "Overview"));
   const viewport = useRef<HTMLDivElement>(null);
@@ -73,12 +76,19 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
               }}>{!tab.path && tab.folder !== undefined ? <Folder className="size-3.5 shrink-0 opacity-60" /> : <FileText className="size-3.5 shrink-0 opacity-60" />}<span className="truncate">{label}</span></button>
               <button type="button" aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("mr-1.5 flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground/70 transition-colors hover:text-foreground", active && "text-foreground/70")}><X className="size-3.5" /></button>
             </div>
-          </ContextMenuTrigger><ContextMenuContent className="min-w-48">
+          </ContextMenuTrigger><ContextMenuContent
+            className="min-w-48"
+            // The menu is portaled, but React still bubbles its events through
+            // the tab (a drag handle). Keep presses on menu items to the menu.
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
             <ContextMenuItem onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>
             {group.tabs.length > 1 && <ContextMenuItem onSelect={() => group.tabs.filter((t) => t.id !== tab.id).forEach((t) => close(index, t.id))}>Close other tabs</ContextMenuItem>}
             <ContextMenuSeparator />
             {split
-              ? <ContextMenuItem onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
+              ? (tab.path === null || !otherHas(tab.path)) && <ContextMenuItem onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
               : <ContextMenuItem onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>}
           </ContextMenuContent></ContextMenu>
         </Reorder.Item>;

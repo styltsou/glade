@@ -53,7 +53,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Tagging System** — YAML frontmatter-based tags with auto-complete, popularity ranking, and click-to-filter (AND-combinable).
 - **Pinned Notes** — Pin important notes to a dedicated section at the top of the sidebar.
 - **Pinned Folders** — Pin folders to keep them on the Home screen; every opened folder gets the same features, pinned or not.
-- **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Like VS Code, a note has at most one tab per pane, but the same note can be open in both panes: `Cmd/Ctrl+\` splits by copying the current tab, and what you type in one pane appears in the other. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's, can be dragged to reorder, and are restored per folder. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
+- **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Each note and folder overview is open at most once: opening it again focuses its tab, in whichever pane it is. `Cmd/Ctrl+\` moves the current tab into a new pane beside it. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's, can be dragged to reorder, and are restored per folder. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
 - **Editable Titles** — Click the note title to rename inline.
@@ -66,7 +66,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 
 ### 🎨 Appearance
 
-- **Themes** — Glade (neutral, the default), Vercel, Linear, Claude, Vesper, Tokyo Night, Catppuccin, Gruvbox, Everforest and Rosé Pine, each in light and dark (Tokyo Night uses Day/Night, Catppuccin Latte/Mocha), or following the system. All meet WCAG AA contrast. `Cmd/Ctrl+,` opens a theme picker in the command palette that previews each theme as you move through it; the workspace menu has the same choices. There is no settings page.
+- **Themes** — Glade (neutral, the default), Vercel, Linear, Claude, Vesper, Tokyo Night, Catppuccin, Gruvbox, Everforest and Rosé Pine, each in light and dark (Tokyo Night uses Day/Night, Catppuccin Latte/Mocha), or following the system. All meet WCAG AA contrast. `Cmd/Ctrl+,` opens a theme picker in the command palette that previews each theme as you move through it, and `Cmd/Ctrl+Shift+,` picks light, dark or system the same way; the workspace menu has the same choices. There is no settings page.
 - **Resizable Panels** — Sidebar, tag panel, pinned section, and table of contents are all resizable and collapsible.
 
 ### ⚡ Performance
@@ -93,7 +93,8 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 | `Cmd/Ctrl + O` | Open recent |
 | `Cmd/Ctrl + Shift + O` / `Alt + O` | Open folder / open file |
 | `Cmd/Ctrl + Shift + H` | Home |
-| `Cmd/Ctrl + ,` | Change theme or mode |
+| `Cmd/Ctrl + ,` | Change theme |
+| `Cmd/Ctrl + Shift + ,` | Light, dark or system |
 | `Cmd/Ctrl + S` | Save note |
 | `Alt + C` | Search: case-sensitive toggle |
 | `Alt + W` | Search: whole-word toggle |

@@ -55,11 +55,22 @@ describe("panes with their own tabs", () => {
 		expect(paths(s)).toEqual([["a.md", "c.md"], ["b.md"]]);
 	});
 
-	it("opens a note in the focused pane even if the other pane has it", () => {
+	it("focuses a note already open in the other pane instead of opening it twice", () => {
 		let s = T.openToTheSide(T.initialTabs("a.md"), "b.md");
 		s = T.openInNewTab(s, "a.md");
-		expect(paths(s)).toEqual([["a.md"], ["b.md", "a.md"]]);
+		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
+		expect(s.focused).toBe(0);
+		s = T.openToTheSide(s, "b.md");
 		expect(s.focused).toBe(1);
+	});
+
+	it("focuses a folder overview already open anywhere", () => {
+		let s = T.openFolder(T.initialTabs(), "docs");
+		s = T.openToTheSide(s, "a.md");
+		s = T.openFolder(s, "docs");
+		expect(s.focused).toBe(0);
+		expect(T.activeTab(s).folder).toBe("docs");
+		expect(paths(s)).toEqual([[null], ["a.md"]]);
 	});
 
 	it("keeps one tab per note within a pane", () => {
@@ -80,25 +91,22 @@ describe("panes with their own tabs", () => {
 		expect(s.focused).toBe(1);
 	});
 
-	it("splitting copies the active tab into a new pane", () => {
+	it("splitting moves the active tab into a new pane", () => {
 		let s = T.openInNewTab(T.initialTabs("a.md"), "b.md");
 		s = T.splitActive(s);
-		expect(paths(s)).toEqual([["a.md", "b.md"], ["b.md"]]);
+		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
 		expect(s.focused).toBe(1);
-		expect(s.groups[1].tabs[0].id).not.toBe(s.groups[0].tabs[1].id);
 		expect(T.splitActive(s)).toBe(s);
 	});
 
-	it("splitting a lone tab copies it too", () => {
+	it("splitting a lone tab gives a blank new pane", () => {
 		const s = T.splitActive(T.initialTabs("a.md"));
-		expect(paths(s)).toEqual([["a.md"], ["a.md"]]);
+		expect(paths(s)).toEqual([["a.md"], [null]]);
 	});
 
-	it("moving a tab into a pane that has the note selects it there", () => {
-		let s = T.splitActive(T.openInNewTab(T.initialTabs("a.md"), "b.md"));
-		s = T.moveTabToOtherGroup(s, 0, s.groups[0].tabs[1].id);
-		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
-		expect(s.focused).toBe(1);
+	it("restoring a session drops a note's duplicate tabs", () => {
+		const s = T.fromSaved({ groups: [["a.md", "b.md"], ["b.md", "c.md"]], activeIndex: [0, 0], focused: 0, ratio: 0.5 }, () => true);
+		expect(s && paths(s)).toEqual([["a.md", "b.md"], ["c.md"]]);
 	});
 
 	it("closes a deleted note in every pane", () => {

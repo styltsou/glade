@@ -1,8 +1,9 @@
 /**
  * Tabs and split views, as plain data.
  *
- * Like VS Code: a note has at most one tab per pane, but the same note can be
- * open in both panes. Splitting copies the active tab into the new pane.
+ * Each note and each folder overview is open at most once in the window:
+ * opening it again focuses its tab, in whichever pane it is. Blank "new tab"
+ * pages are the exception. Splitting moves the active tab into the new pane.
  *
  * The window has one or two panes ("groups"). Each pane has its own tabs and
  * its own active tab; a pane closes when its last tab does. The last pane can
@@ -100,18 +101,28 @@ export function findOpen(state: TabsState, path: string): { group: number; tabId
 	return null;
 }
 
+/** Where a folder overview (`null` = the root) is already open. Prefers the focused pane. */
+export function findFolder(state: TabsState, folder: string | null): { group: number; tabId: string } | null {
+	const order = state.groups.map((_, i) => i).sort((a, b) => (a === state.focused ? -1 : b === state.focused ? 1 : a - b));
+	for (const gi of order) {
+		const tab = state.groups[gi].tabs.find((t) => t.path === null && t.folder === folder);
+		if (tab) return { group: gi, tabId: tab.id };
+	}
+	return null;
+}
+
 function reveal(state: TabsState, group: number, tabId: string): TabsState {
 	return mapGroup({ ...state, focused: group }, group, (g) => ({ ...g, activeId: tabId }));
 }
 
 /**
- * Show `path` in the active tab of the focused pane. If the note already has a
- * tab in this pane, that tab is selected instead (one tab per note per pane).
+ * Show `path` in the active tab of the focused pane. A note that is already
+ * open anywhere is focused instead of being opened twice.
  */
 export function openInActive(state: TabsState, path: string | null): TabsState {
 	if (path !== null) {
-		const existing = findInGroup(state, state.focused, path);
-		if (existing) return reveal(state, state.focused, existing);
+		const open = findOpen(state, path);
+		if (open) return reveal(state, open.group, open.tabId);
 	}
 	const gi = state.focused;
 	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
@@ -125,8 +136,10 @@ function makeTabKeepingId(id: string, path: string | null, folder?: string | nul
 	return folder === undefined ? { id, path } : { id, path, folder };
 }
 
-/** Show a folder overview in the active tab. */
+/** Show a folder overview in the active tab, or focus it where it is already open. */
 export function openFolder(state: TabsState, folder: string | null): TabsState {
+	const open = findFolder(state, folder);
+	if (open) return reveal(state, open.group, open.tabId);
 	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, folder)));
 	return mapGroup(state, state.focused, (g) => ({
 		...g,
@@ -141,11 +154,11 @@ function insertTabAfterActive(group: Group, tab: Tab): Group {
 	return { ...group, tabs, activeId: tab.id };
 }
 
-/** Open `path` in a tab of its own in the focused pane (or select its tab there). */
+/** Open `path` in a tab of its own in the focused pane, or focus it where it is open. */
 export function openInNewTab(state: TabsState, path: string | null): TabsState {
 	if (path !== null) {
-		const existing = findInGroup(state, state.focused, path);
-		if (existing) return reveal(state, state.focused, existing);
+		const open = findOpen(state, path);
+		if (open) return reveal(state, open.group, open.tabId);
 	}
 	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(path)));
 }
@@ -155,16 +168,16 @@ export function newTab(state: TabsState): TabsState {
 	return openInNewTab(state, null);
 }
 
-/** Open `path` in the other pane (creating it), or select its tab there. */
+/** Open `path` in the other pane (creating it), or focus it where it is open. */
 export function openToTheSide(state: TabsState, path: string | null): TabsState {
+	if (path !== null) {
+		const open = findOpen(state, path);
+		if (open) return reveal(state, open.group, open.tabId);
+	}
 	if (state.groups.length < MAX_GROUPS) {
 		return { ...state, groups: [...state.groups, makeGroup(makeTab(path))], focused: state.groups.length };
 	}
 	const other = state.focused === 0 ? 1 : 0;
-	if (path !== null) {
-		const existing = findInGroup(state, other, path);
-		if (existing) return reveal(state, other, existing);
-	}
 	return mapGroup({ ...state, focused: other }, other, (g) => insertTabAfterActive(g, makeTab(path)));
 }
 
@@ -211,16 +224,22 @@ export function closePathTab(state: TabsState, path: string): TabsState {
 }
 
 /**
- * Split: open a copy of the active tab in a new right pane, like VS Code, so
- * the same note can be read in one pane and edited in the other.
+ * Split: move the active tab into a new right pane. A lone tab stays where it
+ * is and the new pane starts with a blank "new tab" page.
  */
 export function splitActive(state: TabsState): TabsState {
 	if (state.groups.length >= MAX_GROUPS) return state;
 	const g = focusedGroup(state);
 	if (g.tabs.length === 0) return state;
-	const active = activeTabOf(g);
-	const copy = active.folder === undefined ? makeTab(active.path) : makeTab(active.path, active.folder);
-	return { ...state, groups: [...state.groups, makeGroup(copy)], focused: state.groups.length };
+	if (g.tabs.length === 1) {
+		return { ...state, groups: [...state.groups, makeGroup()], focused: state.groups.length };
+	}
+	const moving = activeTabOf(g);
+	const at = g.tabs.indexOf(moving);
+	const rest = g.tabs.filter((t) => t.id !== moving.id);
+	const left: Group = { ...g, tabs: rest, activeId: rest[Math.max(0, at - 1)].id };
+	const groups = state.groups.map((x) => (x === g ? left : x));
+	return { ...state, groups: [...groups, makeGroup(moving)], focused: groups.length };
 }
 
 /** Move a tab to the other pane (creating it if needed). */
@@ -313,13 +332,16 @@ export function toSaved(state: TabsState): SavedTabs {
 
 export function fromSaved(saved: Partial<SavedTabs> | null | undefined, exists: (path: string) => boolean): TabsState | null {
 	if (!saved || !Array.isArray(saved.groups) || saved.groups.length === 0) return null;
+	const seen = new Set<string>();
 	const groups: Group[] = saved.groups
 		.slice(0, MAX_GROUPS)
 		.map((paths, gi) => {
 			const tabs = (Array.isArray(paths) ? paths : [])
 				.map((p) => makeTab(typeof p === "string" && (p.startsWith("/") || exists(p)) ? p : null))
 				// Drop blank pages: they carry nothing worth restoring.
-				.filter((t, _i, all) => t.path !== null || all.length === 1);
+				.filter((t, _i, all) => t.path !== null || all.length === 1)
+				// Older sessions could hold a note twice; keep its first tab.
+				.filter((t) => t.path === null || (seen.has(t.path) ? false : (seen.add(t.path), true)));
 			if (tabs.length === 0) return null;
 			const wanted = saved.activeIndex?.[gi] ?? 0;
 			const active = tabs[Math.min(Math.max(wanted, 0), tabs.length - 1)];
