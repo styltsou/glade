@@ -1,26 +1,37 @@
-/* Claude: warm paper and clay accent, warm in both modes. */
+/* Claude: ivory paper (#faf9f5) and clay (#c96442 / #d97757).
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="claude"] {
-  --tint-h: 35;
-  --tint-s: 28%;
-  --ink-s: 14%;
-  --surface-sink: 2.5%;
-  --brand: 16 58% 45%;
+  --tint-h: 48;
+  --tint-s: 33.3%;
+  --ink-h: 60;
+  --ink-s: 2.6%;
+  --surface-sink: 2.9%;
+  --gray-12: 60 2.6% 7.6%;
+  --sidebar: 53 28.6% 94.5%;
+  --brand: 15 55.6% 52.4%;
   --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 16 56% 46%;
-  --syntax-string: 100 28% 36%;
-  --syntax-number: 210 40% 42%;
-  --syntax-function: 210 40% 42%;
+  --syntax-keyword: 15 55.6% 52.4%;
+  --syntax-string: 90 35.6% 35.3%;
+  --syntax-number: 212 44.3% 42.9%;
+  --syntax-function: 212 44.3% 42.9%;
+  --syntax-comment: 46 5.3% 51.6%;
 }
 
 [data-theme="claude"][data-mode="dark"] {
-  --tint-h: 30;
-  --tint-s: 6%;
-  --ink-s: 6%;
-  --surface-lift: 2.5%;
-  --brand: 18 62% 60%;
-  --brand-foreground: 20 30% 8%;
-  --syntax-keyword: 18 62% 64%;
-  --syntax-string: 100 30% 60%;
-  --syntax-number: 210 45% 70%;
-  --syntax-function: 210 45% 70%;
+  --tint-h: 60;
+  --tint-s: 2.7%;
+  --ink-h: 48;
+  --ink-s: 33.3%;
+  --surface-lift: 7.5%;
+  --gray-12: 48 33.3% 97.1%;
+  --sidebar: 30 3.3% 11.8%;
+  --brand: 15 63.1% 59.6%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 15 63.1% 59.6%;
+  --syntax-string: 92 32.6% 64.5%;
+  --syntax-number: 212 53.4% 71.4%;
+  --syntax-function: 212 53.4% 71.4%;
+  --syntax-comment: 44 4.5% 47.6%;
 }

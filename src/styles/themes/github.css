@@ -1,0 +1,37 @@
+/* GitHub: Primer light (#ffffff) and dark (#0d1117), GitHub blue.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
+[data-theme="github"] {
+  --tint-h: 0;
+  --tint-s: 0%;
+  --ink-h: 211;
+  --ink-s: 10.6%;
+  --surface-sink: 0%;
+  --gray-12: 213 12.7% 13.9%;
+  --sidebar: 210 28.6% 97.3%;
+  --brand: 212 92.1% 44.5%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 356 71.8% 47.3%;
+  --syntax-string: 216 82.6% 22.5%;
+  --syntax-number: 213 94.4% 35.1%;
+  --syntax-function: 261 69.1% 59.4%;
+  --syntax-comment: 211 10.6% 39%;
+}
+
+[data-theme="github"][data-mode="dark"] {
+  --tint-h: 216;
+  --tint-s: 27.8%;
+  --ink-h: 214;
+  --ink-s: 7.8%;
+  --surface-lift: 0.1%;
+  --gray-12: 210 66.7% 96.5%;
+  --sidebar: 218 80% 2%;
+  --brand: 214 92.8% 62%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 4 100% 72.4%;
+  --syntax-string: 207 100% 82.4%;
+  --syntax-number: 208 100% 73.7%;
+  --syntax-function: 269 100% 82.9%;
+  --syntax-comment: 214 7.8% 60%;
+}

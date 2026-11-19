@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useStore } from "@/store";
 import { resolveMode, applyToDOM } from "@/store/slices/themeSlice";
-import { knownTheme } from "@/themes";
+import { effectiveMode, knownTheme } from "@/themes";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const theme = useStore((state) => state.theme);
@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Determine the actual light/dark mode based on user preference or system
     const currentResolved = resolveMode(mode);
-    setResolvedMode(currentResolved);
+    setResolvedMode(effectiveMode(knownTheme(theme), currentResolved));
     applyToDOM(theme, currentResolved);
   }, [theme, mode, setResolvedMode]);
 
@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Only react to OS changes if we are currently tracking "system"
       if (useStore.getState().mode === "system") {
         const resolved = resolveMode("system");
-        setResolvedMode(resolved);
+        setResolvedMode(effectiveMode(knownTheme(useStore.getState().theme), resolved));
         applyToDOM(useStore.getState().theme, resolved);
       }
     };

@@ -1,0 +1,52 @@
+/* Raycast: #07080a canvas, #101111 panels, Raycast red (#FF6363).
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
+[data-theme="raycast"] {
+  --gray-1: 0 0% 100%;
+  --gray-2: 240 11.1% 96.5%;
+  --gray-3: 240 6.7% 94.1%;
+  --gray-4: 240 4.8% 91.8%;
+  --gray-5: 240 5.5% 89.2%;
+  --gray-6: 240 4% 90.2%;
+  --gray-7: 240 5.1% 84.7%;
+  --gray-8: 240 3.4% 71.6%;
+  --gray-9: 240 2.3% 56.7%;
+  --gray-10: 240 2.4% 49%;
+  --gray-11: 210 0.9% 42%;
+  --gray-11-5: 240 1.5% 26.7%;
+  --gray-12: 210 4% 9.8%;
+  --sidebar: 240 11.1% 96.5%;
+  --brand: 0 75.9% 62.5%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 0 68.6% 47.5%;
+  --syntax-string: 151 66.5% 36.3%;
+  --syntax-number: 41 100% 40%;
+  --syntax-function: 203 87.8% 41.8%;
+  --syntax-comment: 240 2.3% 56.7%;
+}
+
+[data-theme="raycast"][data-mode="dark"] {
+  --gray-1: 220 17.6% 3.3%;
+  --gray-2: 180 3% 6.5%;
+  --gray-3: 210 4% 9.8%;
+  --gray-4: 220 5.3% 11.2%;
+  --gray-5: 210 2.8% 14.1%;
+  --gray-6: 195 5.1% 15.3%;
+  --gray-7: 210 2.1% 18.8%;
+  --gray-8: 240 1.5% 26.7%;
+  --gray-9: 210 0.9% 42%;
+  --gray-10: 240 1.6% 47.8%;
+  --gray-11: 240 0.5% 61.4%;
+  --gray-11-5: 0 0% 80.8%;
+  --gray-12: 0 0% 97.6%;
+  --sidebar: 0 0% 5.1%;
+  --popover: 180 3% 6.5%;
+  --brand: 0 100% 69.4%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 0 100% 69.4%;
+  --syntax-string: 149 49.5% 58%;
+  --syntax-number: 40 100% 60%;
+  --syntax-function: 207 100% 66.7%;
+  --syntax-comment: 210 0.9% 42%;
+}

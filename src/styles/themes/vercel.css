@@ -1,17 +1,32 @@
-/* Vercel (Geist): pure white and near-black, Vercel blue as the accent. */
+/* Vercel (Geist): pure white in light, pure black in dark, Vercel blue as the
+   accent. The sidebar shares the page colour; borders do the separating. */
 [data-theme="vercel"] {
   --tint-h: 0;
   --tint-s: 0%;
+  --ink-s: 0%;
   --brand: 212 100% 46%;
   --brand-foreground: 0 0% 100%;
+  --sidebar: var(--gray-1);
+  --card: var(--gray-1);
+  --gray-12: 0 0% 9%;
   --syntax-keyword: 330 70% 45%;
   --syntax-string: 150 60% 30%;
   --syntax-number: 212 100% 44%;
   --syntax-function: 265 60% 50%;
 }
 
+/* Geist's dark scale: #000 page, then small steps for hovers and borders. */
 [data-theme="vercel"][data-mode="dark"] {
-  --surface-lift: -3%;
+  --gray-1: 0 0% 0%;
+  --gray-2: 0 0% 4%;
+  --gray-3: 0 0% 7%;
+  --gray-4: 0 0% 10%;
+  --gray-5: 0 0% 12.5%;
+  --gray-6: 0 0% 15%;
+  --gray-7: 0 0% 20%;
+  --gray-8: 0 0% 30%;
+  --gray-12: 0 0% 93%;
+  --popover: var(--gray-2);
   --brand: 212 100% 62%;
   --brand-foreground: 0 0% 4%;
   --syntax-keyword: 330 80% 72%;

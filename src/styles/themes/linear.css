@@ -1,25 +1,52 @@
-/* Linear-inspired: cool, almost-black surfaces and indigo accent. */
+/* Linear: #08090a canvas, #0f1011 panels, indigo (#5e6ad2 / #7170ff).
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="linear"] {
-  --tint-h: 230;
-  --tint-s: 12%;
-  --ink-s: 14%;
-  --brand: 234 56% 56%;
+  --gray-1: 0 0% 100%;
+  --gray-2: 180 6.7% 97.1%;
+  --gray-3: 210 9.1% 95.7%;
+  --gray-4: 220 9.7% 93.9%;
+  --gray-5: 225 8.7% 91%;
+  --gray-6: 0 0% 90.2%;
+  --gray-7: 218 20.5% 84.7%;
+  --gray-8: 218 12.3% 74.5%;
+  --gray-9: 219 6.4% 56.9%;
+  --gray-10: 219 5.6% 50.6%;
+  --gray-11: 218 4.9% 44.1%;
+  --gray-11-5: 217 9.8% 26.1%;
+  --gray-12: 228 8.8% 11.2%;
+  --sidebar: 180 6.7% 97.1%;
+  --brand: 234 56.3% 59.6%;
   --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 250 55% 52%;
-  --syntax-string: 160 45% 32%;
-  --syntax-number: 25 75% 42%;
-  --syntax-function: 215 65% 45%;
+  --syntax-keyword: 234 56.3% 59.6%;
+  --syntax-string: 150 44.4% 33.1%;
+  --syntax-number: 27 84.6% 38.2%;
+  --syntax-function: 214 64.8% 47.8%;
+  --syntax-comment: 219 6.4% 56.9%;
 }
 
 [data-theme="linear"][data-mode="dark"] {
-  --tint-h: 230;
-  --tint-s: 8%;
-  --ink-s: 8%;
-  --surface-lift: -2.5%;
-  --brand: 236 85% 72%;
-  --brand-foreground: 230 20% 8%;
-  --syntax-keyword: 250 85% 78%;
-  --syntax-string: 160 45% 66%;
-  --syntax-number: 25 85% 70%;
-  --syntax-function: 215 85% 74%;
+  --gray-1: 210 11.1% 3.5%;
+  --gray-2: 210 6.2% 6.3%;
+  --gray-3: 210 4.8% 8.2%;
+  --gray-4: 210 3.8% 10.2%;
+  --gray-5: 240 4.8% 16.5%;
+  --gray-6: 223 9.1% 15.1%;
+  --gray-7: 240 5.5% 21.6%;
+  --gray-8: 240 4.6% 25.5%;
+  --gray-9: 218 5.3% 40.6%;
+  --gray-10: 219 6.4% 56.9%;
+  --gray-11: 219 6.4% 56.9%;
+  --gray-11-5: 218 20.5% 84.7%;
+  --gray-12: 180 6.7% 97.1%;
+  --sidebar: 210 6.2% 6.3%;
+  --popover: 210 6.2% 6.3%;
+  --brand: 234 56.3% 59.6%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 240 100% 72%;
+  --syntax-string: 150 49.5% 60.4%;
+  --syntax-number: 30 85.4% 65.1%;
+  --syntax-function: 234 100% 75.5%;
+  --syntax-comment: 218 5.3% 40.6%;
 }

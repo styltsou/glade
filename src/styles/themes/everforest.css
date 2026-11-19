@@ -1,28 +1,38 @@
-/* Everforest: cream and forest green, blue-grey ink. */
+/* Everforest (medium): light bg0 (#fdf6e3) and dark bg0 (#2d353b),
+   green accent; the sidebar uses bg_dim.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="everforest"] {
   --tint-h: 44;
-  --tint-s: 55%;
+  --tint-s: 86.7%;
   --ink-h: 202;
-  --ink-s: 14%;
-  --surface-sink: 5%;
-  --brand: 82 55% 29%;
-  --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 25 85% 48%;
-  --syntax-string: 82 60% 30%;
-  --syntax-number: 319 50% 50%;
-  --syntax-function: 201 55% 42%;
+  --ink-s: 10.7%;
+  --surface-sink: 5.9%;
+  --gray-12: 202 10.7% 40.4%;
+  --sidebar: 51 45.8% 88.4%;
+  --brand: 68 98.8% 31.8%;
+  --brand-foreground: 44 86.7% 94.1%;
+  --syntax-keyword: 25 91.2% 55.5%;
+  --syntax-string: 68 98.8% 31.8%;
+  --syntax-number: 319 64.8% 64.3%;
+  --syntax-function: 201 54.5% 50%;
+  --syntax-comment: 111 6.8% 59.6%;
 }
 
 [data-theme="everforest"][data-mode="dark"] {
   --tint-h: 206;
-  --tint-s: 13%;
+  --tint-s: 13.5%;
   --ink-h: 41;
-  --ink-s: 30%;
-  --surface-lift: 11%;
-  --brand: 83 34% 63%;
-  --brand-foreground: 206 13% 14%;
-  --syntax-keyword: 19 69% 68%;
-  --syntax-string: 83 34% 63%;
-  --syntax-number: 331 43% 72%;
-  --syntax-function: 172 31% 62%;
+  --ink-s: 31.8%;
+  --surface-lift: 13.4%;
+  --gray-12: 41 31.8% 74.7%;
+  --sidebar: 202 13.6% 15.9%;
+  --brand: 83 33.7% 62.7%;
+  --brand-foreground: 206 13.5% 20.4%;
+  --syntax-keyword: 19 69.3% 68%;
+  --syntax-string: 83 33.7% 62.7%;
+  --syntax-number: 331 42.7% 72%;
+  --syntax-function: 135 32.6% 63.3%;
+  --syntax-comment: 138 5.6% 54.7%;
 }

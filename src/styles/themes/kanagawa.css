@@ -1,0 +1,37 @@
+/* Kanagawa: Wave (#1f1f28) in dark, Lotus (#f2ecbc) in light.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
+[data-theme="kanagawa"] {
+  --tint-h: 53;
+  --tint-s: 67.5%;
+  --ink-h: 49;
+  --ink-s: 7.6%;
+  --surface-sink: 15.7%;
+  --gray-12: 240 8.7% 36.1%;
+  --sidebar: 51 50.5% 79.4%;
+  --brand: 218 33.6% 45.5%;
+  --brand-foreground: 53 67.5% 84.3%;
+  --syntax-keyword: 264 26.6% 40.6%;
+  --syntax-string: 86 27.4% 42.2%;
+  --syntax-number: 340 36.7% 52.9%;
+  --syntax-function: 218 33.6% 45.5%;
+  --syntax-comment: 54 4.1% 52.2%;
+}
+
+[data-theme="kanagawa"][data-mode="dark"] {
+  --tint-h: 240;
+  --tint-s: 12.7%;
+  --ink-h: 51;
+  --ink-s: 32.5%;
+  --surface-lift: 6.9%;
+  --gray-12: 51 32.7% 79.6%;
+  --sidebar: 240 13.7% 10%;
+  --brand: 220 53.6% 67.1%;
+  --brand-foreground: 240 12.7% 13.9%;
+  --syntax-keyword: 263 28.6% 61%;
+  --syntax-string: 87 36.7% 57.8%;
+  --syntax-number: 341 48.3% 65.9%;
+  --syntax-function: 220 53.6% 67.1%;
+  --syntax-comment: 53 4.1% 42.9%;
+}

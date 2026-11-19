@@ -1,0 +1,37 @@
+/* Nord: Polar Night (#2e3440) in dark, Snow Storm (#eceff4) in light, frost accent.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
+[data-theme="nord"] {
+  --tint-h: 218;
+  --tint-s: 26.7%;
+  --ink-h: 220;
+  --ink-s: 16.5%;
+  --surface-sink: 5.9%;
+  --gray-12: 220 16.4% 21.6%;
+  --sidebar: 218 26.8% 92%;
+  --brand: 213 32% 52.2%;
+  --brand-foreground: 218 26.7% 94.1%;
+  --syntax-keyword: 213 32% 52.2%;
+  --syntax-string: 93 29.6% 38.4%;
+  --syntax-number: 312 20.7% 46.5%;
+  --syntax-function: 192 40.1% 38.6%;
+  --syntax-comment: 219 16.8% 55.7%;
+}
+
+[data-theme="nord"][data-mode="dark"] {
+  --tint-h: 220;
+  --tint-s: 16.4%;
+  --ink-h: 219;
+  --ink-s: 27.9%;
+  --surface-lift: 14.6%;
+  --gray-12: 218 26.7% 94.1%;
+  --sidebar: 221 16% 19.6%;
+  --brand: 193 43.4% 67.5%;
+  --brand-foreground: 220 16.4% 21.6%;
+  --syntax-keyword: 210 34% 63.1%;
+  --syntax-string: 92 27.8% 64.7%;
+  --syntax-number: 311 20.2% 63.1%;
+  --syntax-function: 193 43.4% 67.5%;
+  --syntax-comment: 220 16.7% 45.7%;
+}

@@ -1,24 +1,20 @@
-/* Vesper: neutral black, peach accent, mint strings. Light mode keeps the
-   same character with a deeper peach for contrast on white. */
-[data-theme="vesper"] {
-  --tint-h: 0;
-  --tint-s: 0%;
-  --brand: 24 95% 37%;
-  --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 0 0% 38%;
-  --syntax-string: 164 60% 28%;
-  --syntax-number: 26 80% 40%;
-  --syntax-function: 26 80% 40%;
-  --syntax-comment: 0 0% 55%;
-}
+/* Vesper: #101010 black, peach (#FFC799) and peppermint (#99FFE4).
+   Dark only.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
 
 [data-theme="vesper"][data-mode="dark"] {
-  --surface-lift: -3.5%;
-  --brand: 25 100% 66%;
-  --brand-foreground: 0 0% 6%;
-  --syntax-keyword: 0 0% 63%;
+  --tint-h: 0;
+  --tint-s: 0%;
+  --ink-h: 0;
+  --ink-s: 0%;
+  --surface-lift: -0.7%;
+  --gray-12: 0 0% 100%;
+  --brand: 27 100% 80%;
+  --brand-foreground: 0 0% 6.3%;
+  --syntax-keyword: 0 0% 62.7%;
   --syntax-string: 164 100% 80%;
-  --syntax-number: 25 100% 70%;
-  --syntax-function: 25 100% 70%;
-  --syntax-comment: 0 0% 50%;
+  --syntax-number: 27 100% 80%;
+  --syntax-function: 27 100% 80%;
+  --syntax-comment: 0 0% 54.5%;
 }

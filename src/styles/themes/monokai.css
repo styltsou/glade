@@ -1,0 +1,20 @@
+/* Monokai (classic): #272822, pink keywords, green functions. Dark only.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
+[data-theme="monokai"][data-mode="dark"] {
+  --tint-h: 70;
+  --tint-s: 8.1%;
+  --ink-h: 50;
+  --ink-s: 10.9%;
+  --surface-lift: 7.5%;
+  --gray-12: 60 30% 96.1%;
+  --sidebar: 80 5.1% 11.6%;
+  --brand: 80 75.6% 53.3%;
+  --brand-foreground: 70 8.1% 14.5%;
+  --syntax-keyword: 338 94.6% 56.3%;
+  --syntax-string: 54 69.5% 67.8%;
+  --syntax-number: 261 100% 75.3%;
+  --syntax-function: 80 75.6% 53.3%;
+  --syntax-comment: 50 10.9% 41.4%;
+}

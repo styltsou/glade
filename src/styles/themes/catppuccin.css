@@ -1,30 +1,38 @@
-/* Catppuccin: Latte in light mode, Mocha in dark mode, mauve accent. */
+/* Catppuccin: Latte (#eff1f5) in light mode, Mocha (#1e1e2e) in dark,
+   mauve accent; the sidebar uses each flavour's mantle.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="catppuccin"] {
   --tint-h: 220;
-  --tint-s: 23%;
-  --ink-h: 234;
-  --ink-s: 16%;
-  --surface-sink: 4.5%;
+  --tint-s: 23.1%;
+  --ink-h: 233;
+  --ink-s: 12.8%;
+  --surface-sink: 5.1%;
+  --gray-12: 234 16% 35.5%;
+  --sidebar: 220 22% 92%;
   --brand: 266 85% 58%;
   --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 266 85% 55%;
-  --syntax-string: 109 58% 34%;
-  --syntax-number: 22 90% 44%;
-  --syntax-function: 220 91% 50%;
-  --syntax-comment: 231 10% 55%;
+  --syntax-keyword: 266 85% 58%;
+  --syntax-string: 109 57.6% 39.8%;
+  --syntax-number: 22 99.2% 52%;
+  --syntax-function: 220 91.5% 53.9%;
+  --syntax-comment: 228 11.2% 65.1%;
 }
 
 [data-theme="catppuccin"][data-mode="dark"] {
   --tint-h: 240;
-  --tint-s: 21%;
-  --ink-h: 226;
-  --ink-s: 64%;
-  --surface-lift: 8%;
-  --brand: 267 84% 81%;
-  --brand-foreground: 240 21% 15%;
-  --syntax-keyword: 267 84% 81%;
-  --syntax-string: 115 54% 76%;
-  --syntax-number: 23 92% 75%;
-  --syntax-function: 217 92% 76%;
-  --syntax-comment: 230 13% 55%;
+  --tint-s: 21.1%;
+  --ink-h: 227;
+  --ink-s: 35.3%;
+  --surface-lift: 7.9%;
+  --gray-12: 226 63.9% 88%;
+  --sidebar: 240 21.3% 12%;
+  --brand: 267 83.5% 81%;
+  --brand-foreground: 240 21.1% 14.9%;
+  --syntax-keyword: 267 83.5% 81%;
+  --syntax-string: 115 54.1% 76.1%;
+  --syntax-number: 23 92% 75.5%;
+  --syntax-function: 217 91.9% 75.9%;
+  --syntax-comment: 230 12.8% 55.5%;
 }

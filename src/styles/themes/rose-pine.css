@@ -1,28 +1,37 @@
-/* Rosé Pine: dawn paper and iris, moonlit purples at night. */
+/* Rosé Pine: Dawn (#faf4ed) in light mode, main (#191724) in dark, iris accent.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="rose-pine"] {
   --tint-h: 32;
-  --tint-s: 50%;
+  --tint-s: 56.5%;
   --ink-h: 248;
-  --ink-s: 20%;
+  --ink-s: 12.2%;
   --surface-sink: 4.5%;
-  --brand: 268 28% 52%;
+  --gray-12: 248 19.2% 39.8%;
+  --sidebar: 35 100% 97.6%;
+  --brand: 268 21.5% 57.1%;
   --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 268 28% 52%;
-  --syntax-string: 35 75% 44%;
-  --syntax-number: 189 35% 40%;
-  --syntax-function: 197 53% 34%;
+  --syntax-keyword: 268 21.5% 57.1%;
+  --syntax-string: 35 81.2% 56.1%;
+  --syntax-number: 189 29.8% 48%;
+  --syntax-function: 197 53.2% 33.5%;
+  --syntax-comment: 257 9.1% 61.2%;
 }
 
 [data-theme="rose-pine"][data-mode="dark"] {
   --tint-h: 249;
   --tint-s: 22%;
-  --ink-h: 245;
-  --ink-s: 32%;
-  --surface-lift: 4%;
-  --brand: 267 57% 78%;
-  --brand-foreground: 249 22% 12%;
-  --syntax-keyword: 267 57% 78%;
-  --syntax-string: 35 88% 72%;
-  --syntax-number: 189 43% 73%;
-  --syntax-function: 197 49% 60%;
+  --ink-h: 248;
+  --ink-s: 15%;
+  --surface-lift: 4.6%;
+  --gray-12: 245 50% 91.4%;
+  --sidebar: 247 22.7% 14.7%;
+  --brand: 267 57.1% 78%;
+  --brand-foreground: 249 22% 11.6%;
+  --syntax-keyword: 267 57.1% 78%;
+  --syntax-string: 35 87.6% 71.6%;
+  --syntax-number: 189 43.5% 72.9%;
+  --syntax-function: 197 49% 37.6%;
+  --syntax-comment: 249 11.7% 47.1%;
 }

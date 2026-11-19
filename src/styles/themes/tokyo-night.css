@@ -1,30 +1,37 @@
-/* Tokyo Night: Day in light mode, Night in dark mode. */
+/* Tokyo Night: Day (#e1e2e7) in light mode, Night (#1a1b26) in dark.
+   Generated from the published palette (hex values in the comments
+   are the source of truth). */
+
 [data-theme="tokyo-night"] {
   --tint-h: 230;
-  --tint-s: 14%;
-  --ink-h: 224;
-  --ink-s: 40%;
-  --surface-sink: 7%;
-  --brand: 215 81% 45%;
+  --tint-s: 11.1%;
+  --ink-h: 227;
+  --ink-s: 33.3%;
+  --surface-sink: 10.6%;
+  --gray-12: 222 55.3% 48.2%;
+  --sidebar: 224 25.3% 85.3%;
+  --brand: 215 81% 54.7%;
   --brand-foreground: 0 0% 100%;
-  --syntax-keyword: 266 70% 55%;
-  --syntax-string: 89 34% 32%;
-  --syntax-number: 31 100% 33%;
-  --syntax-function: 215 81% 48%;
-  --syntax-comment: 230 22% 55%;
+  --syntax-keyword: 266 84.9% 63.7%;
+  --syntax-string: 89 34.5% 34.1%;
+  --syntax-number: 31 100% 34.7%;
+  --syntax-function: 215 81% 54.7%;
+  --syntax-comment: 230 24.9% 61.4%;
 }
 
 [data-theme="tokyo-night"][data-mode="dark"] {
   --tint-h: 235;
-  --tint-s: 19%;
+  --tint-s: 18.8%;
   --ink-h: 229;
-  --ink-s: 50%;
-  --surface-lift: 6%;
-  --brand: 221 89% 72%;
-  --brand-foreground: 235 19% 12%;
-  --syntax-keyword: 261 85% 79%;
-  --syntax-string: 89 51% 61%;
-  --syntax-number: 22 100% 70%;
-  --syntax-function: 221 89% 72%;
-  --syntax-comment: 229 23% 50%;
+  --ink-s: 35.4%;
+  --surface-lift: 5.5%;
+  --gray-12: 229 72.6% 85.7%;
+  --sidebar: 240 15.4% 10.2%;
+  --brand: 221 88.7% 72.4%;
+  --brand-foreground: 235 18.8% 12.5%;
+  --syntax-keyword: 261 85.3% 78.6%;
+  --syntax-string: 89 50.5% 61.2%;
+  --syntax-number: 22 100% 69.6%;
+  --syntax-function: 221 88.7% 72.4%;
+  --syntax-comment: 229 22.9% 43.7%;
 }
