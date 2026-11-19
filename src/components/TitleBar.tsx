@@ -50,6 +50,8 @@ export function TitleBar() {
   const handleClose = () => appWindow.close();
   const handleDragStart = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    // Menus and popups are portaled, but React still bubbles their events here.
+    if (!e.currentTarget.contains(target)) return;
     if (e.button !== 0 || target.closest("button, [data-no-drag]")) return;
     e.preventDefault();
     if (e.detail === 2) appWindow.toggleMaximize();

@@ -1,4 +1,3 @@
-import { FolderPlus, PlusIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderCard } from "@/components/FolderCard";
@@ -6,7 +5,6 @@ import { NoteCard } from "@/components/NoteCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
-import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import type { VaultEntry } from "@/types";
 
 function NoteCardSkeleton() {
@@ -50,8 +48,6 @@ export function HomeView() {
   const isVaultLoading = useStore((state) => state.isVaultLoading);
   const currentFolder = useStore((state) => state.currentFolder);
   const loadAll = useStore((state) => state.loadAll);
-  const openCreateFolder = useStore((state) => state.openCreateFolder);
-  const createNote = useStore((state) => state.createNote);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -126,14 +122,6 @@ export function HomeView() {
                 {shouldShowFolderSkeletons
                   ? [...Array(4)].map((_, i) => <FolderCardSkeleton key={i} />)
                   : subFolders.map((folder) => <FolderCard key={folder.path} folder={folder} />)}
-                {!shouldShowFolderSkeletons && (
-                  <CreateCard
-                    icon={<FolderPlus className="size-4" />}
-                    label="New folder"
-                    shortcut={formatShortcut(bindingFor("new-folder")!)}
-                    onClick={() => openCreateFolder(currentFolder || undefined)}
-                  />
-                )}
               </div>
             </section>
           )}
@@ -148,15 +136,6 @@ export function HomeView() {
                   : [...folderNotes]
                       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || a.title.localeCompare(b.title))
                       .map((card) => <NoteCard key={card.path} card={card} />)}
-                {!shouldShowNoteSkeletons && (
-                  <CreateCard
-                    icon={<PlusIcon className="size-4" />}
-                    label="New note"
-                    shortcut={formatShortcut(bindingFor("new-note")!)}
-                    onClick={() => createNote(currentFolder || undefined)}
-                    tall
-                  />
-                )}
               </div>
             </section>
           )}
@@ -182,33 +161,6 @@ function findEntryByPath(
 }
 
 /** A dashed card at the end of a grid that creates a new item there. */
-function CreateCard({
-  icon,
-  label,
-  shortcut,
-  onClick,
-  tall = false,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  shortcut: string;
-  onClick: () => void;
-  tall?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`press group flex h-full w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border px-4 text-sm text-muted-foreground hover:border-foreground/25 hover:bg-foreground/[0.03] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 ${
-        tall ? "min-h-28" : "min-h-[4.5rem]"
-      }`}
-    >
-      {icon}
-      <span className="font-medium">{label}</span>
-      <span className="ml-1 text-xs text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100">{shortcut}</span>
-    </button>
-  );
-}
 
 function SectionHeader({ label }: { label: string }) {
   return (

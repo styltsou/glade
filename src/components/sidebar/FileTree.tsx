@@ -1,10 +1,11 @@
 import { useStore } from "@/store";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { Folder, Plus as PlusIcon, FileText, FolderOpen } from "lucide-react";
+import { FolderPlus, Plus as PlusIcon, FileText, FolderOpen } from "lucide-react";
 import { sortEntries, filterByTags } from "./file-tree-helpers";
 import { FileTreeNode } from "./FileTreeNode";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { VaultEntry } from "@/types";
 import type { TabDrop } from "@/lib/tabs";
@@ -297,11 +298,11 @@ export function FileTree() {
                     className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                     onClick={() => openCreateFolder()}
                   >
-                    <Folder className="h-4 w-4" />
+                    <FolderPlus className="h-4 w-4" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>New folder</p>
+                  <p className="flex items-center gap-2">New folder<span className="opacity-60">{formatShortcut(bindingFor("new-folder")!)}</span></p>
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -314,7 +315,7 @@ export function FileTree() {
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
-                  <p>New note</p>
+                  <p className="flex items-center gap-2">New note<span className="opacity-60">{formatShortcut(bindingFor("new-note")!)}</span></p>
                 </TooltipContent>
               </Tooltip>
             </>

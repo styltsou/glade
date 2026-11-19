@@ -146,3 +146,21 @@ describe("editor tab controls", () => {
     expect(zoom.defaultPrevented).toBe(false);
   });
 });
+
+describe("tab context menu", () => {
+  it("runs the chosen action", async () => {
+    const controls = render(["a.md", "b.md"]);
+    const tab = controls()[1];
+    await act(async () => {
+      tab.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, button: 2, clientX: 10, clientY: 10 }));
+    });
+    const item = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((i) => i.textContent?.startsWith("Close tab"));
+    expect(item).toBeTruthy();
+    await act(async () => {
+      item!.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, button: 0 }));
+      item!.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, button: 0 }));
+      item!.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }));
+    });
+    expect(controls()).toHaveLength(1);
+  });
+});

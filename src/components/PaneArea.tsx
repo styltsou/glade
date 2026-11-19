@@ -58,7 +58,7 @@ export function PaneArea() {
               role="separator"
               aria-orientation="vertical"
               onPointerDown={startDrag}
-              className="group relative z-10 -mx-px w-[3px] shrink-0 cursor-col-resize bg-border/60 transition-colors hover:bg-primary/50 data-[dragging=true]:bg-primary/70"
+              className="group relative z-10 w-px shrink-0 cursor-col-resize bg-border transition-colors hover:bg-primary/50 data-[dragging=true]:bg-primary/70"
             >
               <span className="absolute inset-y-0 -inset-x-1.5" />
             </div>
