@@ -129,6 +129,12 @@ function App() {
     const frame = requestAnimationFrame(() => void showWindowOnce());
     return () => cancelAnimationFrame(frame);
   }, [isReady]);
+  // A large folder can take a while to scan: don't keep the window hidden for
+  // it. The tree and tabs have their own loading states.
+  useEffect(() => {
+    const timer = setTimeout(() => void showWindowOnce(), 150);
+    return () => clearTimeout(timer);
+  }, []);
 
   // The backend routes opens (CLI, file manager, Home) to this window.
   useEffect(() => {
@@ -255,8 +261,8 @@ function App() {
 
   if (!isReady) {
     return (
-      <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+      // Plain background while the folder loads: no text to flash by.
+      <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground">
         <WindowResizeHandles />
       </main>
     );

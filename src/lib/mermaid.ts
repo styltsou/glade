@@ -1,4 +1,17 @@
-import mermaid from 'mermaid'
+import type { Mermaid } from 'mermaid'
+
+// Mermaid (with its layout engines) is several megabytes: load it only when a
+// diagram is first rendered, never at startup.
+let mermaidPromise: Promise<Mermaid> | null = null
+let mermaid: Mermaid | null = null
+function loadMermaid(): Promise<Mermaid> {
+  mermaidPromise ??= import('mermaid').then((m) => {
+    mermaid = m.default
+    mermaid.initialize(baseConfig())
+    return mermaid
+  })
+  return mermaidPromise
+}
 
 // SVG cache keyed by source string
 const svgCache = new Map<string, string>()
@@ -30,8 +43,6 @@ export function initMermaid() {
   if (initialized) return
   initialized = true
 
-  mermaid.initialize(baseConfig())
-
   // Re-initialize when system theme changes
   const mql = window.matchMedia('(prefers-color-scheme: dark)')
   mql.addEventListener('change', () => {
@@ -49,7 +60,7 @@ export function initMermaid() {
 }
 
 function reinitMermaid() {
-  mermaid.initialize(baseConfig())
+  mermaid?.initialize(baseConfig())
   // Clear cache since theme changed
   svgCache.clear()
   // Notify listeners
@@ -84,8 +95,9 @@ export async function renderMermaid(source: string): Promise<{ svg: string }> {
     initMermaid()
   }
 
+  const m = await loadMermaid()
   const id = `mermaid-render-${++renderCounter}`
-  const { svg } = await mermaid.render(id, source)
+  const { svg } = await m.render(id, source)
 
   // Cache the result
   svgCache.set(source, svg)
@@ -100,13 +112,14 @@ export async function renderMermaid(source: string): Promise<{ svg: string }> {
  */
 export async function renderMermaidForExport(source: string): Promise<string> {
   if (!initialized) initMermaid()
+  const m = await loadMermaid()
   const base = baseConfig()
-  mermaid.initialize({ ...base, htmlLabels: false, flowchart: { ...base.flowchart, htmlLabels: false, useMaxWidth: false } })
+  m.initialize({ ...base, htmlLabels: false, flowchart: { ...base.flowchart, htmlLabels: false, useMaxWidth: false } })
   try {
-    const { svg } = await mermaid.render(`mermaid-export-${++renderCounter}`, source)
+    const { svg } = await m.render(`mermaid-export-${++renderCounter}`, source)
     return svg
   } finally {
-    mermaid.initialize(base)
+    m.initialize(base)
   }
 }
 

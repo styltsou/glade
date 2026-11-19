@@ -47,12 +47,17 @@ export default defineConfig(async () => ({
       },
       output: {
         manualChunks(id: string) {
+          // Vite's own helpers (module preload, CommonJS interop) are needed at startup.
+          if (id.includes("vite/preload-helper") || id.includes("commonjsHelpers")) return "vendor";
           if (!id.includes("node_modules")) return undefined;
           if (/lowlight|highlight\.js/.test(id)) return "syntax";
-          if (/@codemirror|@lezer|@uiw\/react-codemirror/.test(id)) return "codemirror";
+          if (/codemirror|@lezer|@uiw\//.test(id)) return "codemirror";
           if (/prosemirror|@tiptap|tiptap-markdown|markdown-it/.test(id)) return "editor-core";
-          if (/mermaid|cytoscape|katex|d3|dagre/.test(id)) return "diagrams";
-          return undefined;
+          if (/mermaid|cytoscape|katex|d3|dagre|elkjs|langium|chevrotain/.test(id)) return "diagrams";
+          // Everything else (React, Radix, zustand…) goes in one shared chunk.
+          // Left unassigned, Rollup would place shared modules inside whichever
+          // heavy chunk uses them first, pulling that chunk into startup.
+          return "vendor";
         },
       },
     },
