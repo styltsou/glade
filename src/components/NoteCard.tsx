@@ -112,7 +112,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger>
+      <ContextMenuTrigger className="block h-full">
         <div
           onClick={handleClick}
           onMouseEnter={handleMouseEnter}
@@ -125,7 +125,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
             }
           }}
           className="
-            group relative flex flex-col gap-2 text-left w-full min-h-36
+            group relative flex flex-col gap-2 text-left w-full h-full min-h-36
             rounded-lg p-4 cursor-pointer
             bg-card border border-border/70 shadow-xs
             transition-[border-color,background-color] duration-100

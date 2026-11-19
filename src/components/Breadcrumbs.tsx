@@ -15,6 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { baseName, dirName, shortenPath } from "@/lib/paths";
 import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Ellipsis, Folder } from "lucide-react";
 
 interface BreadcrumbsProps {
@@ -148,16 +149,24 @@ function CollapsingCrumbs({
   const renderItem = (item: Crumb) => {
     const isRoot = item === items[0];
     const content = isRoot ? <Folder className="size-4" aria-label={item.label} /> : item.label;
-    return item.folderPath === undefined || item === items[items.length - 1] ? (
-      <BreadcrumbPage title={isRoot ? item.label : undefined} className="max-w-[240px] truncate font-semibold text-foreground">{content}</BreadcrumbPage>
-    ) : (
-      <BreadcrumbLink
-        title={isRoot ? item.label : undefined}
-        onClick={() => onNavigate(item.folderPath ?? null)}
-        className="flex max-w-[160px] cursor-pointer items-center truncate text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {content}
-      </BreadcrumbLink>
+    const isLast = item.folderPath === undefined || item === items[items.length - 1];
+    // The tooltip always shows the full name, truncated or not.
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {isLast ? (
+            <BreadcrumbPage className="max-w-[480px] truncate font-semibold text-foreground">{content}</BreadcrumbPage>
+          ) : (
+            <BreadcrumbLink
+              onClick={() => onNavigate(item.folderPath ?? null)}
+              className="flex max-w-[160px] cursor-pointer items-center truncate text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {content}
+            </BreadcrumbLink>
+          )}
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{item.label}</TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -195,7 +204,7 @@ function CollapsingCrumbs({
                           onClick={() => onNavigate(c.folderPath ?? null)}
                           className="flex w-full items-center rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         >
-                          <span className="truncate">{c.label}</span>
+                          <span className="truncate" title={c.label}>{c.label}</span>
                         </button>
                       ))}
                     </HoverCard.Content>

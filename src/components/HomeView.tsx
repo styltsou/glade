@@ -1,4 +1,7 @@
 import { useEffect, useRef } from "react";
+import { FolderPlus, Plus } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderCard } from "@/components/FolderCard";
 import { NoteCard } from "@/components/NoteCard";
@@ -48,6 +51,8 @@ export function HomeView() {
   const isVaultLoading = useStore((state) => state.isVaultLoading);
   const currentFolder = useStore((state) => state.currentFolder);
   const loadAll = useStore((state) => state.loadAll);
+  const createNote = useStore((state) => state.createNote);
+  const openCreateFolder = useStore((state) => state.openCreateFolder);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -56,10 +61,6 @@ export function HomeView() {
   }, [loadAll]);
 
   const hasNotes = folderNotes.length > 0;
-  const hasFolders = currentFolder
-    ? findEntryByPath(entries, currentFolder)?.children.some((e) => e.is_dir)
-    : entries.some((e) => e.is_dir);
-
   const currentEntry = currentFolder
     ? findEntryByPath(entries, currentFolder)
     : null;
@@ -72,8 +73,6 @@ export function HomeView() {
     ? currentEntry?.children.filter((e) => !e.is_dir).length || 0
     : entries.filter((e) => !e.is_dir).length; // Depending on how home notes are fetched, this might just be 0 if home only shows pinned, but we'll assume folder notes if any exist. Just for skeletons.
 
-  const hasData = hasNotes || hasFolders || expectedNoteCount > 0;
-  const isLoadingAny = isVaultLoading || isHomeLoading || isFolderNotesLoading;
 
   // Show skeletons only while data is actively loading, never when vault is confirmed empty.
   const shouldShowFolderSkeletons = isVaultLoading && subFolders.length === 0;
@@ -86,12 +85,40 @@ export function HomeView() {
     <div className="flex flex-col flex-1 h-full w-full bg-background overflow-hidden relative">
       {/* Folder Header */}
       {currentFolder && (
-        <div className="flex items-center justify-between h-10 shrink-0 select-none border-b w-full bg-background">
+        <div className="flex items-center justify-between h-10 shrink-0 select-none w-full bg-background">
           <div className="flex items-center pl-3 h-full min-w-0">
             <Breadcrumbs />
           </div>
 
-          <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
+          <div className="flex items-center gap-0.5 pr-3 h-full shrink-0">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    aria-label="New folder"
+                    className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.07] transition-colors cursor-pointer"
+                    onClick={() => openCreateFolder(currentFolder)}
+                  >
+                    <FolderPlus className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="flex items-center gap-2">New folder<span className="opacity-60">{formatShortcut(bindingFor("new-folder")!)}</span></p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    aria-label="New note"
+                    className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/[0.07] transition-colors cursor-pointer"
+                    onClick={() => void createNote(currentFolder)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p className="flex items-center gap-2">New note<span className="opacity-60">{formatShortcut(bindingFor("new-note")!)}</span></p>
+                </TooltipContent>
+              </Tooltip>
           </div>
         </div>
       )}
@@ -115,7 +142,7 @@ export function HomeView() {
 
         <div className="space-y-12">
           {/* Folders section */}
-          {(hasData || !isLoadingAny) && (
+          {(shouldShowFolderSkeletons || subFolders.length > 0) && (
             <section>
               <SectionHeader label="Folders" />
               <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">
@@ -127,7 +154,7 @@ export function HomeView() {
           )}
 
           {/* Notes section */}
-          {(hasData || !isLoadingAny) && (
+          {(shouldShowNoteSkeletons || folderNotes.length > 0) && (
             <section>
               <SectionHeader label="Notes" />
               <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))] gap-4">

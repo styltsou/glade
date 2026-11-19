@@ -36,7 +36,7 @@ export function FolderCard({ folder }: FolderCardProps) {
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger>
+      <ContextMenuTrigger className="block h-full">
         <div
           onClick={handleClick}
           tabIndex={0}
@@ -48,7 +48,7 @@ export function FolderCard({ folder }: FolderCardProps) {
             }
           }}
           className="
-            group relative flex flex-col gap-1.5 text-left w-full
+            group relative flex flex-col gap-1.5 text-left w-full h-full
             rounded-lg p-3 cursor-pointer
             bg-card border border-border/70 shadow-xs
             transition-[border-color,background-color] duration-100
