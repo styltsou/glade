@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef } from "react";
+import { lazy, Suspense, useRef } from "react";
 import { useStore } from "@/store";
 import { activeTabOf } from "@/lib/tabs";
 import { HomeView } from "@/components/HomeView";
@@ -13,32 +13,9 @@ export function PaneArea() {
   const targetKind = useStore((s) => s.target?.kind);
   const focusGroup = useStore((s) => s.focusGroup);
   const setTabRatio = useStore((s) => s.setTabRatio);
-  const setPaneBoxes = useStore((s) => s.setPaneBoxes);
   const containerRef = useRef<HTMLDivElement>(null);
   const split = state.groups.length > 1;
 
-  // Report where each pane is, so its tabs in the title bar sit right above it.
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container || state.groups.length < 2) return;
-    const measure = () => {
-      const panes = [...container.querySelectorAll<HTMLElement>(":scope > [data-pane]")];
-      setPaneBoxes(panes.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { left: Math.round(r.left), right: Math.round(r.right) };
-      }));
-    };
-    measure();
-    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
-    ro?.observe(container);
-    container.querySelectorAll<HTMLElement>(":scope > [data-pane]").forEach((el) => ro?.observe(el));
-    window.addEventListener("resize", measure);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", measure);
-      setPaneBoxes([]);
-    };
-  }, [state.groups.length, setPaneBoxes]);
 
   const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
     const container = containerRef.current;
@@ -47,6 +24,8 @@ export function PaneArea() {
     const handle = event.currentTarget;
     handle.setPointerCapture(event.pointerId);
     handle.dataset.dragging = "true";
+    // Tabs above the panes follow the divider directly while dragging.
+    document.documentElement.dataset.resizing = "pane";
     const rect = container.getBoundingClientRect();
     let frame = 0;
     const onMove = (e: PointerEvent) => {
@@ -55,6 +34,7 @@ export function PaneArea() {
     };
     const onUp = () => {
       delete handle.dataset.dragging;
+      delete document.documentElement.dataset.resizing;
       cancelAnimationFrame(frame);
       handle.removeEventListener("pointermove", onMove);
       handle.removeEventListener("pointerup", onUp);
@@ -70,7 +50,7 @@ export function PaneArea() {
       {state.groups.map((group, index) => {
         const pane = activeTabOf(group);
         return (
-        <div key={group.id} data-pane className="flex min-w-0 flex-1" style={split ? { flex: `${index === 0 ? state.ratio : 1 - state.ratio} 1 0%` } : undefined}>
+        <div key={group.id} className="flex min-w-0 flex-1" style={split ? { flex: `${index === 0 ? state.ratio : 1 - state.ratio} 1 0%` } : undefined}>
           {index === 1 && (
             <div
               role="separator"

@@ -39,11 +39,13 @@ describe("panes with their own tabs", () => {
 		expect(s.focused).toBe(1);
 	});
 
-	it("adds tabs to the right pane when already split", () => {
+	it("opens to the side in the other pane when already split", () => {
 		let s = T.openToTheSide(T.initialTabs("a.md"), "b.md");
+		s = T.focusGroup(s, 0);
 		s = T.openToTheSide(s, "c.md");
 		expect(paths(s)).toEqual([["a.md"], ["b.md", "c.md"]]);
 		expect(active(s)).toBe("c.md");
+		expect(s.focused).toBe(1);
 	});
 
 	it("keeps tabs per pane when opening in the focused one", () => {
@@ -53,24 +55,56 @@ describe("panes with their own tabs", () => {
 		expect(paths(s)).toEqual([["a.md", "c.md"], ["b.md"]]);
 	});
 
-	it("reveals a note already open in the other pane", () => {
+	it("opens a note in the focused pane even if the other pane has it", () => {
 		let s = T.openToTheSide(T.initialTabs("a.md"), "b.md");
-		s = T.openInActive(s, "a.md");
-		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
-		expect(s.focused).toBe(0);
-	});
-
-	it("splitting a lone tab gives a blank pane", () => {
-		const s = T.splitActive(T.initialTabs("a.md"));
-		expect(paths(s)).toEqual([["a.md"], [null]]);
+		s = T.openInNewTab(s, "a.md");
+		expect(paths(s)).toEqual([["a.md"], ["b.md", "a.md"]]);
 		expect(s.focused).toBe(1);
 	});
 
-	it("splitting moves the active tab to the new pane", () => {
+	it("keeps one tab per note within a pane", () => {
+		let s = T.openInNewTab(T.initialTabs("a.md"), "b.md");
+		s = T.openInNewTab(s, "a.md");
+		expect(paths(s)).toEqual([["a.md", "b.md"]]);
+		expect(active(s)).toBe("a.md");
+		s = T.openInActive(s, "b.md");
+		expect(paths(s)).toEqual([["a.md", "b.md"]]);
+		expect(active(s)).toBe("b.md");
+	});
+
+	it("selects the note's tab in the other pane when opening to the side", () => {
+		let s = T.openToTheSide(T.initialTabs("a.md"), "b.md");
+		s = T.focusGroup(s, 0);
+		s = T.openToTheSide(s, "b.md");
+		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
+		expect(s.focused).toBe(1);
+	});
+
+	it("splitting copies the active tab into a new pane", () => {
 		let s = T.openInNewTab(T.initialTabs("a.md"), "b.md");
 		s = T.splitActive(s);
-		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
+		expect(paths(s)).toEqual([["a.md", "b.md"], ["b.md"]]);
+		expect(s.focused).toBe(1);
+		expect(s.groups[1].tabs[0].id).not.toBe(s.groups[0].tabs[1].id);
 		expect(T.splitActive(s)).toBe(s);
+	});
+
+	it("splitting a lone tab copies it too", () => {
+		const s = T.splitActive(T.initialTabs("a.md"));
+		expect(paths(s)).toEqual([["a.md"], ["a.md"]]);
+	});
+
+	it("moving a tab into a pane that has the note selects it there", () => {
+		let s = T.splitActive(T.openInNewTab(T.initialTabs("a.md"), "b.md"));
+		s = T.moveTabToOtherGroup(s, 0, s.groups[0].tabs[1].id);
+		expect(paths(s)).toEqual([["a.md"], ["b.md"]]);
+		expect(s.focused).toBe(1);
+	});
+
+	it("closes a deleted note in every pane", () => {
+		let s = T.splitActive(T.openInNewTab(T.initialTabs("a.md"), "b.md"));
+		s = T.closePathTab(s, "b.md");
+		expect(paths(s)).toEqual([["a.md"]]);
 	});
 
 	it("moves a tab to the other pane and removes an emptied pane", () => {

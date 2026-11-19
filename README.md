@@ -23,7 +23,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 ### ✍️ Editing
 
 - **Rich Text Editing** — Powered by [TipTap 3](https://tiptap.dev/) with real-time markdown rendering, slash commands (`/`), and a floating bubble menu for quick formatting.
-- **Mermaid Diagrams** — Write ```` ```mermaid ```` code blocks to render flowcharts, sequence diagrams, Gantt charts, and more. Dedicated full-screen editor with live preview, zoom, and **PNG export**.
+- **Mermaid Diagrams** — Write ```` ```mermaid ```` code blocks to render flowcharts, sequence diagrams, Gantt charts, and more. Click a diagram to open it full screen: it stays sharp at any zoom (wheel to zoom, drag to pan, double-click to fit), the code editor is one click away, and **PNG export** renders at 3×.
 - **Tables** — Rounded, scrollable tables with hover controls: click or drag the bars at the right and bottom edge to add or remove columns and rows, and drag the grip above a column or beside a row to move it (arrow keys work too).
 - **Block handles** — Hover any block, including list items and other nested blocks, for a `+` (click to add below, Alt-click to add above) and a grip to drag it to a new place.
 - **Preview rail** — Long notes get a slim rail of heading marks on the left edge; hover it for a clickable outline, or click a mark to jump to that section.
@@ -53,7 +53,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Tagging System** — YAML frontmatter-based tags with auto-complete, popularity ranking, and click-to-filter (AND-combinable).
 - **Pinned Notes** — Pin important notes to a dedicated section at the top of the sidebar.
 - **Pinned Folders** — Pin folders to keep them on the Home screen; every opened folder gets the same features, pinned or not.
-- **Tabs & split views** — Compact tabs live in the window bar; each split pane has its own tabs and toolbar. Active tabs use a background highlight. Tabs support scrolling, drag reordering, and keyboard navigation (Left/Right, Home/End, Delete to close). Click a note to navigate the current tab; Ctrl/Cmd-click or middle-click opens a new tab, Alt-click opens it beside the current note in a split with a draggable divider. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump, `Ctrl/Cmd+\` split or close the focused pane. Tabs and splits are restored per folder.
+- **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Like VS Code, a note has at most one tab per pane, but the same note can be open in both panes: `Cmd/Ctrl+\` splits by copying the current tab, and what you type in one pane appears in the other. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's, can be dragged to reorder, and are restored per folder. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
 - **Editable Titles** — Click the note title to rename inline.
@@ -112,48 +112,62 @@ Glade leverages the power of **Tauri v2** to combine a performant Rust backend w
 
 ## Getting Started
 
-### Prerequisites
+There are no prebuilt downloads yet: you build Glade from source once, and the build produces a normal installed app.
 
-- **Rust**: [Install Rust](https://www.rust-lang.org/tools/install)
-- **Node.js / Bun**: [Install Bun](https://bun.sh/) (recommended) or Node.js
+### Windows: build and install
 
-### Install a local build (Linux, no sudo)
+Takes about 15 minutes the first time, most of it downloads and the first compile.
+
+**1. Install the tools** (once):
+
+- **Microsoft C++ Build Tools**: download from <https://visualstudio.microsoft.com/visual-cpp-build-tools/>, run it, tick **"Desktop development with C++"**, and install.
+- **Rust**: download and run `rustup-init.exe` from <https://rustup.rs>, and accept the defaults (press Enter).
+- **Bun**: open **PowerShell** and run:
+  ```powershell
+  powershell -c "irm bun.sh/install.ps1 | iex"
+  ```
+- **Git**: <https://git-scm.com/download/win> (defaults are fine). Or skip Git and use **Code → Download ZIP** on the GitHub page, then unzip it.
+
+WebView2, which Glade uses to draw its window, is already part of Windows 10 and 11.
+
+**2. Build the installer.** Close and reopen PowerShell (so it sees the new tools), then:
+
+```powershell
+git clone https://github.com/styltsou/glade.git
+cd glade
+bun install
+bun run tauri build --bundles nsis
+```
+
+**3. Install.** The installer is created at:
+
+```text
+src-tauri\target\release\bundle\nsis\Glade_0.1.0_x64-setup.exe
+```
+
+Run it. Windows will warn that the app is from an unknown publisher (it isn't code-signed): click **More info → Run anyway**. Glade then appears in the Start menu, and `.md` files can be opened with it.
+
+**Updating:** in the `glade` folder run `git pull`, then the same `bun install` and `bun run tauri build --bundles nsis`, and run the new installer. It replaces the old version.
+
+If the build fails with `link.exe not found`, the C++ Build Tools are missing the "Desktop development with C++" workload. If `bun` or `cargo` is not found, open a new PowerShell window.
+
+### Linux: install a local build (no sudo)
+
+Needs [Rust](https://www.rust-lang.org/tools/install), [Bun](https://bun.sh/) and the [Tauri system packages](https://v2.tauri.app/start/prerequisites/#linux). Then:
 
 ```bash
+bun install
 bun run install:local
 ```
 
-Builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
-- **Git**: Ensure Git is installed and configured on your system.
+This builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
 
-### Installation & Run
+### Development
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/glade.git
-   cd glade
-   ```
-
-2. **Install dependencies**
-   ```bash
-   bun install
-   # or
-   npm install
-   ```
-
-3. **Run in Development Mode**
-   ```bash
-   bun tauri dev
-   # or
-   npm run tauri dev
-   ```
-
-4. **Build for Production**
-   ```bash
-   bun tauri build
-   # or
-   npm run tauri build
-   ```
+```bash
+bun install
+bun tauri dev
+```
 
 ## Roadmap
 

@@ -4,16 +4,12 @@ import { NodeViewWrapper } from '@tiptap/react'
 import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
 import {
-  Edit,
   Code,
   Eye,
   Copy,
   Check,
   Trash2,
   X,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
   Download,
   ChevronFirst,
   ChevronLast
@@ -22,10 +18,11 @@ import { useStore } from '@/store'
 import CodeMirror from '@uiw/react-codemirror'
 import { markdown } from '@codemirror/lang-markdown'
 import { oneDark } from '@codemirror/theme-one-dark'
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
+import { MermaidCanvas } from './MermaidCanvas'
+import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-import { renderMermaid, onMermaidThemeChange } from '@/lib/mermaid'
+import { renderMermaid, renderMermaidForExport, svgToPng, onMermaidThemeChange } from '@/lib/mermaid'
 
 interface MermaidBlockViewProps {
   node: any
@@ -46,7 +43,8 @@ export function MermaidBlockView({
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview')
   const setMermaidFullscreenOpen = useStore((state) => state.setMermaidFullscreenOpen)
   const [isFullViewOpen, setIsFullViewOpen] = useState(false)
-  const [showCodePane, setShowCodePane] = useState(true)
+  // Full view opens on the diagram; the code is one click away.
+  const [showCodePane, setShowCodePane] = useState(false)
   const [draft, setDraft] = useState(source)
   const [svg, setSvg] = useState<string | null>(null)
   const [lastValidSvg, setLastValidSvg] = useState<string | null>(null)
@@ -135,50 +133,43 @@ export function MermaidBlockView({
 
   const previewSvg = error ? lastValidSvg : (svg || lastValidSvg)
 
+  const openFullView = useCallback(() => {
+    setDraft(source)
+    setShowCodePane(false)
+    setIsFullViewOpen(true)
+    setMermaidFullscreenOpen(true)
+  }, [source, setMermaidFullscreenOpen])
+
+  const closeFullView = () => {
+    updateAttributes({ source: draft })
+    setIsFullViewOpen(false)
+    setMermaidFullscreenOpen(false)
+  }
+
   const handleExportPng = useCallback(async () => {
-    if (!previewSvg) return
+    const src = draft.trim() ? draft : source
+    if (!src.trim()) return
     try {
       const dest = await save({
         defaultPath: 'diagram.png',
         filters: [{ name: 'PNG Image', extensions: ['png'] }],
       })
       if (!dest) return
-
-      const svgElement = document.createElement('div')
-      svgElement.innerHTML = previewSvg
-      const svg = svgElement.querySelector('svg')
-      if (!svg) return
-      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
-      const svgData = new XMLSerializer().serializeToString(svg)
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-      const img = document.createElement('img')
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-      const url = URL.createObjectURL(svgBlob)
-      img.onload = async () => {
-        canvas.width = img.width * 2
-        canvas.height = img.height * 2
-        if (ctx) {
-          ctx.scale(2, 2)
-          ctx.fillStyle = 'transparent'
-          ctx.fillRect(0, 0, canvas.width, canvas.height)
-          ctx.drawImage(img, 0, 0)
-          const dataUrl = canvas.toDataURL('image/png')
-          const base64Data = dataUrl.split(',')[1]
-          const binaryString = atob(base64Data)
-          const bytes = new Uint8Array(binaryString.length)
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i)
-          }
-          await invoke('write_file', { path: dest, contents: Array.from(bytes) })
-        }
-        URL.revokeObjectURL(url)
-      }
-      img.src = url
+      const svgText = await renderMermaidForExport(src)
+      // The page background is transparent (rounded window), so read the theme's.
+      const probe = document.createElement('div')
+      probe.className = 'bg-background'
+      document.body.appendChild(probe)
+      const background = getComputedStyle(probe).backgroundColor || '#ffffff'
+      probe.remove()
+      const bytes = await svgToPng(svgText, 3, background)
+      await invoke('write_file', { path: dest, contents: Array.from(bytes) })
+      toast.success('Diagram exported')
     } catch (e) {
       console.error('Export error:', e)
+      toast.error(`Could not export the diagram: ${e instanceof Error ? e.message : String(e)}`)
     }
-  }, [previewSvg])
+  }, [draft, source])
 
   // Theme detection for CodeMirror
   const cmTheme = useMemo(() => {
@@ -244,25 +235,6 @@ export function MermaidBlockView({
             </TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsFullViewOpen(true)
-                  setMermaidFullscreenOpen(true)
-                  setDraft(source)
-                  setShowCodePane(true)
-                }}
-              >
-                <Edit className="size-3.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>Edit Full Screen</p>
-            </TooltipContent>
-          </Tooltip>
-
           {editor?.isEditable && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -283,7 +255,19 @@ export function MermaidBlockView({
 
         {/* Inline Content */}
         {viewMode === 'preview' ? (
-          <div className="mermaid-block-rendered outline-none" tabIndex={-1}>
+          <div
+            className="mermaid-block-rendered cursor-zoom-in outline-none"
+            tabIndex={0}
+            role="button"
+            aria-label="Open diagram in full view"
+            onClick={openFullView}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openFullView()
+              }
+            }}
+          >
             {previewSvg ? (
               <div className="mermaid-svg-container" dangerouslySetInnerHTML={{ __html: previewSvg }} />
             ) : (
@@ -317,21 +301,18 @@ export function MermaidBlockView({
 
       {/* ─── Full Editor Overlay ─── */}
       {isFullViewOpen && portalTarget && createPortal(
-        <div className="mermaid-full-overlay">
+        <div
+          className="mermaid-full-overlay"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              e.stopPropagation()
+              closeFullView()
+            }
+          }}
+        >
           {/* Minimal Header */}
-<div className="mermaid-full-header">
-            <button
-              type="button"
-              className="mermaid-full-close"
-              onClick={() => {
-                updateAttributes({ source: draft })
-                setIsFullViewOpen(false)
-                setMermaidFullscreenOpen(false)
-              }}
-            >
-              <X className="size-4" />
-            </button>
-
+          <div className="mermaid-full-header">
             <button
               type="button"
               className="mermaid-full-toggle-btn"
@@ -346,6 +327,7 @@ export function MermaidBlockView({
                 type="button"
                 className="mermaid-full-action-btn"
                 onClick={() => handleCopySource(draft)}
+                title="Copy source"
               >
                 {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
               </button>
@@ -354,8 +336,18 @@ export function MermaidBlockView({
                 type="button"
                 className="mermaid-full-action-btn"
                 onClick={handleExportPng}
+                title="Export as PNG"
               >
                 <Download className="size-4" />
+              </button>
+
+              <button
+                type="button"
+                className="mermaid-full-close ml-1"
+                onClick={closeFullView}
+                title="Close (Esc)"
+              >
+                <X className="size-4" />
               </button>
             </div>
           </div>
@@ -391,54 +383,7 @@ export function MermaidBlockView({
 
             {/* Canvas Pane */}
             <div className="mermaid-full-pane-canvas">
-              <TransformWrapper
-                initialScale={1}
-                minScale={0.1}
-                maxScale={10}
-                centerOnInit={true}
-                doubleClick={{ disabled: false, mode: 'reset' }}
-              >
-                {({ zoomIn, zoomOut, resetTransform, centerView }) => (
-                  <div className="mermaid-full-preview">
-                    <TransformComponent
-                      wrapperStyle={{ width: '100%', height: '100%' }}
-                      contentStyle={{ 
-                        width: '100%', 
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      <div className="mermaid-canvas-container">
-                        {previewSvg ? (
-                          <div 
-                            className="mermaid-svg-container-canvas" 
-                            dangerouslySetInnerHTML={{ __html: previewSvg }} 
-                          />
-                        ) : (
-                          <div className="mermaid-block-empty">
-                            {draft.trim() ? 'Rendering...' : 'Empty Diagram'}
-                          </div>
-                        )}
-                      </div>
-                    </TransformComponent>
-                    
-                    {/* Floating Zoom Controls */}
-                    <div className="mermaid-full-zoom-controls">
-                      <button type="button" onClick={() => zoomIn()} title="Zoom In">
-                        <ZoomIn className="size-4" />
-                      </button>
-                      <button type="button" onClick={() => zoomOut()} title="Zoom Out">
-                        <ZoomOut className="size-4" />
-                      </button>
-                      <button type="button" onClick={() => { centerView(); resetTransform(); }} title="Reset">
-                        <Maximize className="size-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </TransformWrapper>
+              <MermaidCanvas svg={previewSvg} empty={draft.trim() ? 'Rendering...' : 'Empty Diagram'} />
             </div>
           </div>
         </div>,

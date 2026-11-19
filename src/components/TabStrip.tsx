@@ -91,51 +91,35 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   </div>;
 }
 
-export function TabStrip({ leadingInset = 0, trailingInset = 0 }: { leadingInset?: number; trailingInset?: number }) {
+/**
+ * Tabs for each pane, laid out so each group sits exactly above its pane.
+ *
+ * `paneOffset` is (left edge of the pane area) − (left edge of this strip), in
+ * pixels: 0 when the sidebar is open (the title-bar section is as wide as the
+ * sidebar), negative when it is closed. The divider is then at
+ * `ratio × stripWidth + (1 − ratio) × paneOffset`, which CSS computes in the
+ * same frame as the panes, so nothing is measured and nothing lags. While the
+ * sidebar opens or closes, the width uses the sidebar's own transition, so the
+ * boundary moves in step with it.
+ */
+export function TabStrip({ trailingInset = 0, paneOffset = 0 }: { trailingInset?: number; paneOffset?: number }) {
   const state = useStore((s) => s.tabsState);
-  const panes = useStore((s) => s.paneBoxes);
-  const ref = useRef<HTMLDivElement>(null);
-  const [strip, setStrip] = useState<{ left: number; right: number } | null>(null);
-
-  const isSplit = state.groups.length > 1;
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el || !isSplit) return;
-    const measure = () => {
-      const r = el.getBoundingClientRect();
-      setStrip((cur) => (cur && cur.left === Math.round(r.left) && cur.right === Math.round(r.right) ? cur : { left: Math.round(r.left), right: Math.round(r.right) }));
-    };
-    measure();
-    const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
-    ro?.observe(el);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro?.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [isSplit]);
-
+  const split = state.groups.length > 1;
   const last = state.groups.length - 1;
-  // In a split, the boundary between tab groups follows the pane divider. The
-  // outer edges just flow with the title bar, so opening or closing the sidebar
-  // moves the tabs in the same frame as the bar itself, with nothing to lag behind.
-  const aligned = strip !== null && state.groups.length > 1 && panes.length === state.groups.length;
   return (
-    <div ref={ref} className={cn("h-full min-w-0 flex-1", aligned ? "relative" : "flex")}>
+    <div className="flex h-full min-w-0 flex-1">
       {state.groups.map((group, index) => {
-        let style: React.CSSProperties;
-        if (aligned) {
-          const width = strip.right - strip.left;
-          const divider = Math.min(width, Math.max(0, panes[1].left - strip.left));
-          const left = index === 0 ? 0 : divider;
-          const right = index === 0 ? divider : width;
-          style = { position: "absolute", top: 0, bottom: 0, left, width: right - left };
-        } else {
-          style = { flex: `${state.groups.length > 1 ? (index === 0 ? state.ratio : 1 - state.ratio) : 1} 1 0%` };
-        }
+        const style: React.CSSProperties =
+          split && index === 0
+            ? { width: `calc(${state.ratio * 100}% + ${(1 - state.ratio) * paneOffset}px)`, flex: "none" }
+            : { flex: "1 1 0%" };
         return (
-          <div key={group.id} className={cn("h-full min-w-0", index > 0 && "border-l border-border/60")} style={style}>
-            <GroupTabs group={group} index={index} inset={index === 0 ? leadingInset : 0} trailing={index === last ? trailingInset : 0} />
+          <div
+            key={group.id}
+            className={cn("h-full min-w-0", split && index === 0 && "sidebar-motion", index > 0 && "border-l border-border/60")}
+            style={style}
+          >
+            <GroupTabs group={group} index={index} inset={0} trailing={index === last ? trailingInset : 0} />
           </div>
         );
       })}

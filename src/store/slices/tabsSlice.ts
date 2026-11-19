@@ -6,9 +6,6 @@ import type { StoreState } from "../index";
 
 export interface TabsSlice {
   tabsState: T.TabsState;
-  /** Where each pane sits horizontally in the window, so title-bar tabs line up with their pane. */
-  paneBoxes: { left: number; right: number }[];
-  setPaneBoxes: (boxes: { left: number; right: number }[]) => void;
 
   /** Open a note: in the active tab, a new tab, or in the pane to the side. */
   openNote: (path: string, mode?: "active" | "tab" | "side", partial?: Partial<NoteData>) => Promise<void>;
@@ -44,12 +41,6 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
 
   return {
     tabsState: T.initialTabs(),
-    paneBoxes: [],
-    setPaneBoxes: (boxes) => {
-      const cur = get().paneBoxes;
-      if (cur.length === boxes.length && cur.every((b, i) => b.left === boxes[i].left && b.right === boxes[i].right)) return;
-      set({ paneBoxes: boxes });
-    },
 
     openNote: async (path, mode = "active", partial) => {
       const state = get().tabsState;

@@ -273,7 +273,14 @@
   max-width: none !important;
   max-height: none !important;
   height: auto;
-  filter: drop-shadow(0 10px 30px rgba(0,0,0,0.1));
+}
+
+/* Full-view canvas: the SVG is sized in real pixels per zoom level, so it is
+   redrawn sharp instead of being stretched. No filters (they rasterize). */
+.mermaid-canvas-content > svg {
+  display: block;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 /* CodeMirror */

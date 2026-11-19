@@ -1,6 +1,9 @@
 /**
  * Tabs and split views, as plain data.
  *
+ * Like VS Code: a note has at most one tab per pane, but the same note can be
+ * open in both panes. Splitting copies the active tab into the new pane.
+ *
  * The window has one or two panes ("groups"). Each pane has its own tabs and
  * its own active tab; a pane closes when its last tab does. The last pane can
  * have no tabs at all, and then shows Home. A tab shows a note, a folder
@@ -82,7 +85,12 @@ function mapGroup(state: TabsState, index: number, fn: (g: Group) => Group): Tab
 	return { ...state, groups: state.groups.map((g, i) => (i === index ? fn(g) : g)) };
 }
 
-/** Where a note is already open. Prefers the focused pane. */
+/** Where a note is open within one pane. */
+export function findInGroup(state: TabsState, group: number, path: string): string | null {
+	return state.groups[group]?.tabs.find((t) => t.path === path)?.id ?? null;
+}
+
+/** Where a note is already open, in any pane. Prefers the focused pane. */
 export function findOpen(state: TabsState, path: string): { group: number; tabId: string } | null {
 	const order = state.groups.map((_, i) => i).sort((a, b) => (a === state.focused ? -1 : b === state.focused ? 1 : a - b));
 	for (const gi of order) {
@@ -97,14 +105,13 @@ function reveal(state: TabsState, group: number, tabId: string): TabsState {
 }
 
 /**
- * Show `path` in the active tab of the focused pane. A note that is already
- * open somewhere is revealed instead of being opened twice, so two editors never
- * hold the same file.
+ * Show `path` in the active tab of the focused pane. If the note already has a
+ * tab in this pane, that tab is selected instead (one tab per note per pane).
  */
 export function openInActive(state: TabsState, path: string | null): TabsState {
 	if (path !== null) {
-		const open = findOpen(state, path);
-		if (open) return reveal(state, open.group, open.tabId);
+		const existing = findInGroup(state, state.focused, path);
+		if (existing) return reveal(state, state.focused, existing);
 	}
 	const gi = state.focused;
 	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
@@ -134,11 +141,11 @@ function insertTabAfterActive(group: Group, tab: Tab): Group {
 	return { ...group, tabs, activeId: tab.id };
 }
 
-/** Open `path` in a tab of its own in the focused pane (or reveal it). */
+/** Open `path` in a tab of its own in the focused pane (or select its tab there). */
 export function openInNewTab(state: TabsState, path: string | null): TabsState {
 	if (path !== null) {
-		const open = findOpen(state, path);
-		if (open) return reveal(state, open.group, open.tabId);
+		const existing = findInGroup(state, state.focused, path);
+		if (existing) return reveal(state, state.focused, existing);
 	}
 	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(path)));
 }
@@ -148,16 +155,17 @@ export function newTab(state: TabsState): TabsState {
 	return openInNewTab(state, null);
 }
 
-/** Open `path` in the right pane (creating it), as a tab there. */
+/** Open `path` in the other pane (creating it), or select its tab there. */
 export function openToTheSide(state: TabsState, path: string | null): TabsState {
-	if (path !== null) {
-		const open = findOpen(state, path);
-		if (open) return reveal(state, open.group, open.tabId);
-	}
 	if (state.groups.length < MAX_GROUPS) {
-		return { ...state, groups: [...state.groups, makeGroup(makeTab(path))], focused: 1 };
+		return { ...state, groups: [...state.groups, makeGroup(makeTab(path))], focused: state.groups.length };
 	}
-	return mapGroup({ ...state, focused: 1 }, 1, (g) => insertTabAfterActive(g, makeTab(path)));
+	const other = state.focused === 0 ? 1 : 0;
+	if (path !== null) {
+		const existing = findInGroup(state, other, path);
+		if (existing) return reveal(state, other, existing);
+	}
+	return mapGroup({ ...state, focused: other }, other, (g) => insertTabAfterActive(g, makeTab(path)));
 }
 
 export function activateTab(state: TabsState, group: number, tabId: string): TabsState {
@@ -193,27 +201,26 @@ export function closeTab(state: TabsState, group: number, tabId: string): TabsSt
 	return mapGroup(state, group, () => ({ ...g, tabs, activeId }));
 }
 
-/** Close whichever tab shows `path` (used when a note is deleted). */
+/** Close every tab showing `path`, in every pane (used when a note is deleted). */
 export function closePathTab(state: TabsState, path: string): TabsState {
-	const open = findOpen(state, path);
-	return open ? closeTab(state, open.group, open.tabId) : state;
+	let next = state;
+	for (let open = findOpen(next, path); open; open = findOpen(next, path)) {
+		next = closeTab(next, open.group, open.tabId);
+	}
+	return next;
 }
 
 /**
- * Split: move the active tab into a new right pane. A lone tab stays where it is
- * and the new pane starts with a blank "new tab" page.
+ * Split: open a copy of the active tab in a new right pane, like VS Code, so
+ * the same note can be read in one pane and edited in the other.
  */
 export function splitActive(state: TabsState): TabsState {
 	if (state.groups.length >= MAX_GROUPS) return state;
 	const g = focusedGroup(state);
 	if (g.tabs.length === 0) return state;
-	if (g.tabs.length === 1) {
-		return { ...state, groups: [...state.groups, makeGroup()], focused: 1 };
-	}
-	const moving = activeTabOf(g);
-	const rest = g.tabs.filter((t) => t.id !== moving.id);
-	const left: Group = { ...g, tabs: rest, activeId: rest[Math.max(0, g.tabs.indexOf(moving) - 1)].id };
-	return { ...state, groups: [left, makeGroup(moving)], focused: 1 };
+	const active = activeTabOf(g);
+	const copy = active.folder === undefined ? makeTab(active.path) : makeTab(active.path, active.folder);
+	return { ...state, groups: [...state.groups, makeGroup(copy)], focused: state.groups.length };
 }
 
 /** Move a tab to the other pane (creating it if needed). */
@@ -222,6 +229,15 @@ export function moveTabToOtherGroup(state: TabsState, group: number, tabId: stri
 	const tab = from?.tabs.find((t) => t.id === tabId);
 	if (!from || !tab) return state;
 	const to = group === 0 ? 1 : 0;
+	// The other pane already has this note: select it there instead of duplicating.
+	if (state.groups[to] && tab.path !== null) {
+		const existing = findInGroup(state, to, tab.path);
+		if (existing) {
+			const closed = closeTab(state, group, tabId);
+			const target = closed.groups.findIndex((g) => g.id === state.groups[to].id);
+			return target === -1 ? closed : reveal(closed, target, existing);
+		}
+	}
 	let groups = [...state.groups];
 	if (!groups[to]) {
 		if (from.tabs.length === 1) return state; // nothing left behind to split from
