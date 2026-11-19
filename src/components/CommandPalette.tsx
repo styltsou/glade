@@ -264,6 +264,10 @@ function runCommand(id: CommandId): boolean {
 /** Set by the mounted palette, so commands can open it in a given mode. */
 const paletteControls = { openThemes: () => {}, openModes: () => {} };
 
+/** Open the palette on its theme or mode list (for menus elsewhere in the app). */
+export const openThemePicker = () => paletteControls.openThemes();
+export const openModePicker = () => paletteControls.openModes();
+
 const MODE_OPTIONS: { id: ThemeMode; label: string; icon: Icon }[] = [
   { id: "light", label: "Light", icon: SunIcon },
   { id: "dark", label: "Dark", icon: MoonIcon },

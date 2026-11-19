@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Home, Info, Monitor, Moon, Palette, Pin, PinOff, FolderSearch, FolderOpen, Sun, X } from "lucide-react";
-import { themes, type ThemeId, type ThemeMode } from "@/themes";
-import { ThemeSwatch } from "@/components/ThemeSwatch";
+import { ChevronDown, FileText, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Sun, X } from "lucide-react";
+import { openModePicker, openThemePicker } from "@/components/CommandPalette";
 import { AboutDialog } from "@/components/AboutDialog";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { invoke } from "@tauri-apps/api/core";
@@ -13,12 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -33,11 +27,6 @@ export function WorkspaceMenu({ folder = false, className }: { folder?: boolean;
   const pinFolder = useStore((s) => s.pinFolder);
   const unpinFolder = useStore((s) => s.unpinFolder);
   const closeTarget = useStore((s) => s.closeTarget);
-  const theme = useStore((s) => s.theme);
-  const mode = useStore((s) => s.mode);
-  const resolvedMode = useStore((s) => s.resolvedMode);
-  const setTheme = useStore((s) => s.setTheme);
-  const setMode = useStore((s) => s.setMode);
   const [aboutOpen, setAboutOpen] = useState(false);
   const folderTarget = folder && target?.kind === "folder" ? target : null;
   const pinned = !!folderTarget && !!home?.pinned_folders.some((f) => f.path === folderTarget.path);
@@ -56,7 +45,7 @@ export function WorkspaceMenu({ folder = false, className }: { folder?: boolean;
         <span className="truncate">{label}</span>
         <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-100 ease-[var(--ease-ui)] [[data-state=open]_&]:rotate-180" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))]" data-no-drag>
+      <DropdownMenuContent side="bottom" align="start" className="min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))]" data-no-drag>
         <DropdownMenuItem onSelect={showHome}>
           <Home className="size-4" /> Home
           <DropdownMenuShortcut>{formatShortcut(bindingFor("toggle-home")!)}</DropdownMenuShortcut>
@@ -94,31 +83,14 @@ export function WorkspaceMenu({ folder = false, className }: { folder?: boolean;
           </>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <Palette className="size-4" /> Theme
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="min-w-48">
-            <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as ThemeId)}>
-              {themes.map((t) => (
-                <DropdownMenuRadioItem key={t.id} value={t.id} onSelect={(e) => e.preventDefault()}>
-                  <ThemeSwatch theme={t.id} mode={resolvedMode} /> {t.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuRadioGroup value={mode} onValueChange={(v) => setMode(v as ThemeMode)}>
-              <DropdownMenuRadioItem value="light" onSelect={(e) => e.preventDefault()}><Sun className="size-4" /> Light</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="dark" onSelect={(e) => e.preventDefault()}><Moon className="size-4" /> Dark</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="system" onSelect={(e) => e.preventDefault()}><Monitor className="size-4" /> System</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled className="text-xs">
-              More themes in the palette
-              <DropdownMenuShortcut>{formatShortcut(bindingFor("open-settings")!)}</DropdownMenuShortcut>
-            </DropdownMenuItem>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+        <DropdownMenuItem onSelect={openThemePicker}>
+          <Palette className="size-4" /> Theme…
+          <DropdownMenuShortcut>{formatShortcut(bindingFor("open-settings")!)}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={openModePicker}>
+          <Sun className="size-4" /> Mode…
+          <DropdownMenuShortcut>{formatShortcut(bindingFor("open-mode-picker")!)}</DropdownMenuShortcut>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setAboutOpen(true)}>
           <Info className="size-4" /> About Glade
         </DropdownMenuItem>

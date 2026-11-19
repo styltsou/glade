@@ -2,11 +2,13 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, FileText, Code, Copy, Check, BookOpen, Pencil, Eye } from "lucide-react";
+import { Clock, FileText, Code, Copy, Check, BookOpen, Pencil } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FindBar } from "./FindBar";
+import { useStore } from "@/store";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
 interface NoteHeaderProps {
   notePath: string;
@@ -83,6 +85,7 @@ export function NoteHeader({
   useRegex = false,
   onToggleUseRegex,
 }: NoteHeaderProps) {
+  const setNoteEditMode = useStore((s) => s.setNoteEditMode);
   const segments = notePath.split("/");
   const parentPath = segments.slice(0, -1).join("/") || null;
   
@@ -109,7 +112,7 @@ export function NoteHeader({
 
 
   return (
-    <div className="flex items-center justify-between h-10 shrink-0 select-none border-b border-border/60 relative">
+    <div className="flex items-center justify-between h-10 shrink-0 select-none relative">
       {/* Floating FindBar — positioned absolutely in top-right of the editor */}
       {findVisible && (
         <div className="absolute top-full right-4 z-50 mt-1">
@@ -154,21 +157,27 @@ export function NoteHeader({
           </span>
         )}
 
-        <div
-          className={cn(
-            "flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium mx-2 transition-colors duration-100",
-            isEditMode
-              ? "bg-primary/10 text-primary"
-              : "bg-secondary text-secondary-foreground"
-          )}
-        >
-          {isEditMode ? (
-            <Pencil className="w-3 h-3" />
-          ) : (
-            <Eye className="w-3 h-3" />
-          )}
-          <span className="hidden @[30rem]/pane:inline">{isEditMode ? "Edit mode" : "Read mode"}</span>
-        </div>
+        {/* Reading is the default, so only editing is flagged. Click to go back to reading. */}
+        {isEditMode && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label="Editing. Switch to reading"
+                onClick={() => setNoteEditMode(notePath, false)}
+                className="press flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary/15"
+              >
+                <Pencil className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p className="flex items-center gap-2">
+                Editing · switch to reading
+                <span className="opacity-60">{formatShortcut(bindingFor("toggle-edit-mode")!)}</span>
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
 
         {dateLabel && (
           <span className="text-muted-foreground text-xs hidden @[40rem]/pane:flex items-center gap-1">

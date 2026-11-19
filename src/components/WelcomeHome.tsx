@@ -121,11 +121,7 @@ export function WelcomeHome() {
           <p className="mt-1 text-sm text-muted-foreground">Open a folder or a file, or pick up where you left off.</p>
         </div>
 
-        {empty ? (
-          <p className="mb-8 px-1 text-sm text-muted-foreground">
-            Nothing here yet. Folders and files you open will be listed here.
-          </p>
-        ) : (
+        {!empty && (
           <div>
             <HomeLists list={list} />
           </div>

@@ -320,3 +320,45 @@ kbd {
   user-select: none !important;
   cursor: grabbing !important;
 }
+
+/*
+ * Popups (menus, context menus, selects, popovers, tooltips): quick, strong
+ * ease-out, and they grow from the trigger or pointer (Radix sets the
+ * transform origin) instead of sliding in from a side. Leaving is faster than
+ * entering. Dialogs are exempt: they stay centered with their own motion.
+ */
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="context-menu-content"],
+[data-slot="context-menu-sub-content"],
+[data-slot="select-content"],
+[data-slot="popover-content"],
+[data-slot="tooltip-content"] {
+  --tw-ease: var(--ease-ui);
+  --tw-animation-duration: 130ms;
+  --tw-enter-translate-x: 0;
+  --tw-enter-translate-y: 0;
+  --tw-exit-translate-x: 0;
+  --tw-exit-translate-y: 0;
+  --tw-enter-scale: 0.97;
+  --tw-exit-scale: 0.97;
+}
+[data-slot="dropdown-menu-content"][data-state="closed"],
+[data-slot="dropdown-menu-sub-content"][data-state="closed"],
+[data-slot="context-menu-content"][data-state="closed"],
+[data-slot="context-menu-sub-content"][data-state="closed"],
+[data-slot="select-content"][data-state="closed"],
+[data-slot="popover-content"][data-state="closed"],
+[data-slot="tooltip-content"][data-state="closed"] {
+  --tw-animation-duration: 80ms;
+}
+/* Once one tooltip is showing, the next appears with no animation. */
+[data-slot="tooltip-content"][data-state="instant-open"] {
+  --tw-animation-duration: 0s;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot$="-content"] {
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+  }
+}

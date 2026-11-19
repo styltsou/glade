@@ -15,7 +15,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { baseName, dirName, shortenPath } from "@/lib/paths";
 import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
-import { ArrowLeft, Ellipsis } from "lucide-react";
+import { ArrowLeft, Ellipsis, Folder } from "lucide-react";
 
 interface BreadcrumbsProps {
   path?: string | null;
@@ -143,17 +143,23 @@ function CollapsingCrumbs({
   const collapsed = items.slice(1, 1 + hidden);
   const visible = [items[0], ...items.slice(1 + hidden)];
 
-  const renderItem = (item: Crumb) =>
-    item.folderPath === undefined || item === items[items.length - 1] ? (
-      <BreadcrumbPage className="max-w-[240px] truncate font-semibold text-foreground">{item.label}</BreadcrumbPage>
+  // The root folder is a folder icon, not its name: the name is already in the
+  // window and the tab, and the icon keeps the trail short.
+  const renderItem = (item: Crumb) => {
+    const isRoot = item === items[0];
+    const content = isRoot ? <Folder className="size-4" aria-label={item.label} /> : item.label;
+    return item.folderPath === undefined || item === items[items.length - 1] ? (
+      <BreadcrumbPage title={isRoot ? item.label : undefined} className="max-w-[240px] truncate font-semibold text-foreground">{content}</BreadcrumbPage>
     ) : (
       <BreadcrumbLink
+        title={isRoot ? item.label : undefined}
         onClick={() => onNavigate(item.folderPath ?? null)}
-        className="max-w-[160px] cursor-pointer truncate text-muted-foreground transition-colors hover:text-foreground"
+        className="flex max-w-[160px] cursor-pointer items-center truncate text-muted-foreground transition-colors hover:text-foreground"
       >
-        {item.label}
+        {content}
       </BreadcrumbLink>
     );
+  };
 
   return (
     <div ref={outerRef} className={cn("flex min-w-0 select-none items-center overflow-hidden", className)}>
