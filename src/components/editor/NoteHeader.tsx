@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, FileText, Code, Copy, Check, BookOpen, Pencil } from "lucide-react";
+import { Clock, FileText, Code, Copy, Check, BookOpen } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -157,22 +157,22 @@ export function NoteHeader({
           </span>
         )}
 
-        {/* Reading is the default, so only editing is flagged. Click to go back to reading. */}
-        {isEditMode && (
+        {/* Flag read-only mode so it is clear why typing does nothing. Click to start editing. */}
+        {!isEditMode && (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Editing. Switch to reading"
-                onClick={() => setNoteEditMode(notePath, false)}
-                className="press flex size-7 items-center justify-center rounded-md bg-primary/10 text-primary transition-colors hover:bg-primary/15"
+                aria-label="Reading mode. Switch to editing"
+                onClick={() => setNoteEditMode(notePath, true)}
+                className="press flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground transition-colors hover:text-foreground"
               >
-                <Pencil className="size-3.5" />
+                <BookOpen className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p className="flex items-center gap-2">
-                Editing · switch to reading
+                Reading mode
                 <span className="opacity-60">{formatShortcut(bindingFor("toggle-edit-mode")!)}</span>
               </p>
             </TooltipContent>
