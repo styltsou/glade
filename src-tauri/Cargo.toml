@@ -1,6 +1,6 @@
 [package]
 name = "glade"
-version = "0.1.0"
+version = "0.2.0"
 description = "A local-first markdown viewer and editor"
 authors = ["you"]
 edition = "2021"
