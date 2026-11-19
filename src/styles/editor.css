@@ -379,7 +379,15 @@
   margin: 0;
 }
 
+/* Table overflow doesn't clip cells to the rounded border, so round the four
+   corner cells themselves; their highlight and focus ring then follow the curve. */
+.tiptap-editor table tr:first-child > :first-child { border-top-left-radius: calc(0.5rem - 1px); }
+.tiptap-editor table tr:first-child > :last-child { border-top-right-radius: calc(0.5rem - 1px); }
+.tiptap-editor table tr:last-child > :first-child { border-bottom-left-radius: calc(0.5rem - 1px); }
+.tiptap-editor table tr:last-child > :last-child { border-bottom-right-radius: calc(0.5rem - 1px); }
+
 .tiptap-editor table .selectedCell::after {
+  border-radius: inherit;
   content: "";
   position: absolute;
   inset: 0;
