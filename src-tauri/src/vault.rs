@@ -233,20 +233,32 @@ pub fn fs_times(path: &Path) -> (Option<String>, Option<String>) {
     (created.map(to_rfc3339), modified.map(to_rfc3339))
 }
 
-/// Generate a preview string from the body (first ~120 chars, single line).
+/// Plain-text preview of a note body (first ~120 chars, single line): markdown
+/// is rendered away, so `**bold**`, links, quotes and list markers show as text.
+/// Headings, code blocks and rules are skipped.
 pub fn make_preview(body: &str) -> String {
-    let preview: String = body
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim();
-            !trimmed.is_empty() && !trimmed.starts_with('#') && !trimmed.starts_with("---")
-        })
-        .take(2)
-        .collect::<Vec<_>>()
-        .join(" ");
+    use pulldown_cmark::{Event, Parser, Tag, TagEnd};
 
-    if preview.len() > PREVIEW_LENGTH {
-        format!("{}…", &preview[..PREVIEW_LENGTH])
+    let mut text = String::new();
+    let mut skip = 0usize; // inside a heading or code block
+    for event in Parser::new(body) {
+        match event {
+            Event::Start(Tag::Heading { .. } | Tag::CodeBlock(_) | Tag::Image { .. }) => skip += 1,
+            Event::End(TagEnd::Heading(_) | TagEnd::CodeBlock | TagEnd::Image) => skip = skip.saturating_sub(1),
+            Event::Text(t) | Event::Code(t) if skip == 0 => text.push_str(&t),
+            Event::SoftBreak | Event::HardBreak if skip == 0 => text.push(' '),
+            Event::End(TagEnd::Paragraph | TagEnd::Item | TagEnd::TableCell | TagEnd::TableRow) if skip == 0 => text.push(' '),
+            _ => {}
+        }
+        if text.chars().count() > PREVIEW_LENGTH * 2 {
+            break;
+        }
+    }
+
+    let preview = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    if preview.chars().count() > PREVIEW_LENGTH {
+        let cut: String = preview.chars().take(PREVIEW_LENGTH).collect();
+        format!("{}…", cut.trim_end())
     } else {
         preview
     }
@@ -334,6 +346,20 @@ mod tests {
         let p = root.join(rel);
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, "x").unwrap();
+    }
+
+    #[test]
+    fn preview_renders_markdown_to_plain_text() {
+        let body = "# Title\n\n> **Working document** · 19 November 2026 · [link](http://x)\n\n- one\n- `two`\n\n```\ncode\n```\n";
+        assert_eq!(make_preview(body), "Working document · 19 November 2026 · link one two");
+    }
+
+    #[test]
+    fn preview_truncates_on_char_boundaries() {
+        let body = "Ελληνικά ".repeat(40);
+        let p = make_preview(&body);
+        assert!(p.ends_with('…'));
+        assert_eq!(p.chars().count(), PREVIEW_LENGTH + 1);
     }
 
     fn names(paths: &[PathBuf]) -> Vec<String> {
