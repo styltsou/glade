@@ -41,7 +41,9 @@
     ],
     "active": true,
     "targets": [
-      "deb"
+      "deb",
+      "appimage",
+      "nsis"
     ],
     "icon": [
       "icons/32x32.png",
@@ -55,6 +57,17 @@
     "linux": {
       "deb": {
         "desktopTemplate": "Glade.desktop"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "REPLACE_WITH_CONTENTS_OF_~/.tauri/glade.key.pub",
+      "endpoints": [
+        "https://github.com/styltsou/glade/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

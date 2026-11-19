@@ -6,6 +6,8 @@ import {
   Trash2 as TrashIcon,
   ChevronRight,
   ChevronDown,
+  Plus as PlusIcon,
+  Columns2 as ColumnsIcon,
 } from "lucide-react";
 import { useStore } from "@/store";
 import {
@@ -159,6 +161,7 @@ function PinnedItem({
 }) {
   const duplicateNote = useStore((state) => state.duplicateNote);
   const openRename = useStore((state) => state.openRename);
+  const openNote = useStore((state) => state.openNote);
   const openDelete = useStore((state) => state.openDelete);
 
   return (
@@ -179,6 +182,15 @@ function PinnedItem({
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => openNote(path, "tab")}>
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Open in new tab
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => openNote(path, "side")}>
+          <ColumnsIcon className="mr-2 h-4 w-4" />
+          Open to the side
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={() => openRename(path, name)}>
           <PencilIcon className="mr-2 h-4 w-4" />
           Rename

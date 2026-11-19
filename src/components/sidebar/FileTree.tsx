@@ -7,6 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { VaultEntry } from "@/types";
+import type { TabDrop } from "@/lib/tabs";
+import { hitTest, sameDrop } from "@/lib/paneDnd";
 
 function isDescendant(ancestorPath: string, nodePath: string): boolean {
   const ancestorParts = ancestorPath.split("/");
@@ -102,6 +104,7 @@ export function FileTree() {
 
   const dragRef = useRef<{ id: string; name: string; type: string } | null>(null);
   const dropTargetRef = useRef<string | null>(null);
+  const paneTargetRef = useRef<TabDrop | null>(null);
   const lastMouseRef = useRef<{ x: number; y: number } | null>(null);
   const expandTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -113,6 +116,9 @@ export function FileTree() {
   }, []);
 
   const cancelDrag = useCallback(() => {
+    paneTargetRef.current = null;
+    useStore.getState().setTabDropTarget(null);
+    document.documentElement.removeAttribute("data-dragging-tab");
     dragRef.current = null;
     dropTargetRef.current = null;
     lastMouseRef.current = null;
@@ -165,6 +171,7 @@ export function FileTree() {
       
       if (!started && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) {
         started = true;
+        document.documentElement.setAttribute("data-dragging-tab", "");
         dragRef.current = { id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" };
         setDragState({ id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" });
       }
@@ -172,6 +179,21 @@ export function FileTree() {
       if (!started) return;
       
       setGhostPos({ x: ev.clientX, y: ev.clientY });
+
+      // Over a pane or a tab bar: open it there, or split it off (notes and folders).
+      const paneTarget = hitTest(ev.clientX, ev.clientY, useStore.getState().tabsState.groups.length);
+      if (!sameDrop(paneTarget, paneTargetRef.current)) {
+        paneTargetRef.current = paneTarget;
+        useStore.getState().setTabDropTarget(paneTarget);
+      }
+      if (paneTarget) {
+        if (dropTargetRef.current !== null) {
+          dropTargetRef.current = null;
+          setDropTarget(null);
+          clearExpandTimer();
+        }
+        return;
+      }
 
       const target = getFolderDropTarget(ev);
       if (target) {
@@ -224,8 +246,15 @@ export function FileTree() {
       clearExpandTimer();
 
       const target = dropTargetRef.current;
-      
-      if (started && dragRef.current && target) {
+      const paneTarget = paneTargetRef.current;
+      paneTargetRef.current = null;
+      useStore.getState().setTabDropTarget(null);
+      document.documentElement.removeAttribute("data-dragging-tab");
+
+      if (started && dragRef.current && paneTarget) {
+        const view = dragRef.current.type === "folder" ? { path: null, folder: dragRef.current.id } : { path: dragRef.current.id };
+        useStore.getState().dropViewAt(view, paneTarget);
+      } else if (started && dragRef.current && target) {
         const fromPath = dragRef.current.id;
         let toPath: string;
 

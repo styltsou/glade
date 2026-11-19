@@ -63,6 +63,18 @@ export function initialTabs(path: string | null = null): TabsState {
 	return { groups: [path === null ? emptyGroup() : makeGroup(makeTab(path))], focused: 0, ratio: 0.5 };
 }
 
+/** A fresh window on a folder: one tab with the root folder overview. */
+export function rootTabs(): TabsState {
+	return { groups: [makeGroup(makeTab(null, null))], focused: 0, ratio: 0.5 };
+}
+
+/** Nothing opened yet: no tabs, or only the root folder tab a window starts with. */
+export function isPristine(state: TabsState): boolean {
+	if (state.groups.length !== 1) return false;
+	const tabs = state.groups[0].tabs;
+	return tabs.length === 0 || (tabs.length === 1 && tabs[0].path === null && tabs[0].folder === null);
+}
+
 /** Stand-in for "no tab": a pane with no tabs shows Home. */
 export const NO_TAB: Tab = Object.freeze({ id: "", path: null }) as Tab;
 
@@ -179,6 +191,17 @@ export function openToTheSide(state: TabsState, path: string | null): TabsState 
 	}
 	const other = state.focused === 0 ? 1 : 0;
 	return mapGroup({ ...state, focused: other }, other, (g) => insertTabAfterActive(g, makeTab(path)));
+}
+
+/** Open a folder overview in the other pane (creating it), or focus it where it is open. */
+export function openFolderToTheSide(state: TabsState, folder: string | null): TabsState {
+	const open = findFolder(state, folder);
+	if (open) return reveal(state, open.group, open.tabId);
+	if (state.groups.length < MAX_GROUPS) {
+		return { ...state, groups: [...state.groups, makeGroup(makeTab(null, folder))], focused: state.groups.length };
+	}
+	const other = state.focused === 0 ? 1 : 0;
+	return mapGroup({ ...state, focused: other }, other, (g) => insertTabAfterActive(g, makeTab(null, folder)));
 }
 
 export function activateTab(state: TabsState, group: number, tabId: string): TabsState {
@@ -320,28 +343,53 @@ export interface SavedTabs {
 	ratio: number;
 }
 
-/** Paths per pane, for saving. Folder overviews are not saved. */
+/** Saved form of a folder overview: "./" for the root, "sub/dir/" for a subfolder. */
+const ROOT_SAVED = "./";
+function savedTab(t: Tab): string | null {
+	if (t.path !== null) return t.path;
+	if (t.folder === null) return ROOT_SAVED;
+	return typeof t.folder === "string" ? `${t.folder}/` : null;
+}
+
+/** Paths per pane, for saving. Folder overviews are saved with a trailing slash. */
 export function toSaved(state: TabsState): SavedTabs {
 	return {
-		groups: state.groups.map((g) => g.tabs.map((t) => t.path)),
+		groups: state.groups.map((g) => g.tabs.map(savedTab)),
 		activeIndex: state.groups.map((g) => Math.max(0, g.tabs.findIndex((t) => t.id === g.activeId))),
 		focused: state.focused,
 		ratio: state.ratio,
 	};
 }
 
-export function fromSaved(saved: Partial<SavedTabs> | null | undefined, exists: (path: string) => boolean): TabsState | null {
+function restoreTab(p: unknown, exists: (path: string) => boolean, folderExists: (folder: string) => boolean): Tab {
+	if (typeof p !== "string") return makeTab(null);
+	if (p === ROOT_SAVED) return makeTab(null, null);
+	if (p.endsWith("/") && !p.startsWith("/")) {
+		const folder = p.slice(0, -1);
+		return folderExists(folder) ? makeTab(null, folder) : makeTab(null);
+	}
+	return makeTab(p.startsWith("/") || exists(p) ? p : null);
+}
+
+export function fromSaved(
+	saved: Partial<SavedTabs> | null | undefined,
+	exists: (path: string) => boolean,
+	folderExists: (folder: string) => boolean = () => true,
+): TabsState | null {
 	if (!saved || !Array.isArray(saved.groups) || saved.groups.length === 0) return null;
 	const seen = new Set<string>();
 	const groups: Group[] = saved.groups
 		.slice(0, MAX_GROUPS)
 		.map((paths, gi) => {
 			const tabs = (Array.isArray(paths) ? paths : [])
-				.map((p) => makeTab(typeof p === "string" && (p.startsWith("/") || exists(p)) ? p : null))
+				.map((p) => restoreTab(p, exists, folderExists))
 				// Drop blank pages: they carry nothing worth restoring.
-				.filter((t, _i, all) => t.path !== null || all.length === 1)
-				// Older sessions could hold a note twice; keep its first tab.
-				.filter((t) => t.path === null || (seen.has(t.path) ? false : (seen.add(t.path), true)));
+				.filter((t, _i, all) => t.path !== null || t.folder !== undefined || all.length === 1)
+				// Older sessions could hold a note or folder twice; keep its first tab.
+				.filter((t) => {
+					const key = t.path ?? (t.folder === undefined ? null : `dir:${t.folder ?? ""}`);
+					return key === null || (seen.has(key) ? false : (seen.add(key), true));
+				});
 			if (tabs.length === 0) return null;
 			const wanted = saved.activeIndex?.[gi] ?? 0;
 			const active = tabs[Math.min(Math.max(wanted, 0), tabs.length - 1)];
@@ -354,4 +402,80 @@ export function fromSaved(saved: Partial<SavedTabs> | null | undefined, exists: 
 		focused: Math.min(Math.max(saved.focused ?? 0, 0), groups.length - 1),
 		ratio: Math.min(1 - MIN_RATIO, Math.max(MIN_RATIO, saved.ratio ?? 0.5)),
 	};
+}
+
+/** Where a dragged tab, note or folder can land. */
+export type TabDrop =
+	| { kind: "strip"; group: number; index: number; x: number }
+	| { kind: "pane"; group: number; zone: "center" | "left" | "right" };
+
+/**
+ * Drop an existing tab somewhere: reorder within its tab bar, move it to the
+ * other pane, or split it off into a new pane on the left or right.
+ */
+export function dropTab(state: TabsState, fromGroup: number, tabId: string, target: TabDrop): TabsState {
+	const src = state.groups[fromGroup];
+	const tab = src?.tabs.find((t) => t.id === tabId);
+	if (!src || !tab) return state;
+	const from = src.tabs.indexOf(tab);
+
+	if (target.kind === "strip" && target.group === fromGroup) {
+		const to = target.index > from ? target.index - 1 : target.index;
+		return activateTab(reorder(state, fromGroup, from, Math.min(to, src.tabs.length - 1)), fromGroup, tabId);
+	}
+	if (target.kind === "pane" && target.zone === "center" && target.group === fromGroup) {
+		return activateTab(state, fromGroup, tabId);
+	}
+	const side = target.kind === "pane" && target.zone !== "center" ? target.zone : null;
+	// A pane's only tab can't be split off from it (the pane would be empty).
+	if (side && (state.groups.length >= MAX_GROUPS || src.tabs.length === 1)) return activateTab(state, fromGroup, tabId);
+
+	const remaining = src.tabs.filter((t) => t.id !== tabId);
+	let groups = state.groups.map((g, i) =>
+		i === fromGroup
+			? { ...g, tabs: remaining, activeId: g.activeId === tabId ? (remaining[Math.max(0, from - 1)]?.id ?? "") : g.activeId }
+			: g,
+	);
+	let targetId: string;
+	if (side) {
+		const fresh = makeGroup(tab);
+		groups = side === "left" ? [fresh, ...groups] : [...groups, fresh];
+		targetId = fresh.id;
+	} else {
+		const tg = groups[target.group];
+		if (!tg) return state;
+		const at = target.kind === "strip" ? target.index : tg.tabs.findIndex((t) => t.id === tg.activeId) + 1;
+		const tabs = [...tg.tabs];
+		tabs.splice(Math.min(Math.max(at, 0), tabs.length), 0, tab);
+		groups = groups.map((g, i) => (i === target.group ? { ...g, tabs, activeId: tab.id } : g));
+		targetId = tg.id;
+	}
+	const kept = groups.filter((g) => g.tabs.length > 0);
+	return {
+		groups: kept,
+		focused: kept.findIndex((g) => g.id === targetId),
+		ratio: kept.length !== state.groups.length ? 0.5 : state.ratio,
+	};
+}
+
+/**
+ * Drop a note or folder (dragged from the sidebar). If it is already open, its
+ * tab moves there; otherwise a new tab is opened at the drop.
+ */
+export function dropView(state: TabsState, view: { path: string | null; folder?: string | null }, target: TabDrop): TabsState {
+	const open = view.path !== null ? findOpen(state, view.path) : view.folder !== undefined ? findFolder(state, view.folder) : null;
+	if (open) return dropTab(state, open.group, open.tabId, target);
+	const tab = makeTab(view.path, view.path === null ? view.folder : undefined);
+	if (target.kind === "pane" && target.zone !== "center" && state.groups.length < MAX_GROUPS) {
+		const fresh = makeGroup(tab);
+		const groups = target.zone === "left" ? [fresh, ...state.groups] : [...state.groups, fresh];
+		return { ...state, groups, focused: groups.indexOf(fresh), ratio: 0.5 };
+	}
+	const gi = target.group;
+	const g = state.groups[gi];
+	if (!g) return state;
+	const at = target.kind === "strip" ? target.index : g.tabs.findIndex((t) => t.id === g.activeId) + 1;
+	const tabs = [...g.tabs];
+	tabs.splice(Math.min(Math.max(at, 0), tabs.length), 0, tab);
+	return mapGroup({ ...state, focused: gi }, gi, () => ({ ...g, tabs, activeId: tab.id }));
 }

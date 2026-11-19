@@ -181,6 +181,10 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               <FolderOpen className="mr-2 h-4 w-4" />
               Open folder
             </ContextMenuItem>
+            <ContextMenuItem onClick={() => useStore.getState().openFolderToSide(entry.path)}>
+              <ColumnsIcon className="mr-2 h-4 w-4" />
+              Open to the side
+            </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem onClick={() => createNote(entry.path)}>
               <PlusIcon className="mr-2 h-4 w-4" />

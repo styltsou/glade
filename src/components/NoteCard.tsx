@@ -1,5 +1,5 @@
 import { useState, useCallback, useLayoutEffect, useRef } from "react";
-import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon } from "lucide-react";
+import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon, Plus as PlusIcon, Columns2 as ColumnsIcon } from "lucide-react";
 import { useStore } from "@/store";
 import {
   ContextMenu,
@@ -28,6 +28,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const pinNote = useStore((state) => state.pinNote);
   const unpinNote = useStore((state) => state.unpinNote);
   const openRename = useStore((state) => state.openRename);
+  const openNote = useStore((state) => state.openNote);
   const openDelete = useStore((state) => state.openDelete);
   const prefetchNote = useStore((state) => state.prefetchNote);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -215,6 +216,15 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => openNote(card.path, "tab")}>
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Open in new tab
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => openNote(card.path, "side")}>
+          <ColumnsIcon className="mr-2 h-4 w-4" />
+          Open to the side
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={() => openRename(card.path, card.title)}>
           <PencilIcon className="mr-2 h-4 w-4" />
           Rename

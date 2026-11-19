@@ -8,6 +8,7 @@ mod migration;
 mod config;
 mod error;
 mod types;
+mod updates;
 mod vault;
 mod watch;
 mod workspace;
@@ -32,6 +33,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let paths: Vec<String> = args.into_iter().skip(1).collect();
             let opened = launch::handle_args(app, &paths, std::path::Path::new(&cwd));
@@ -122,6 +125,7 @@ pub fn run() {
             unpin_folder,
             remove_from_glade,
             locate_folder,
+            updates::claim_update_check,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

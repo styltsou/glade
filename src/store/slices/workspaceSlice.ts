@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import type { HomeData, Target } from "@/types";
 import * as T from "@/lib/tabs";
 import { relativeTo } from "@/lib/paths";
+import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 import type { StoreState } from "../index";
 
 export interface WorkspaceSlice {
@@ -99,8 +100,9 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       const restored = T.fromSaved(
         { groups: ui.tabs ?? [], activeIndex: ui.active_tabs ?? [], focused: ui.focused_pane ?? 0, ratio: ui.split_ratio || 0.5 },
         (p) => !!idToPath[p],
+        (folder) => !!findEntryByPath(get().entries, folder)?.is_dir,
       );
-      if (restored && !T.focusedPath(get().tabsState) && get().tabsState.groups.length === 1 && get().tabsState.groups[0].tabs.length === 1) {
+      if (restored && T.isPristine(get().tabsState)) {
         set({ tabsState: restored });
         await get().syncFocusedNote();
       } else if (ui.last_file && idToPath[ui.last_file] && !get().activeNote) {
@@ -174,7 +176,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       noteCache: {},
       tags: [],
       activeNote: null,
-      tabsState: T.initialTabs(),
+      tabsState: target?.kind === "folder" ? T.rootTabs() : T.initialTabs(),
       backStack: [],
       currentFolder: null,
       pinnedNotes: [],

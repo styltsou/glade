@@ -15,8 +15,16 @@ export interface TabsSlice {
   fetchNote: (path: string) => Promise<void>;
   /** Show a folder overview in the active tab (null = the root). */
   openFolderTab: (folder: string | null) => void;
+  /** Show a folder overview in the other pane. */
+  openFolderToSide: (folder: string | null) => void;
   /** Turn the active tab into the blank "new tab" page. */
   setFocusedPathNull: () => void;
+
+  /** Where a tab, note or folder being dragged would land (drives the drop highlights). */
+  tabDropTarget: T.TabDrop | null;
+  setTabDropTarget: (target: T.TabDrop | null) => void;
+  dropTabAt: (fromGroup: number, tabId: string, target: T.TabDrop) => void;
+  dropViewAt: (view: { path: string | null; folder?: string | null }, target: T.TabDrop) => void;
 
   newTab: () => void;
   activateTab: (group: number, id: string) => void;
@@ -83,9 +91,16 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
       void get().loadFolderNotes(folder);
     },
 
+    openFolderToSide: (folder) => apply(T.openFolderToTheSide(get().tabsState, folder)),
+
     setFocusedPathNull: () => {
       set({ tabsState: T.openInActive(get().tabsState, null), activeNote: null });
     },
+
+    tabDropTarget: null,
+    setTabDropTarget: (target) => set({ tabDropTarget: target }),
+    dropTabAt: (fromGroup, tabId, target) => apply(T.dropTab(get().tabsState, fromGroup, tabId, target)),
+    dropViewAt: (view, target) => apply(T.dropView(get().tabsState, view, target)),
 
     newTab: () => {
       set({ tabsState: T.newTab(get().tabsState), activeNote: null, currentFolder: null });

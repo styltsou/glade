@@ -4,6 +4,7 @@ import { activeTabOf } from "@/lib/tabs";
 import { HomeView } from "@/components/HomeView";
 import { EditorSkeleton } from "@/components/editor/EditorSkeleton";
 import { cn } from "@/lib/utils";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
 const Editor = lazy(() => import("@/components/Editor").then((m) => ({ default: m.Editor })));
 
@@ -14,6 +15,7 @@ export function PaneArea() {
   const focusGroup = useStore((s) => s.focusGroup);
   const setTabRatio = useStore((s) => s.setTabRatio);
   const containerRef = useRef<HTMLDivElement>(null);
+  const drop = useStore((s) => (s.tabDropTarget?.kind === "pane" ? s.tabDropTarget : null));
   const split = state.groups.length > 1;
 
 
@@ -63,10 +65,25 @@ export function PaneArea() {
           )}
           <div
             id={`editor-workspace-${group.id}`} role="tabpanel" aria-labelledby={`file-tab-${pane.id}`}
-            className={cn("flex min-w-0 flex-1 flex-col overflow-hidden", split && state.focused !== index && "opacity-[0.97]")}
+            data-pane-index={index}
+            className={cn("relative flex min-w-0 flex-1 flex-col overflow-hidden", split && state.focused !== index && "opacity-[0.97]")}
             onMouseDownCapture={() => split && state.focused !== index && focusGroup(index)}
           >
-            {pane.path ? (
+            {drop && drop.group === index && (
+              // Where a dragged tab or note would land: the whole pane, or the half it would split into.
+              <div
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute inset-y-2 z-30 rounded-lg border-2 border-primary/50 bg-primary/10",
+                  drop.zone === "center" && "inset-x-2",
+                  drop.zone === "left" && "left-2 right-1/2",
+                  drop.zone === "right" && "left-1/2 right-2",
+                )}
+              />
+            )}
+            {pane.id === "" ? (
+              <EmptyPane />
+            ) : pane.path ? (
               <Suspense fallback={<EditorSkeleton />}>
                 <Editor
                   path={pane.path}
@@ -84,6 +101,34 @@ export function PaneArea() {
           </div>
         </div>
       ); })}
+    </div>
+  );
+}
+
+/** Every tab is closed: point at the sidebar and the shortcuts that open something. */
+function EmptyPane() {
+  const openRoot = useStore((s) => s.openFolderTab);
+  const hints = [
+    { label: "Open a note", command: "toggle-command-palette" },
+    { label: "New note", command: "new-note" },
+  ] as const;
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-muted-foreground">
+      <p className="text-sm">Open a note or folder from the sidebar</p>
+      <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 text-xs">
+        {hints.map((h) => {
+          const binding = bindingFor(h.command);
+          return (
+            <div key={h.command} className="contents">
+              <dt className="text-right">{h.label}</dt>
+              <dd className="text-left font-mono opacity-70">{binding ? formatShortcut(binding) : ""}</dd>
+            </div>
+          );
+        })}
+      </dl>
+      <button type="button" onClick={() => openRoot(null)} className="text-xs text-primary hover:underline">
+        Show folder overview
+      </button>
     </div>
   );
 }

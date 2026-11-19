@@ -4,7 +4,7 @@
 > **Status**: This project is currently **under active development**. The `main` branch may contain incomplete features and minor bugs as it is the primary work-in-progress branch.
 
 > [!NOTE]
-> **No pre-built binary yet.** Run from source: see [Getting Started](#getting-started) below.
+> **Download** Glade for Windows and Linux from the [latest release](https://github.com/styltsou/glade/releases/latest), or see [Getting Started](#getting-started) below. Installed copies update themselves.
 
 A fast, quiet markdown viewer and editor for the files you already have, built with [Tauri v2](https://tauri.app/), [React](https://react.dev/), and [Rust](https://www.rust-lang.org/).
 
@@ -53,7 +53,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Tagging System** — YAML frontmatter-based tags with auto-complete, popularity ranking, and click-to-filter (AND-combinable).
 - **Pinned Notes** — Pin important notes to a dedicated section at the top of the sidebar.
 - **Pinned Folders** — Pin folders to keep them on the Home screen; every opened folder gets the same features, pinned or not.
-- **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Each note and folder overview is open at most once: opening it again focuses its tab, in whichever pane it is. `Cmd/Ctrl+\` moves the current tab into a new pane beside it. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's, can be dragged to reorder, and are restored per folder. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
+- **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Each note and folder overview is open at most once: opening it again focuses its tab, in whichever pane it is. `Cmd/Ctrl+\` moves the current tab into a new pane beside it. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's and are restored per folder. Drag a tab, or a note or folder from the sidebar, onto a tab bar to place it, onto a pane to open it there, or onto the left or right edge of a single pane to split; Esc cancels a drag. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
 - **Editable Titles** — Click the note title to rename inline.
@@ -113,9 +113,31 @@ Glade leverages the power of **Tauri v2** to combine a performant Rust backend w
 
 ## Getting Started
 
-There are no prebuilt downloads yet: you build Glade from source once, and the build produces a normal installed app.
+### Windows
 
-### Windows: build and install
+1. Download `Glade_<version>_x64-setup.exe` from the [latest release](https://github.com/styltsou/glade/releases/latest).
+2. Run it. Glade isn't code-signed, so Windows shows "Windows protected your PC": click **More info → Run anyway**. (Your browser may also ask whether to keep the download.)
+3. Glade appears in the Start menu, and `.md` files can be opened with it.
+
+**Updates:** Glade checks for a new release when it starts, downloads it in the background, and shows **Glade X.Y.Z is ready** with a **Restart** button.
+
+### Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/styltsou/glade/main/scripts/install.sh | sh
+```
+
+This installs Glade for your user only (no sudo): the AppImage in `~/.local/lib/glade`, a `glade` command in `~/.local/bin`, and a launcher entry and icons under `~/.local/share`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white` before `sh`.
+
+**Updates:** Glade updates itself the same way as on Windows. Running the command again also installs the latest release.
+
+AppImages need FUSE 2; the script tells you if it's missing (`sudo apt install libfuse2t64` on Ubuntu 24.04, `libfuse2` on 22.04). A `.deb` is also attached to each release, but it doesn't update itself.
+
+To uninstall, delete `~/.local/lib/glade`, `~/.local/bin/glade`, `~/.local/share/applications/glade.desktop` and `~/.local/share/icons/hicolor/*/apps/glade.*`.
+
+### Build from source
+
+#### Windows: build and install
 
 Takes about 15 minutes the first time, most of it downloads and the first compile.
 
@@ -148,11 +170,11 @@ src-tauri\target\release\bundle\nsis\Glade_0.1.0_x64-setup.exe
 
 Run it. Windows will warn that the app is from an unknown publisher (it isn't code-signed): click **More info → Run anyway**. Glade then appears in the Start menu, and `.md` files can be opened with it.
 
-**Updating:** in the `glade` folder run `git pull`, then the same `bun install` and `bun run tauri build --bundles nsis`, and run the new installer. It replaces the old version.
+**Updating:** in the `glade` folder run `git pull`, then the same `bun install` and `bun run tauri build --bundles nsis`, and run the new installer. It replaces the old version. A self-built copy also updates itself from GitHub Releases.
 
 If the build fails with `link.exe not found`, the C++ Build Tools are missing the "Desktop development with C++" workload. If `bun` or `cargo` is not found, open a new PowerShell window.
 
-### Linux: install a local build (no sudo)
+#### Linux: install a local build (no sudo)
 
 Needs [Rust](https://www.rust-lang.org/tools/install), [Bun](https://bun.sh/) and the [Tauri system packages](https://v2.tauri.app/start/prerequisites/#linux). Then:
 
@@ -161,7 +183,7 @@ bun install
 bun run install:local
 ```
 
-This builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build.
+This builds the release binary and installs `glade`, a launcher entry and icons under `~/.local`. The icon follows your system theme (white tile on dark desktops, black on light); force one with `ICON_VARIANT=black` or `ICON_VARIANT=white`. Run it again after changing the app to update the installed version. Use `bun run install:local -- --skip-build` to reinstall the last build. A local build doesn't update itself; running the `curl … | sh` installer above replaces it with the release AppImage.
 
 ### Development
 
@@ -170,11 +192,39 @@ bun install
 bun tauri dev
 ```
 
+## Releasing
+
+Each `v*` tag pushed to GitHub runs [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the Windows installer, the AppImage and the `.deb`, and publishes them as a GitHub Release together with `latest.json`, the manifest installed copies check for updates. Updates are signed; installed copies only accept updates signed with the project's key.
+
+**Once:** create the signing key (it asks for a password) and register it:
+
+```bash
+bun tauri signer generate -w ~/.tauri/glade.key
+```
+
+1. Put the contents of `~/.tauri/glade.key.pub` in `plugins.updater.pubkey` in [`src-tauri/tauri.conf.json`](src-tauri/tauri.conf.json) and commit it.
+2. In the GitHub repository, under **Settings → Secrets and variables → Actions**, add `TAURI_SIGNING_PRIVATE_KEY` (the contents of `~/.tauri/glade.key`) and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+
+Keep the key and password safe: without them, installed copies can't verify any future update.
+
+**Each release:** with a clean working tree,
+
+```bash
+scripts/release.sh 0.2.0
+```
+
+```bash
+git push --follow-tags
+```
+
+The script sets the version in `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml` and `Cargo.lock`, commits, and tags `v0.2.0`; pushing the tag starts the build. The signed update files come from [`src-tauri/tauri.release.conf.json`](src-tauri/tauri.release.conf.json), which only the workflow uses, so local builds don't need the key.
+
 ## Roadmap
 
 ### 📦 Distribution
 
-- [ ] **Prebuilt binaries** — Installers for macOS, Windows and Linux.
+- [x] **Prebuilt binaries** — Windows installer and Linux AppImage on GitHub Releases, with automatic updates.
+- [ ] **macOS build** — Needs code signing and notarization.
 
 ### 🔗 Linking & Discovery
 

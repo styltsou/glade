@@ -2,6 +2,7 @@ import {
   Folder,
   Pencil as PencilIcon,
   Trash2 as TrashIcon,
+  Columns2 as ColumnsIcon,
 } from "lucide-react";
 import { useCallback } from "react";
 import {
@@ -22,6 +23,7 @@ interface FolderCardProps {
 export function FolderCard({ folder }: FolderCardProps) {
   const setCurrentFolder = useStore((state) => state.setCurrentFolder);
   const openRename = useStore((state) => state.openRename);
+  const openFolderToSide = useStore((state) => state.openFolderToSide);
   const openDelete = useStore((state) => state.openDelete);
 
   const handleClick = useCallback(() => {
@@ -87,6 +89,11 @@ export function FolderCard({ folder }: FolderCardProps) {
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-48">
+        <ContextMenuItem onClick={() => openFolderToSide(folder.path)}>
+          <ColumnsIcon className="mr-2 h-4 w-4" />
+          Open to the side
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem
           onClick={() => openRename(folder.path, folder.name, true)}
         >
