@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -106,7 +107,7 @@ export function SidebarCollapseToggle() {
         </button>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>Expand sidebar (Ctrl+B)</p>
+        <p>Expand sidebar ({formatShortcut(bindingFor("toggle-sidebar")!)})</p>
       </TooltipContent>
     </Tooltip>
   );

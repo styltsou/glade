@@ -46,6 +46,8 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "open-settings", key: ",", mod: true },
   { command: "open-settings", code: "Comma", mod: true },
   { command: "open-mode-picker", code: "Comma", mod: true, shiftKey: true },
+  // First entry is the one shown in hints.
+  { command: "toggle-sidebar", code: "Slash", mod: true },
   { command: "toggle-sidebar", code: "KeyB", mod: true },
   { command: "toggle-toc", code: "KeyT", mod: true, shiftKey: true },
   { command: "toggle-edit-mode", code: "KeyE", mod: true },
@@ -86,6 +88,21 @@ export function bindingFor(command: GlobalCommand): Keybinding | undefined {
   return KEYBINDINGS.find((kb) => kb.command === command);
 }
 
+/** Physical key codes for punctuation, so hints show the symbol, not "Comma". */
+const CODE_SYMBOLS: Record<string, string> = {
+  Comma: ",",
+  Period: ".",
+  Slash: "/",
+  Backslash: "\\",
+  Semicolon: ";",
+  Quote: "'",
+  Backquote: "`",
+  Minus: "-",
+  Equal: "=",
+  BracketLeft: "[",
+  BracketRight: "]",
+};
+
 /** Key caps for a shortcut, e.g. ["Ctrl", "Shift", "O"] or ["⌘", "⇧", "O"]. */
 export function shortcutKeys(kb: Shortcut): string[] {
   const mac = isMac();
@@ -93,7 +110,7 @@ export function shortcutKeys(kb: Shortcut): string[] {
   if (kb.mod) keys.push(mac ? "⌘" : "Ctrl");
   if (kb.altKey) keys.push(mac ? "⌥" : "Alt");
   if (kb.shiftKey) keys.push(mac ? "⇧" : "Shift");
-  const main = kb.code ? kb.code.replace(/^Key|^Digit/, "") : (kb.key ?? "");
+  const main = kb.code ? (CODE_SYMBOLS[kb.code] ?? kb.code.replace(/^Key|^Digit/, "")) : (kb.key ?? "");
   keys.push(main.length === 1 ? main.toUpperCase() : main);
   return keys;
 }

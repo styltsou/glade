@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
@@ -79,7 +80,7 @@ export function TitleBar() {
         className={`sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
       >
       {/* Sidebar toggle */}
-      {folderOpen && <Tip label="Toggle sidebar (Ctrl+B)"><button
+      {folderOpen && <Tip label={`Toggle sidebar (${formatShortcut(bindingFor("toggle-sidebar")!)})`}><button
         onClick={toggleSidebarCollapsed}
         aria-label="Toggle sidebar"
         className={iconButton}
