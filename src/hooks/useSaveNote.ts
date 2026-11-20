@@ -13,6 +13,9 @@ interface UseSaveNoteOptions {
 	blockedRef?: MutableRefObject<boolean>;
 }
 
+/** How long typing must pause before the note is written. */
+export const AUTOSAVE_DELAY_MS = 1000;
+
 export function useSaveNote({
 	focused = true,
 	activeNote,
@@ -59,17 +62,61 @@ export function useSaveNote({
 		return pendingSaveRef.current;
 	}, [activeNote, saveNote, setSaveStatusWithRef, latestContentRef, lastSavedContentRef, pendingSaveRef, effectiveSavedTimeoutRef]);
 
+	// Autosave: write once typing pauses, when the window loses focus, and as it closes.
+	const saveNowRef = useRef(saveNow);
+	saveNowRef.current = saveNow;
+	const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const cancelAutosave = useCallback(() => {
+		if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+		autosaveTimerRef.current = null;
+	}, []);
+
+	/** Call after every edit; each call restarts the wait. */
+	const scheduleAutosave = useCallback(() => {
+		cancelAutosave();
+		autosaveTimerRef.current = setTimeout(() => {
+			autosaveTimerRef.current = null;
+			void saveNowRef.current();
+		}, AUTOSAVE_DELAY_MS);
+	}, [cancelAutosave]);
+
+	// A timer from one note must never fire against another.
+	const path = activeNote?.path;
+	useEffect(() => cancelAutosave, [path, cancelAutosave]);
+
+	useEffect(() => {
+		if (!focused) return;
+		const flush = () => {
+			cancelAutosave();
+			void saveNowRef.current();
+		};
+		const onVisibility = () => {
+			if (document.visibilityState === "hidden") flush();
+		};
+		window.addEventListener("blur", flush);
+		window.addEventListener("beforeunload", flush);
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			window.removeEventListener("blur", flush);
+			window.removeEventListener("beforeunload", flush);
+			document.removeEventListener("visibilitychange", onVisibility);
+		};
+	}, [focused, cancelAutosave]);
+
+	// Ctrl+S saves right away; any wait in progress is no longer needed.
 	useEffect(() => {
 		const handler = (e: KeyboardEvent) => {
 			if (!focused) return;
 			if ((e.metaKey || e.ctrlKey) && e.key === "s") {
 				e.preventDefault();
+				cancelAutosave();
 				saveNow();
 			}
 		};
 		window.addEventListener("keydown", handler);
 		return () => window.removeEventListener("keydown", handler);
-	}, [saveNow, focused]);
+	}, [saveNow, focused, cancelAutosave]);
 
 	useEffect(() => {
 		return () => {
@@ -83,5 +130,6 @@ export function useSaveNote({
 		saveStatus,
 		setSaveStatusWithRef,
 		saveNow,
+		scheduleAutosave,
 	};
 }

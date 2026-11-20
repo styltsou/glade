@@ -109,7 +109,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const externalEvent = useStore((state) => state.externalEvent);
   const reloadNote = useStore((state) => state.reloadNote);
 
-  const { saveStatus, setSaveStatusWithRef, saveNow } = useSaveNote({
+  const { saveStatus, setSaveStatusWithRef, saveNow, scheduleAutosave } = useSaveNote({
     focused,
     activeNote,
     saveNote,
@@ -183,6 +183,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           savedTimeoutRef.current = null;
         }
         setSaveStatusWithRef("unsaved");
+        scheduleAutosave();
       }
     },
   });
@@ -464,9 +465,10 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           savedTimeoutRef.current = null;
         }
         setSaveStatusWithRef("unsaved");
+        scheduleAutosave();
       }
     },
-    [activeNote, setSaveStatusWithRef],
+    [activeNote, setSaveStatusWithRef, scheduleAutosave],
   );
 
   // Keep TOC headings updated whenever editor changes

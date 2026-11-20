@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -107,6 +107,18 @@ export function NoteHeader({
   }, [notePath, noteTitle]);
 
 
+  // Autosave normally clears "unsaved" within a second, so only say so when it lingers
+  // (a failed save, or an external-edit conflict that blocks writing).
+  const [unsavedLingers, setUnsavedLingers] = useState(false);
+  useEffect(() => {
+    if (saveStatus !== "unsaved") {
+      setUnsavedLingers(false);
+      return;
+    }
+    const timer = setTimeout(() => setUnsavedLingers(true), 3000);
+    return () => clearTimeout(timer);
+  }, [saveStatus]);
+
   return (
     <div className="flex items-center justify-between h-10 shrink-0 select-none relative">
       {/* Floating FindBar — positioned absolutely in top-right of the editor */}
@@ -146,10 +158,9 @@ export function NoteHeader({
       </div>
 
       <div className="flex items-center gap-1 pr-3 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px">
-        {saveStatus !== "idle" && (
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-in fade-in-0 duration-150">
-            <span className={cn("size-1.5 rounded-full", saveStatus === "saved" ? "bg-emerald-500" : "bg-amber-500")} />
-            <span className="hidden @[34rem]/pane:inline">{saveStatus === "saved" ? "Saved" : "Unsaved"}</span>
+        {unsavedLingers && (
+          <span aria-live="polite" className="mr-1 text-xs text-foreground/80 animate-in fade-in-0 duration-150">
+            Unsaved
           </span>
         )}
 
