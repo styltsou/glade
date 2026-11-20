@@ -6,6 +6,7 @@ pub mod sidebar;
 pub mod export;
 pub mod folders;
 pub mod links;
+pub mod images;
 
 pub use vault::*;
 pub use note::*;
@@ -15,3 +16,4 @@ pub use sidebar::*;
 pub use export::*;
 pub use folders::*;
 pub use links::*;
+pub use images::*;

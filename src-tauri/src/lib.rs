@@ -115,6 +115,8 @@ pub fn run() {
             set_property,
             watch::check_external,
             commands::classify_links,
+            commands::import_image_file,
+            commands::save_pasted_image,
             commands::create_linked_note,
             commands::list_dir_markdown,
             commands::get_backlinks,

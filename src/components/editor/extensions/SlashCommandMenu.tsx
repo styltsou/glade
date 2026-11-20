@@ -21,6 +21,7 @@ import {
 	Table,
 	Type,
 	GitBranch,
+	Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,6 +68,7 @@ const iconMap: Record<string, React.ReactNode> = {
 	Minus: <Minus className="h-4 w-4" />,
 	Link2: <Link2 className="h-4 w-4" />,
 	GitBranch: <GitBranch className="h-4 w-4" />,
+	Image: <ImageIcon className="h-4 w-4" />,
 };
 
 export interface SlashCommandMenuHandle {

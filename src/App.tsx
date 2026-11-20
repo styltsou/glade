@@ -4,6 +4,7 @@ import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
 import { focusedGroup } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
+import { useImageDrop } from "@/hooks/useImageDrop";
 import { Lightbox } from "@/components/Lightbox";
 import { DragGhost } from "@/components/dnd/DragGhost";
 import { ExportDialog } from "@/components/editor/ExportDialog";
@@ -208,6 +209,8 @@ function App() {
     }, 2000);
     return () => clearInterval(timer);
   }, [pollExternal]);
+
+  useImageDrop(!showWelcome);
 
   // Dropping a folder or markdown file opens it.
   useEffect(() => {

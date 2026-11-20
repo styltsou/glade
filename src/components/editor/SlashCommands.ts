@@ -3,6 +3,7 @@ import { Suggestion } from '@tiptap/suggestion';
 import { PluginKey } from 'prosemirror-state';
 import type { SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
 import type { Editor } from '@tiptap/react';
+import { pickImage } from '@/lib/insertImage';
 
 export interface SlashCommandItem {
   id: string;
@@ -25,6 +26,7 @@ export const slashCommandsList: SlashCommandItem[] = [
   { id: "table", label: "Table", icon: "Table", command: "table" },
   { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule" },
   { id: "link", label: "Add link", icon: "Link2", command: "link" },
+  { id: "image", label: "Image", icon: "Image", command: "image" },
   { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock" },
 ];
 
@@ -131,6 +133,9 @@ export function executeSlashCommand(editor: Editor, range: { from: number; to: n
       }
       break;
     }
+    case "image":
+      void pickImage(editor, (editor.storage as any)?.paneNote?.path);
+      break;
     case "mermaidBlock":
       editor.chain().focus().insertContent({
         type: 'mermaidBlock',

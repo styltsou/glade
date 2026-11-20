@@ -4,6 +4,7 @@ import { useStore } from "@/store";
 import { isAbsolutePath, relativeLink } from "@/lib/links";
 import { Plugin } from "@tiptap/pm/state";
 import { openLightbox } from "@/components/Lightbox";
+import { addPastedImage } from "@/lib/insertImage";
 
 /** Resolve a markdown image source to something the webview can load. */
 export function displayImageSrc(src: string | null | undefined, notePath?: string | null): string | null | undefined {
@@ -63,10 +64,22 @@ export const LocalImage = Image.extend({
   },
 
   addProseMirrorPlugins() {
+    const editor = this.editor;
     return [
       ...(this.parent?.() ?? []),
       new Plugin({
         props: {
+          // A screenshot or copied image becomes a file next to the note. Rich clipboard
+          // content (HTML) is left to the normal paste.
+          handlePaste: (_view, event) => {
+            const data = event.clipboardData;
+            const image = data && Array.from(data.files).find((f) => f.type.startsWith("image/"));
+            const notePath = (editor.storage as any)?.paneNote?.path as string | null | undefined;
+            if (!image || !notePath || data.types.includes("text/html")) return false;
+            event.preventDefault();
+            void addPastedImage(editor, notePath, image);
+            return true;
+          },
           handleDOMEvents: {
             // Plain click on an image opens it in the lightbox; modified clicks keep selecting.
             click: (_view, event) => {

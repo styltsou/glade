@@ -164,6 +164,9 @@ pub struct AppConfig {
     /// Whether the Properties panel is collapsed (applies to every note).
     #[serde(default)]
     pub properties_collapsed: bool,
+    /// Subfolder (next to the note) where new images are saved; empty = next to the note.
+    #[serde(default)]
+    pub image_folder: String,
 }
 
 /// Tag with its usage count across all notes.
