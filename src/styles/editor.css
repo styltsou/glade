@@ -298,6 +298,7 @@
   height: auto;
   border-radius: var(--radius);
   margin: 1rem 0;
+  cursor: zoom-in;
 }
 
 .tiptap-editor s {

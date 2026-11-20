@@ -4,6 +4,7 @@ import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
 import { focusedGroup } from "@/lib/tabs";
 import { CommandPalette } from "@/components/CommandPalette";
+import { Lightbox } from "@/components/Lightbox";
 import { DragGhost } from "@/components/dnd/DragGhost";
 import { ExportDialog } from "@/components/editor/ExportDialog";
 import { CreateFolderDialog } from "@/components/CreateFolderDialog";
@@ -286,6 +287,7 @@ function App() {
         </div>
         <CommandPalette />
         <DragGhost />
+        <Lightbox />
         <SharedDialogs />
         <Toaster />
         <WindowResizeHandles />

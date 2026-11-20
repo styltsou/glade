@@ -2,6 +2,8 @@ import Image from "@tiptap/extension-image";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { useStore } from "@/store";
 import { isAbsolutePath, relativeLink } from "@/lib/links";
+import { Plugin } from "@tiptap/pm/state";
+import { openLightbox } from "@/components/Lightbox";
 
 /** Resolve a markdown image source to something the webview can load. */
 export function displayImageSrc(src: string | null | undefined, notePath?: string | null): string | null | undefined {
@@ -58,6 +60,26 @@ export const LocalImage = Image.extend({
       ...this.parent?.(),
       src: { default: null, parseHTML: (el: HTMLElement) => restoreImageSrc(el.getAttribute("src")) },
     };
+  },
+
+  addProseMirrorPlugins() {
+    return [
+      ...(this.parent?.() ?? []),
+      new Plugin({
+        props: {
+          handleDOMEvents: {
+            // Plain click on an image opens it in the lightbox; modified clicks keep selecting.
+            click: (_view, event) => {
+              const el = event.target as HTMLElement | null;
+              if (!el || el.tagName !== "IMG" || event.button !== 0 || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false;
+              const img = el as HTMLImageElement;
+              openLightbox(img.currentSrc || img.src, img.alt);
+              return true;
+            },
+          },
+        },
+      }),
+    ];
   },
 
   renderHTML({ HTMLAttributes }) {
