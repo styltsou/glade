@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
@@ -82,7 +83,7 @@ export function NoteActionButtons({
     <div className="flex items-center">
       <div className="h-10 w-px bg-border" />
 
-      <Tip label="Table of Contents (Ctrl+Shift+T)"><Button
+      <Tip label={`Table of Contents (${formatShortcut(bindingFor("toggle-toc")!)})`}><Button
         variant="ghost"
         className={cn(
           "h-10 w-10 rounded-none",

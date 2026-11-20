@@ -198,7 +198,7 @@ export function NoteHeader({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">
-            <p>Table of Contents (Ctrl+Shift+T)</p>
+            <p>Table of Contents ({formatShortcut(bindingFor("toggle-toc")!)})</p>
           </TooltipContent>
         </Tooltip>
 

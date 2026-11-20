@@ -49,7 +49,7 @@ export const KEYBINDINGS: Keybinding[] = [
   // First entry is the one shown in hints.
   { command: "toggle-sidebar", code: "Slash", mod: true },
   { command: "toggle-sidebar", code: "KeyB", mod: true },
-  { command: "toggle-toc", code: "KeyT", mod: true, shiftKey: true },
+  { command: "toggle-toc", code: "KeyL", mod: true, shiftKey: true },
   { command: "toggle-edit-mode", code: "KeyE", mod: true },
   { command: "toggle-raw-mode", code: "KeyR", mod: true, shiftKey: true },
   { command: "new-tab", code: "KeyT", mod: true },
