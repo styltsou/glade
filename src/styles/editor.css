@@ -690,3 +690,27 @@
 .tiptap-editor .resize-cursor {
   cursor: col-resize;
 }
+
+
+/* A heading flashes briefly when the table of contents scrolls to it. */
+.tiptap-editor .toc-flash {
+  border-radius: 6px;
+  animation: toc-flash 1100ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes toc-flash {
+  from {
+    background-color: hsl(var(--primary) / 22%);
+    box-shadow: 0 0 0 6px hsl(var(--primary) / 22%);
+  }
+  to {
+    background-color: transparent;
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tiptap-editor .toc-flash {
+    animation: none;
+  }
+}

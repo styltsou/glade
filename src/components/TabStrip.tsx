@@ -46,6 +46,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   const split = useStore((s) => s.tabsState.groups.length > 1);
   const activate = useStore((s) => s.activateTab);
   const close = useStore((s) => s.closeTab);
+  const closeOthers = useStore((s) => s.closeOtherTabs);
   const focusGroup = useStore((s) => s.focusGroup);
   const newTab = useStore((s) => s.newTab);
   const splitActive = useStore((s) => s.splitActive);
@@ -221,7 +222,8 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
             onClick={(e) => e.stopPropagation()}
           >
             <ContextMenuItem onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>
-            {group.tabs.length > 1 && <ContextMenuItem onSelect={() => group.tabs.filter((t) => t.id !== tab.id).forEach((t) => close(index, t.id))}>Close other tabs</ContextMenuItem>}
+            {group.tabs.length > 1 && <ContextMenuItem onSelect={() => closeOthers(index, tab.id, "others")}>Close other tabs</ContextMenuItem>}
+            {group.tabs[group.tabs.length - 1]?.id !== tab.id && <ContextMenuItem onSelect={() => closeOthers(index, tab.id, "right")}>Close tabs to the right</ContextMenuItem>}
             <ContextMenuSeparator />
             {split
               ? (tab.path === null || !otherHas(tab.path)) && <ContextMenuItem onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>

@@ -16,6 +16,7 @@ import { WelcomeHome } from "@/components/WelcomeHome";
 import { PaneArea } from "@/components/PaneArea";
 import { FolderSwitcher } from "@/components/FolderSwitcher";
 import { MissingLinkDialog } from "@/components/MissingLinkDialog";
+import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { RootMissing } from "@/components/RootMissing";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
@@ -99,6 +100,7 @@ function SharedDialogs() {
         <FolderSwitcher />
       </ErrorBoundary>
       <MissingLinkDialog />
+      <ShortcutsDialog />
     </>
   );
 }

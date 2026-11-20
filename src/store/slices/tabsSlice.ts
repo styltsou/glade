@@ -31,6 +31,8 @@ export interface TabsSlice {
   activateTab: (group: number, id: string) => void;
   closeTab: (group: number, id: string) => void;
   closeActiveTab: () => void;
+  /** Close the other tabs of a pane, or only the ones after `id`. The tab stays open and active if it was. */
+  closeOtherTabs: (group: number, id: string, which: "others" | "right") => void;
   /** Recently closed tabs, newest last (capped). */
   closedTabs: T.ClosedTab[];
   setClosedTabs: (list: T.ClosedTab[]) => void;
@@ -132,6 +134,14 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
       const id = T.focusedGroup(s).activeId;
       remember(T.closedEntry(s, s.focused, id));
       apply(T.closeTab(s, s.focused, id));
+    },
+    closeOtherTabs: (group, id, which) => {
+      const state = get().tabsState;
+      const { state: next, closedIds } = T.closeTabsAround(state, group, id, which);
+      if (closedIds.length === 0) return;
+      // Left to right, so reopening brings back the right-most one first.
+      closedIds.forEach((closed) => remember(T.closedEntry(state, group, closed)));
+      apply(next);
     },
     reopenClosedTab: () => {
       // Check against the files on disk every time: something may have been removed since it was closed.

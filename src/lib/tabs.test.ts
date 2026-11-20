@@ -167,6 +167,36 @@ describe("closing", () => {
 		expect(paths(s)).toEqual([["a.md"]]);
 	});
 
+	it("closes all other tabs and activates the one that stays", () => {
+		let s = T.openInNewTab(T.openInNewTab(T.initialTabs("a.md"), "b.md"), "c.md");
+		const b = s.groups[0].tabs[1].id;
+		const { state, closedIds } = T.closeTabsAround(s, 0, b, "others");
+		expect(paths(state)).toEqual([["b.md"]]);
+		expect(active(state)).toBe("b.md");
+		expect(closedIds).toHaveLength(2);
+	});
+
+	it("closes only the tabs to the right and keeps the active one if it stays", () => {
+		let s = T.openInNewTab(T.openInNewTab(T.initialTabs("a.md"), "b.md"), "c.md");
+		const [a, b] = s.groups[0].tabs.map((t) => t.id);
+		s = T.activateTab(s, 0, a);
+		const keepActive = T.closeTabsAround(s, 0, b, "right");
+		expect(paths(keepActive.state)).toEqual([["a.md", "b.md"]]);
+		expect(active(keepActive.state)).toBe("a.md");
+		// If the active tab is one of those closed, the clicked tab takes over.
+		const c = s.groups[0].tabs[2].id;
+		const onRight = T.closeTabsAround(T.activateTab(s, 0, c), 0, a, "right");
+		expect(paths(onRight.state)).toEqual([["a.md"]]);
+		expect(active(onRight.state)).toBe("a.md");
+	});
+
+	it("does nothing when there is nothing to close", () => {
+		const s = T.openInNewTab(T.initialTabs("a.md"), "b.md");
+		const last = s.groups[0].tabs[1].id;
+		expect(T.closeTabsAround(s, 0, last, "right")).toEqual({ state: s, closedIds: [] });
+		expect(T.closeTabsAround(s, 0, "missing", "others").closedIds).toEqual([]);
+	});
+
 	it("reorders tabs within a pane", () => {
 		let s = T.openInNewTab(T.openInNewTab(T.initialTabs("a.md"), "b.md"), "c.md");
 		s = T.reorder(s, 0, 0, 2);

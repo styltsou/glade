@@ -3,8 +3,14 @@
  * them and shows their labels, so a shortcut and its hint can never disagree.
  */
 
+/** Ctrl+1..8 jump to that tab; Ctrl+9 jumps to the last one, as in Chrome. */
+export const TAB_DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+export type TabDigit = (typeof TAB_DIGITS)[number];
+
 export type GlobalCommand =
   | "toggle-command-palette"
+  | "show-shortcuts"
+  | `go-to-tab-${TabDigit}`
   | "new-note"
   | "new-folder"
   | "delete"
@@ -41,6 +47,8 @@ export interface Keybinding extends Shortcut {
 export const KEYBINDINGS: Keybinding[] = [
   { command: "toggle-command-palette", code: "KeyK", mod: true },
   { command: "toggle-command-palette", code: "KeyP", mod: true },
+  // Ctrl+Shift+/ is Ctrl+? on a US keyboard.
+  { command: "show-shortcuts", code: "Slash", mod: true, shiftKey: true },
   { command: "new-note", code: "KeyN", mod: true },
   { command: "new-folder", code: "KeyN", mod: true, shiftKey: true },
   { command: "delete", code: "KeyD", mod: true },
@@ -56,6 +64,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "new-tab", code: "KeyT", mod: true },
   { command: "close-tab", code: "KeyW", mod: true },
   { command: "reopen-closed-tab", code: "KeyT", mod: true, shiftKey: true },
+  ...TAB_DIGITS.map((d): Keybinding => ({ command: `go-to-tab-${d}`, code: `Digit${d}`, mod: true })),
   { command: "split-right", key: "\\", mod: true },
   // WebKitGTK reports Ctrl+\ as a control character, so match the physical key too.
   { command: "split-right", code: "Backslash", mod: true },
@@ -84,6 +93,13 @@ export function matchesShortcut(event: KeyboardEvent, kb: Shortcut): boolean {
   const otherDown = mac ? event.ctrlKey : event.metaKey;
   if (!!kb.mod !== modDown || otherDown) return false;
   return true;
+}
+
+/** The tab a "go to tab" command targets: its position (1-8), or "last" for Ctrl+9. */
+export function tabJumpTarget(command: GlobalCommand): number | "last" | null {
+  const m = /^go-to-tab-(\d)$/.exec(command);
+  if (!m) return null;
+  return m[1] === "9" ? "last" : Number(m[1]);
 }
 
 export function bindingFor(command: GlobalCommand): Keybinding | undefined {

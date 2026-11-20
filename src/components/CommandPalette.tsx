@@ -12,6 +12,7 @@ import {
   Copy as CopyIcon,
   CornerDownLeft as CornerDownLeftIcon,
   Download as DownloadIcon,
+  Keyboard as KeyboardIcon,
   Delete as DeleteKeyIcon,
   Eye as EyeIcon,
   FilePlus as FilePlusIcon,
@@ -45,6 +46,7 @@ import {
   isMac,
   matchesShortcut,
   shortcutKeys,
+  tabJumpTarget,
   type GlobalCommand,
 } from "@/lib/keybindings";
 import type { NoteSearchResult } from "@/types";
@@ -52,6 +54,7 @@ import { cn } from "@/lib/utils";
 import { themes, type ThemeId, type ThemeMode } from "@/themes";
 import { applyToDOM, resolveMode } from "@/store/slices/themeSlice";
 import { ThemeSwatch } from "@/components/ThemeSwatch";
+import { openShortcuts } from "@/components/ShortcutsDialog";
 
 type PaletteMode = "search" | "commands" | "themes" | "modes";
 const isPicker = (m: PaletteMode) => m === "themes" || m === "modes";
@@ -110,6 +113,10 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
     ],
   },
   {
+    heading: "Help",
+    items: [{ id: "show-shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon }],
+  },
+  {
     heading: "Danger",
     items: [{ id: "delete", label: "Delete", icon: TrashIcon }],
   },
@@ -153,8 +160,12 @@ function isAvailable(id: CommandId): boolean {
       return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
     case "close-folder":
       return !!s.target;
-    default:
+    default: {
+      // Ctrl+1..9 only apply when that tab exists (9 is the last one).
+      const jump = tabJumpTarget(id as GlobalCommand);
+      if (jump !== null) return inWorkspace && (jump === "last" ? group.tabs.length > 0 : group.tabs.length >= jump);
       return true;
+    }
   }
 }
 
@@ -239,6 +250,9 @@ function runCommand(id: CommandId): boolean {
     case "reopen-closed-tab":
       s.reopenClosedTab();
       break;
+    case "show-shortcuts":
+      openShortcuts();
+      break;
     case "split-right":
       s.splitActive();
       break;
@@ -269,6 +283,13 @@ function runCommand(id: CommandId): boolean {
     case "toggle-appearance":
       s.toggleAppearance();
       break;
+    default: {
+      const jump = tabJumpTarget(id as GlobalCommand);
+      if (jump !== null) {
+        const tab = jump === "last" ? group.tabs[group.tabs.length - 1] : group.tabs[jump - 1];
+        if (tab) s.activateTab(s.tabsState.focused, tab.id);
+      }
+    }
   }
   return true;
 }

@@ -237,6 +237,24 @@ export function closeTab(state: TabsState, group: number, tabId: string): TabsSt
 	return mapGroup(state, group, () => ({ ...g, tabs, activeId }));
 }
 
+/**
+ * Close several tabs of one pane at once, keeping `keepId` open and active
+ * (like a browser, "close others" lands on the tab you clicked).
+ * `which` picks the tabs to close: all the others, or those after `keepId`.
+ */
+export function closeTabsAround(state: TabsState, group: number, keepId: string, which: "others" | "right"): { state: TabsState; closedIds: string[] } {
+	const g = state.groups[group];
+	const at = g?.tabs.findIndex((t) => t.id === keepId) ?? -1;
+	if (!g || at === -1) return { state, closedIds: [] };
+	const closing = g.tabs.filter((_, i) => (which === "others" ? i !== at : i > at));
+	if (closing.length === 0) return { state, closedIds: [] };
+	const gone = new Set(closing.map((t) => t.id));
+	const tabs = g.tabs.filter((t) => !gone.has(t.id));
+	// The kept tab becomes active only if the active one was closed.
+	const activeId = gone.has(g.activeId) ? keepId : g.activeId;
+	return { state: mapGroup(state, group, () => ({ ...g, tabs, activeId })), closedIds: closing.map((t) => t.id) };
+}
+
 /** What is needed to bring back a closed tab: a note, or a folder overview. */
 export interface ClosedTab {
 	path: string | null;
