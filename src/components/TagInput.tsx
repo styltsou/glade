@@ -5,6 +5,9 @@ import { usePaneNote } from "@/components/editor/PaneContext";
 import { cn } from "@/lib/utils";
 import type { TagCount } from "@/types";
 
+/** Same padding, border and type as a saved tag, so the box is the tag it will become. */
+const TAG_BOX = "px-3.5 border border-transparent text-[13px] font-medium";
+
 export function TagInput() {
   const activeNote = usePaneNote();
   const updateNoteTags = useStore((state) => state.updateNoteTags);
@@ -140,22 +143,36 @@ export function TagInput() {
       {tags.map((tag: string) => (
         <span
           key={tag}
-          className="group inline-flex items-center h-8 px-3.5 rounded-full border border-transparent bg-foreground/[0.06] text-[13px] font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.1] hover:text-foreground cursor-default select-none"
+          // On hover the × keeps the tag's 14px rhythm: 14px from the text and
+          // 14px from the edge, measured to its strokes (the icon box has ~4.5px
+          // of empty space around them, so margin and padding are 10px).
+          className="group inline-flex items-center h-8 px-3.5 hover:pr-2.5 rounded-full border border-transparent bg-foreground/[0.06] text-[13px] font-medium text-muted-foreground transition-[padding,background-color,color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-foreground/[0.1] hover:text-foreground cursor-default select-none motion-reduce:transition-colors"
         >
           {tag}
           <button
+            type="button"
+            aria-label={`Remove ${tag}`}
             onClick={() => removeTag(tag)}
-            className="w-0 opacity-0 group-hover:w-4 group-hover:ml-1.5 group-hover:opacity-100 transition-all duration-100 overflow-hidden flex items-center justify-center hover:text-foreground cursor-pointer"
+            className="flex w-0 items-center justify-center overflow-hidden opacity-0 transition-[width,margin,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:ml-2.5 group-hover:w-4 group-hover:opacity-100 hover:text-foreground cursor-pointer motion-reduce:transition-none"
           >
-            <Cross2Icon className="w-3.5 h-3.5" />
+            <Cross2Icon className="size-3.5 shrink-0 scale-75 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-100" />
           </button>
         </span>
       ))}
 
       <div className="relative" ref={containerRef}>
+        {/* Invisible copy of the text sizes the box; the input sits on top of it.
+            (As a grid or flex item the input's own default width, about 20
+            characters, would win.) */}
+        <span aria-hidden className={cn(TAG_BOX, "invisible inline-flex h-8 items-center whitespace-pre")}>
+          {inputValue || "+ add tag"}
+        </span>
         <input
           ref={inputRef}
-          className="bg-foreground/[0.06] px-3.5 rounded-full border border-transparent hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent outline-none text-[13px] h-8 text-muted-foreground font-medium placeholder:text-muted-foreground/60 w-28 focus:ring-0 focus:text-foreground transition-all"
+          className={cn(
+            TAG_BOX,
+            "absolute inset-0 h-8 w-full min-w-0 rounded-full bg-foreground/[0.06] text-muted-foreground outline-none placeholder:text-muted-foreground/60 hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent focus:text-foreground focus:ring-0 transition-colors",
+          )}
           value={inputValue}
           onChange={(e) => {
             const val = e.target.value;
