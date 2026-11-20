@@ -208,7 +208,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
                 // end of the name, so the fade starts further in.
                 "[mask-image:linear-gradient(to_left,transparent,black_20px)]",
                 active ? "@max-[100px]/tab:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]" : "@max-[100px]/tab:group-hover:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]")}>{label}</span></button></Tip>
-              <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground/70 transition-[color,opacity] duration-100 hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
+              <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/70 transition-[color,background-color,opacity] duration-100 hover:bg-foreground/[0.12] hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
                 // Narrow inactive tabs show their close button only on hover, like a browser's.
                 active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}><X className="size-3.5" /></button>
             </div>
