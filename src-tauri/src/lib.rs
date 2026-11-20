@@ -35,6 +35,18 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        // Remember each window's size, position and maximized state between runs.
+        .plugin(
+            // Not VISIBLE or DECORATIONS: the frontend shows the window itself, and it is frameless.
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::SIZE
+                        | tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED,
+                )
+                .with_filter(|label| !label.starts_with("export-pdf-"))
+                .build(),
+        )
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             let paths: Vec<String> = args.into_iter().skip(1).collect();
             let opened = launch::handle_args(app, &paths, std::path::Path::new(&cwd));

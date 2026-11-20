@@ -13,6 +13,7 @@
     "dialog:default",
     "updater:default",
     "process:allow-restart",
+    "window-state:default",
     "core:window:allow-close",
     "core:window:allow-minimize",
     "core:window:allow-maximize",
