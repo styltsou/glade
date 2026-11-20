@@ -87,6 +87,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         tab_layout_version?: number;
         active_tabs?: number[];
         split_ratio?: number;
+        closed_tabs?: string[];
       }>("get_workspace_ui");
       // The window may have moved on to another folder while this loaded.
       if (get().target?.path !== root) return;
@@ -101,6 +102,14 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         { groups: ui.tabs ?? [], activeIndex: ui.active_tabs ?? [], focused: ui.focused_pane ?? 0, ratio: ui.split_ratio || 0.5 },
         (p) => !!idToPath[p],
         (folder) => !!findEntryByPath(get().entries, folder)?.is_dir,
+      );
+      // Bring back the closed-tab history, dropping anything that has gone since.
+      get().setClosedTabs(
+        T.pruneClosed(
+          (ui.closed_tabs ?? []).map(T.decodeClosed).filter((e): e is T.ClosedTab => e !== null),
+          (p) => !!idToPath[p],
+          (folder) => !!findEntryByPath(get().entries, folder)?.is_dir,
+        ),
       );
       if (restored && T.isPristine(get().tabsState)) {
         set({ tabsState: restored });
@@ -124,6 +133,9 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
     await invoke("save_workspace_ui", {
       ui: {
         tabs: relativeTabs,
+        closed_tabs: get()
+          .closedTabs.map(T.encodeClosed)
+          .filter((p): p is string => !!p && !p.startsWith("/")),
         tab_layout_version: 3,
         active_tabs: saved.activeIndex,
         split_ratio: saved.ratio,

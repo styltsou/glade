@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { NoteData } from "@/types";
 import * as T from "@/lib/tabs";
 import type { StoreState } from "../index";
+import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 
 export interface TabsSlice {
   tabsState: T.TabsState;
@@ -30,6 +31,11 @@ export interface TabsSlice {
   activateTab: (group: number, id: string) => void;
   closeTab: (group: number, id: string) => void;
   closeActiveTab: () => void;
+  /** Recently closed tabs, newest last (capped). */
+  closedTabs: T.ClosedTab[];
+  setClosedTabs: (list: T.ClosedTab[]) => void;
+  /** Bring back the most recently closed tab that is not already open. Returns whether one came back. */
+  reopenClosedTab: () => boolean;
   closePathTab: (path: string) => void;
   splitActive: () => void;
   moveTabToOtherGroup: (group: number, id: string) => void;
@@ -41,10 +47,18 @@ export interface TabsSlice {
   resetTabs: (state?: T.TabsState) => void;
 }
 
+const MAX_CLOSED_TABS = 10;
+
 export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set, get) => {
   const apply = (next: T.TabsState) => {
     set({ tabsState: next });
     void get().syncFocusedNote();
+  };
+
+  /** Push onto the closed-tabs stack. Like a browser, closing the same page twice leaves two entries. */
+  const remember = (entry: T.ClosedTab | null) => {
+    if (!entry) return;
+    set({ closedTabs: [...get().closedTabs, entry].slice(-MAX_CLOSED_TABS) });
   };
 
   return {
@@ -106,10 +120,37 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
       set({ tabsState: T.newTab(get().tabsState), activeNote: null, currentFolder: null });
     },
     activateTab: (group, id) => apply(T.activateTab(get().tabsState, group, id)),
-    closeTab: (group, id) => apply(T.closeTab(get().tabsState, group, id)),
+    closedTabs: [],
+    setClosedTabs: (list) => set({ closedTabs: list.slice(-MAX_CLOSED_TABS) }),
+    closeTab: (group, id) => {
+      const state = get().tabsState;
+      remember(T.closedEntry(state, group, id));
+      apply(T.closeTab(state, group, id));
+    },
     closeActiveTab: () => {
       const s = get().tabsState;
-      apply(T.closeTab(s, s.focused, T.focusedGroup(s).activeId));
+      const id = T.focusedGroup(s).activeId;
+      remember(T.closedEntry(s, s.focused, id));
+      apply(T.closeTab(s, s.focused, id));
+    },
+    reopenClosedTab: () => {
+      // Check against the files on disk every time: something may have been removed since it was closed.
+      const { idToPath, entries } = get();
+      const stack = T.pruneClosed(
+        get().closedTabs,
+        (p) => !!idToPath[p],
+        (f) => !!findEntryByPath(entries, f)?.is_dir,
+      );
+      const state = get().tabsState;
+      while (stack.length) {
+        const entry = stack.pop()!;
+        if (T.isOpenElsewhere(state, entry)) continue;
+        set({ closedTabs: stack });
+        apply(T.reopenTab(state, entry));
+        return true;
+      }
+      set({ closedTabs: [] });
+      return false;
     },
     closePathTab: (path) => apply(T.closePathTab(get().tabsState, path)),
     splitActive: () => apply(T.splitActive(get().tabsState)),
@@ -121,9 +162,17 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
     setTabRatio: (ratio) => set({ tabsState: T.setRatio(get().tabsState, ratio) }),
     reorderTabs: (group, from, to) => set({ tabsState: T.reorder(get().tabsState, group, from, to) }),
 
-    tabsRenamePath: (from, to) => set({ tabsState: T.renamePath(get().tabsState, from, to) }),
-    tabsRemovePath: (path) => apply(T.removePath(get().tabsState, path)),
+    tabsRenamePath: (from, to) =>
+      set({
+        tabsState: T.renamePath(get().tabsState, from, to),
+        closedTabs: T.renameClosed(get().closedTabs, from, to),
+      }),
+    tabsRemovePath: (path) => {
+      // A deleted note can't come back, so drop it from the closed stack too.
+      set({ closedTabs: T.removeClosed(get().closedTabs, path) });
+      apply(T.removePath(get().tabsState, path));
+    },
 
-    resetTabs: (state) => set({ tabsState: state ?? T.initialTabs(), activeNote: null }),
+    resetTabs: (state) => set({ tabsState: state ?? T.initialTabs(), activeNote: null, closedTabs: [] }),
   };
 };

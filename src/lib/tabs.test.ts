@@ -293,3 +293,46 @@ describe("root folder tab", () => {
 		expect(back.groups[0].tabs.map((t) => t.path)).toEqual(["a.md"]);
 	});
 });
+
+describe("reopening closed tabs", () => {
+	it("remembers notes and folders, but not blank tabs", () => {
+		let s = T.openInNewTab(T.initialTabs("a.md"), "b.md");
+		const b = s.groups[0].tabs[1].id;
+		expect(T.closedEntry(s, 0, b)).toEqual({ path: "b.md" });
+		s = T.newTab(s);
+		expect(T.closedEntry(s, 0, s.groups[0].activeId)).toBeNull();
+		s = T.openFolder(T.initialTabs("a.md"), "docs");
+		expect(T.closedEntry(s, 0, s.groups[0].activeId)).toEqual({ path: null, folder: "docs" });
+	});
+
+	it("brings a note back next to the active tab", () => {
+		const s = T.reopenTab(T.initialTabs("a.md"), { path: "b.md" });
+		expect(paths(s)).toEqual([["a.md", "b.md"]]);
+		expect(active(s)).toBe("b.md");
+	});
+
+	it("knows when a tab is already open", () => {
+		const s = T.initialTabs("a.md");
+		expect(T.isOpenElsewhere(s, { path: "a.md" })).toBe(true);
+		expect(T.isOpenElsewhere(s, { path: "b.md" })).toBe(false);
+	});
+});
+
+describe("closed tab history", () => {
+	it("round-trips through its saved form", () => {
+		const list: T.ClosedTab[] = [{ path: "a.md" }, { path: null, folder: "docs" }, { path: null, folder: null }];
+		expect(list.map(T.encodeClosed).map(T.decodeClosed)).toEqual(list);
+	});
+
+	it("drops entries whose note or folder is gone", () => {
+		const list: T.ClosedTab[] = [{ path: "a.md" }, { path: "gone.md" }, { path: null, folder: "docs" }, { path: null, folder: "nope" }];
+		const kept = T.pruneClosed(list, (p) => p === "a.md", (f) => f === "docs");
+		expect(kept).toEqual([{ path: "a.md" }, { path: null, folder: "docs" }]);
+	});
+
+	it("follows renames and deletes, including inside folders", () => {
+		const list: T.ClosedTab[] = [{ path: "docs/a.md" }, { path: "b.md" }, { path: null, folder: "docs" }];
+		expect(T.renameClosed(list, "docs", "notes")).toEqual([{ path: "notes/a.md" }, { path: "b.md" }, { path: null, folder: "notes" }]);
+		expect(T.removeClosed(list, "docs")).toEqual([{ path: "b.md" }]);
+	});
+});

@@ -44,6 +44,9 @@ pub struct WorkspaceState {
     pub active_tabs: Vec<usize>,
     #[serde(default)]
     pub split_ratio: f64,
+    /// Recently closed tabs, newest last ("a.md", "sub/" for a folder, "./" for the root).
+    #[serde(default)]
+    pub closed_tabs: Vec<String>,
 }
 
 /// The parts of a folder's state the UI owns and saves as a whole. Pins are
@@ -70,6 +73,9 @@ pub struct UiState {
     pub active_tabs: Vec<usize>,
     #[serde(default)]
     pub split_ratio: f64,
+    /// Recently closed tabs, newest last ("a.md", "sub/" for a folder, "./" for the root).
+    #[serde(default)]
+    pub closed_tabs: Vec<String>,
 }
 
 impl WorkspaceState {
@@ -85,6 +91,7 @@ impl WorkspaceState {
             tab_layout_version: self.tab_layout_version,
             active_tabs: self.active_tabs.clone(),
             split_ratio: self.split_ratio,
+            closed_tabs: self.closed_tabs.clone(),
         }
     }
 
@@ -99,6 +106,7 @@ impl WorkspaceState {
         self.tab_layout_version = ui.tab_layout_version;
         self.active_tabs = ui.active_tabs;
         self.split_ratio = ui.split_ratio;
+        self.closed_tabs = ui.closed_tabs;
     }
 }
 
@@ -276,6 +284,7 @@ mod tests {
             tab_layout_version: 2,
             active_tabs: vec![0, 0],
             split_ratio: 0.5,
+            closed_tabs: vec!["old.md".into(), "docs/".into()],
         });
         save_in(base.path(), root.path(), &st).unwrap();
 
@@ -289,6 +298,7 @@ mod tests {
         assert_eq!(back.ui().active_tab, 1);
         assert_eq!(back.ui().tab_layout_version, 2);
         assert_eq!(back.ui().active_tabs, vec![0, 0]);
+        assert_eq!(back.ui().closed_tabs, vec!["old.md", "docs/"]);
         assert_eq!(back.ui().split_ratio, 0.5);
         // Older state files without these fields still load.
         let old = r#"{"root":"/x","pinned":["p.md"]}"#;

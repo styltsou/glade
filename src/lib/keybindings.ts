@@ -16,6 +16,7 @@ export type GlobalCommand =
   | "toggle-raw-mode"
   | "new-tab"
   | "close-tab"
+  | "reopen-closed-tab"
   | "split-right"
   | "toggle-home"
   | "open-recent"
@@ -54,6 +55,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "toggle-raw-mode", code: "KeyR", mod: true, shiftKey: true },
   { command: "new-tab", code: "KeyT", mod: true },
   { command: "close-tab", code: "KeyW", mod: true },
+  { command: "reopen-closed-tab", code: "KeyT", mod: true, shiftKey: true },
   { command: "split-right", key: "\\", mod: true },
   // WebKitGTK reports Ctrl+\ as a control character, so match the physical key too.
   { command: "split-right", code: "Backslash", mod: true },

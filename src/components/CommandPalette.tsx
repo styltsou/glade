@@ -90,6 +90,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
     heading: "Navigate",
     items: [
       { id: "toggle-home", label: "Go to Home", icon: HomeIcon },
+      { id: "reopen-closed-tab", label: "Reopen closed tab", icon: HistoryIcon },
       { id: "open-recent", label: "Open recent", icon: HistoryIcon },
       { id: "open-folder", label: "Open folder", icon: FolderOpenIcon },
       { id: "open-file", label: "Open file", icon: FileTextIcon },
@@ -146,6 +147,8 @@ function isAvailable(id: CommandId): boolean {
       return inWorkspace;
     case "close-tab":
       return inWorkspace && group.tabs.length > 0;
+    case "reopen-closed-tab":
+      return inWorkspace && s.closedTabs.length > 0;
     case "split-right":
       return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
     case "close-folder":
@@ -232,6 +235,9 @@ function runCommand(id: CommandId): boolean {
       break;
     case "close-tab":
       s.closeTab(s.tabsState.focused, activeTab(s.tabsState).id || group.activeId);
+      break;
+    case "reopen-closed-tab":
+      s.reopenClosedTab();
       break;
     case "split-right":
       s.splitActive();

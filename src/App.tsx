@@ -176,6 +176,7 @@ function App() {
         s.noteEditMode === prev.noteEditMode &&
         s.noteScrollPositions === prev.noteScrollPositions &&
         s.tabsState === prev.tabsState &&
+        s.closedTabs === prev.closedTabs &&
         s.activeNote?.path === prev.activeNote?.path
       ) {
         return;

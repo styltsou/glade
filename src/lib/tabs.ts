@@ -237,6 +237,69 @@ export function closeTab(state: TabsState, group: number, tabId: string): TabsSt
 	return mapGroup(state, group, () => ({ ...g, tabs, activeId }));
 }
 
+/** What is needed to bring back a closed tab: a note, or a folder overview. */
+export interface ClosedTab {
+	path: string | null;
+	folder?: string | null;
+}
+
+/** The tab as it would be remembered, or null for blank "new tab" pages (nothing to bring back). */
+export function closedEntry(state: TabsState, group: number, tabId: string): ClosedTab | null {
+	const tab = state.groups[group]?.tabs.find((t) => t.id === tabId);
+	if (!tab) return null;
+	if (tab.path !== null) return { path: tab.path };
+	return tab.folder === undefined ? null : { path: null, folder: tab.folder };
+}
+
+/** Saved form of a closed tab: same encoding as saved tabs ("a.md", "sub/", "./"). */
+export function encodeClosed(e: ClosedTab): string | null {
+	return savedTab({ id: "", path: e.path, folder: e.folder });
+}
+
+export function decodeClosed(p: unknown): ClosedTab | null {
+	if (typeof p !== "string" || p === "") return null;
+	if (p === ROOT_SAVED) return { path: null, folder: null };
+	if (p.endsWith("/")) return p.startsWith("/") ? null : { path: null, folder: p.slice(0, -1) };
+	return { path: p };
+}
+
+/** Keep only closed tabs whose note or folder still exists (outside files are kept as they are). */
+export function pruneClosed(
+	list: ClosedTab[],
+	exists: (path: string) => boolean,
+	folderExists: (folder: string) => boolean,
+): ClosedTab[] {
+	return list.filter((e) =>
+		e.path !== null ? e.path.startsWith("/") || exists(e.path) : e.folder === null || e.folder === undefined || folderExists(e.folder),
+	);
+}
+
+/** A note or folder moved: update closed tabs inside it too. */
+export function renameClosed(list: ClosedTab[], from: string, to: string): ClosedTab[] {
+	const prefix = `${from.replace(/\/$/, "")}/`;
+	const fix = (p: string) => (p === from ? to : p.startsWith(prefix) ? `${to.replace(/\/$/, "")}/${p.slice(prefix.length)}` : p);
+	return list.map((e) => (e.path !== null ? { ...e, path: fix(e.path) } : typeof e.folder === "string" ? { ...e, folder: fix(e.folder) } : e));
+}
+
+/** A note or folder was deleted: forget closed tabs inside it. */
+export function removeClosed(list: ClosedTab[], path: string): ClosedTab[] {
+	const prefix = `${path.replace(/\/$/, "")}/`;
+	const gone = (p: string | null | undefined) => typeof p === "string" && (p === path || p.startsWith(prefix));
+	return list.filter((e) => !gone(e.path) && !gone(e.folder));
+}
+
+export function isOpenElsewhere(state: TabsState, entry: ClosedTab): boolean {
+	return entry.path !== null ? !!findOpen(state, entry.path) : !!findFolder(state, entry.folder ?? null);
+}
+
+/** Open a closed tab again as a new tab next to the active one in the focused pane. */
+export function reopenTab(state: TabsState, entry: ClosedTab): TabsState {
+	if (entry.path !== null) return openInNewTab(state, entry.path);
+	const open = findFolder(state, entry.folder ?? null);
+	if (open) return reveal(state, open.group, open.tabId);
+	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, entry.folder ?? null)));
+}
+
 /** Close every tab showing `path`, in every pane (used when a note is deleted). */
 export function closePathTab(state: TabsState, path: string): TabsState {
 	let next = state;
