@@ -1,6 +1,6 @@
 import { useEditor } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   useCallback,
   useEffect,
@@ -11,7 +11,7 @@ import {
 } from "react";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
-import { TableOfContents } from "@/components/editor/TableOfContents";
+import { TableOfContents, TOC_GUTTER } from "@/components/editor/TableOfContents";
 import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/editor/SearchHighlight";
 import { useStore } from "@/store";
 import { extensions } from "./editor/extensions";
@@ -55,8 +55,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   );
   const tocOpen = useStore((state) => state.tocOpen);
   const toggleToc = useStore((state) => state.toggleToc);
-  const tocInitialized = useStore((state) => state.tocInitialized);
-  const markTocInitialized = useStore((state) => state.markTocInitialized);
+  const reduceMotion = useReducedMotion();
   const tocWidth = useStore((state) => state.tocWidth);
   const noteEditMode = useStore((state) => state.noteEditMode);
   const setNoteEditMode = useStore((state) => state.setNoteEditMode);
@@ -506,13 +505,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   }, [editor]);
 
   const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
-  const shouldAnimateToc = activeNote && isTocOpen && !tocInitialized[activeNote.path];
-
-  useEffect(() => {
-    if (activeNote && isTocOpen && !tocInitialized[activeNote.path]) {
-      markTocInitialized(activeNote.path);
-    }
-  }, [activeNote, isTocOpen, tocInitialized, markTocInitialized]);
 
   const handleToggleToc = useCallback(() => {
     if (activeNote) {
@@ -729,11 +721,12 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       onMouseDownCapture={onFocus}
       onFocusCapture={onFocus}
       className={cn(
-        "@container/pane flex flex-col flex-1 h-full min-w-0 bg-background overflow-hidden relative",
+        "@container/pane flex flex-1 h-full min-w-0 bg-background overflow-hidden relative",
         split && "transition-[box-shadow] duration-150",
 
       )}
     >
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
       {!mermaidFullscreenOpen && (
         <NoteHeader
           notePath={activeNote.path}
@@ -812,14 +805,18 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           isEditMode={isEditMode}
           onExitEditMode={handleExitEditMode}
         />
-        <AnimatePresence>
+      </div>
+      </div>
+      {/* Opens like a drawer: the clip reveals the card from its right edge while it fades in.
+            Exit is quicker than enter. Not animated when a note mounts with the drawer already open.
+            It spans the full pane height, beside the toolbar, which narrows to make room. */}
+        <AnimatePresence initial={false}>
           {isTocOpen && (
             <motion.div
-              initial={shouldAnimateToc ? { width: 0, opacity: 0 } : false}
-              animate={{ width: tocWidth, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.1, ease: "easeOut" }}
-              className="shrink-0"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: tocWidth + TOC_GUTTER, opacity: 1, transition: { duration: reduceMotion ? 0.12 : 0.24, ease: [0.32, 0.72, 0, 1] } }}
+              exit={{ width: 0, opacity: 0, transition: { duration: reduceMotion ? 0.1 : 0.16, ease: [0.32, 0.72, 0, 1] } }}
+              className="flex shrink-0 justify-end overflow-hidden"
             >
               <TableOfContents
                 editor={editor}
@@ -830,7 +827,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
     </div>
     </PaneProvider>
   );

@@ -4,6 +4,9 @@ import { X } from "lucide-react";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
 
+/** Space around the floating card (1 left for the resize handle, 2 top/bottom/right); the drawer is this much wider than its card. */
+export const TOC_GUTTER = 12;
+
 interface TocEntry {
   level: number;
   text: string;
@@ -124,20 +127,22 @@ export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfCo
 
   return (
     <div
-      className="relative h-full bg-background border-l border-border select-none"
-      style={{ width: tocWidth }}
+      className="relative h-full shrink-0 py-2 pr-2 pl-1 select-none"
+      style={{ width: tocWidth + TOC_GUTTER }}
     >
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between h-9 px-3 py-0 border-b border-border shrink-0">
-          <span className="text-sm font-semibold truncate">Contents</span>
+      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-sidebar shadow-sm">
+        <div className="flex items-center justify-between h-9 pl-4 pr-2 shrink-0">
+          <span className="text-[13px] font-medium tracking-[-0.005em] text-muted-foreground truncate">On this page</span>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1 rounded-md hover:bg-muted h-6 w-6 flex items-center justify-center shrink-0"
+            aria-label="Close contents"
+            className="press flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="size-3.5" />
           </button>
         </div>
-        <div className="flex-1 overflow-auto p-2 scrollbar-thin">
+        <div className="flex-1 overflow-auto px-2 pb-2 overlay-scroll">
           <TocList
             entries={headings}
             onHeadingClick={handleHeadingClick}
@@ -147,7 +152,7 @@ export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfCo
       </div>
       <div
         className={cn(
-          "absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-primary/30 transition-colors",
+          "absolute left-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-primary/30 transition-colors",
           isResizing && "bg-primary/50"
         )}
         onMouseDown={handleMouseDown}
@@ -167,14 +172,14 @@ function TocList({
 }) {
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground px-2 py-1">
-        No headings found
+      <p className="px-2.5 py-1.5 text-[13px] text-muted-foreground/70">
+        No headings yet. Add a heading to build an outline.
       </p>
     );
   }
 
   return (
-    <ul className="space-y-0.5">
+    <ul className="space-y-px">
       {entries.map((entry, idx) => {
         const isActive = activeIdx === idx;
         return (
@@ -182,13 +187,17 @@ function TocList({
             <button
               onClick={() => onHeadingClick(entry.pos)}
               className={cn(
-                "w-full text-left text-sm py-1 px-2 rounded-md transition-colors truncate block",
-                entry.level === 1 && "font-semibold",
-                entry.level === 2 && "pl-4",
-                entry.level === 3 && "pl-8",
+                "block w-full truncate rounded-lg py-[7px] pr-2.5 text-left text-sm tracking-[-0.005em] transition-colors",
+                entry.level <= 1 && "pl-2.5",
+                entry.level === 2 && "pl-5",
+                entry.level === 3 && "pl-7.5",
                 entry.level >= 4 && "pl-10",
-                isActive && "bg-primary/10 text-primary",
-                !isActive && "text-muted-foreground hover:text-foreground hover:bg-muted"
+                isActive
+                  ? "bg-foreground/[0.09] font-medium text-foreground shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
+                  : cn(
+                      "hover:bg-foreground/[0.06] hover:text-foreground active:bg-foreground/[0.09]",
+                      entry.level <= 1 ? "text-sidebar-foreground" : "text-muted-foreground"
+                    )
               )}
             >
               {entry.text}
