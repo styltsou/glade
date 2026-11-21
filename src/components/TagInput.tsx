@@ -143,17 +143,20 @@ export function TagInput() {
       {tags.map((tag: string) => (
         <span
           key={tag}
-          // On hover the × keeps the tag's 14px rhythm: 14px from the text and
-          // 14px from the edge, measured to its strokes (the icon box has ~4.5px
-          // of empty space around them, so margin and padding are 10px).
+          // On hover the × sits ~12px from the text and ~14px from the edge,
+          // measured to its strokes (the icon box has ~4.5px of empty space
+          // around them, so the margin is 8px and the padding 10px).
           className="group inline-flex items-center h-8 px-3.5 hover:pr-2.5 rounded-full border border-transparent bg-foreground/[0.06] text-[13px] font-medium text-muted-foreground transition-[padding,background-color,color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-foreground/[0.1] hover:text-foreground cursor-default select-none motion-reduce:transition-colors"
         >
-          {tag}
+          {/* Tags are lowercase, so the eye centers the x-height, which sits
+              1px below the middle when the caps are centered. Lift the text,
+              not the ×. */}
+          <span className="-translate-y-px">{tag}</span>
           <button
             type="button"
             aria-label={`Remove ${tag}`}
             onClick={() => removeTag(tag)}
-            className="flex w-0 items-center justify-center overflow-hidden opacity-0 transition-[width,margin,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:ml-2.5 group-hover:w-4 group-hover:opacity-100 hover:text-foreground cursor-pointer motion-reduce:transition-none"
+            className="flex w-0 items-center justify-center overflow-hidden opacity-0 transition-[width,margin,opacity] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:ml-2 group-hover:w-4 group-hover:opacity-100 hover:text-foreground cursor-pointer motion-reduce:transition-none"
           >
             <Cross2Icon className="size-3.5 shrink-0 scale-75 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-100" />
           </button>
@@ -171,7 +174,8 @@ export function TagInput() {
           ref={inputRef}
           className={cn(
             TAG_BOX,
-            "absolute inset-0 h-8 w-full min-w-0 rounded-full bg-foreground/[0.06] text-muted-foreground outline-none placeholder:text-muted-foreground/60 hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent focus:text-foreground focus:ring-0 transition-colors",
+            // pb-0.5 lifts the text 1px, like the saved tag's.
+            "absolute inset-0 h-8 w-full min-w-0 pb-0.5 rounded-full bg-foreground/[0.06] text-muted-foreground outline-none placeholder:text-muted-foreground/60 hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent focus:text-foreground focus:ring-0 transition-colors",
           )}
           value={inputValue}
           onChange={(e) => {
