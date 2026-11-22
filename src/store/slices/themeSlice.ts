@@ -20,8 +20,19 @@ export function resolveMode(mode: ThemeMode): "light" | "dark" {
 
 export function applyToDOM(theme: ThemeId, resolvedMode: "light" | "dark") {
   const el = document.documentElement;
-  el.setAttribute("data-theme", knownTheme(theme));
-  el.setAttribute("data-mode", effectiveMode(knownTheme(theme), resolvedMode));
+  const nextTheme = knownTheme(theme);
+  const nextMode = effectiveMode(nextTheme, resolvedMode);
+  if (el.getAttribute("data-theme") === nextTheme && el.getAttribute("data-mode") === nextMode) return;
+
+  // Switch colours in one frame: without this, every element with a colour
+  // transition (buttons, tabs, tags...) fades to the new theme at its own pace.
+  const freeze = document.createElement("style");
+  freeze.textContent = "*,*::before,*::after{transition:none!important}";
+  document.head.appendChild(freeze);
+  el.setAttribute("data-theme", nextTheme);
+  el.setAttribute("data-mode", nextMode);
+  void document.body.offsetHeight; // apply the new colours everywhere while transitions are off
+  setTimeout(() => freeze.remove(), 1);
 }
 
 import type { StoreState } from "../index";
