@@ -10,6 +10,19 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
  * "add block" action. Nested mode is on, so list items and other nested blocks
  * get their own handle (needs the patch in `patches/`).
  */
+/** Blocks whose handles line up with their first line of text. */
+const LINE_CENTERED = new Set(["paragraph", "heading"]);
+
+/** The first line box of a text block: its top and its line height. */
+export function firstLineBox(block: Element, blockRect: DOMRect): { top: number; height: number } {
+	const style = getComputedStyle(block);
+	const fontSize = parseFloat(style.fontSize) || 16;
+	// Computed line-height is in px, or "normal" (about 1.2 times the font size).
+	const height = parseFloat(style.lineHeight) || fontSize * 1.2;
+	const top = blockRect.top + (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.paddingTop) || 0);
+	return { top, height };
+}
+
 export function createBlockDragHandleExtension() {
 	let target: { editor: Editor; node: ProseMirrorNode; pos: number } | undefined;
 	let dragDataListenerAttached = false;
@@ -94,9 +107,15 @@ export function createBlockDragHandleExtension() {
 					const firstRow =
 						currentTarget.node.type.name === "table" ? blockElement.querySelector("table tr") : null;
 					const rowRect = firstRow?.getBoundingClientRect();
+					const controlsHeight = controls.offsetHeight || 24;
+					// Paragraphs and headings: centre on the first line. Pinned to the
+					// block's top, the 24px controls sat ~6px high on a 36px H1 line.
+					const line = !rowRect && LINE_CENTERED.has(currentTarget.node.type.name) ? firstLineBox(blockElement, blockRect) : null;
 					const top = rowRect
-						? rowRect.top + (rowRect.height - (controls.offsetHeight || 28)) / 2
-						: blockRect.top;
+						? rowRect.top + (rowRect.height - controlsHeight) / 2
+						: line
+							? line.top + (line.height - controlsHeight) / 2
+							: blockRect.top;
 					return new DOMRect(editorRect.left + padding, top, 0, rowRect?.height ?? blockRect.height);
 				},
 			};
