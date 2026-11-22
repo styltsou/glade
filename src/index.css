@@ -4,6 +4,7 @@
 @import "@/styles/fonts.css";
 @import "@/styles/tokens.css";
 @import "@/styles/globals.css";
+@import "@/styles/marquee.css";
 @import "@/styles/sonner.css";
 @import "@/styles/editor.css";
 @import "@/styles/mermaid-block.css";

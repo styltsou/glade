@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import {
   Pencil as PencilIcon,
   Copy as CopyIcon,
@@ -170,6 +171,7 @@ function PinnedItem({
         <div className="relative group/note">
           <button
             onClick={onClick}
+            title={name}
             className={cn(
               "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm text-left transition-colors cursor-pointer",
               active
@@ -177,7 +179,7 @@ function PinnedItem({
                 : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
             )}
           >
-            <span className="truncate">{name}</span>
+            <MarqueeText>{name}</MarqueeText>
           </button>
         </div>
       </ContextMenuTrigger>

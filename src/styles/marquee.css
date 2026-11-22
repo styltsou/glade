@@ -1,0 +1,14 @@
+.marquee-viewport {
+  mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-marquee-overflow]:is(:hover, :focus-visible) .marquee-text {
+    animation: marquee-scroll var(--marquee-duration) ease-in-out 150ms forwards;
+  }
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-1 * var(--marquee-distance))); }
+}

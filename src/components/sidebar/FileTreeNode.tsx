@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/context-menu";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
+import { MarqueeText } from "@/components/ui/marquee-text";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   if (entry.is_dir) {
@@ -162,6 +163,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               <button
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}
+                title={entry.name}
                 className={cn(
                   "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-sidebar-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
                 )}
@@ -171,7 +173,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 ) : (
                   <Folder className="size-4 shrink-0 text-muted-foreground" />
                 )}
-                <span className="truncate pr-1">{entry.name}</span>
+                <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
               </button>
             </div>
           </ContextMenuTrigger>
@@ -257,6 +259,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
             onMouseDown={handleMouseDown}
             onMouseEnter={() => prefetchNote(entry.path)}
+            title={entry.name}
             className={cn(
               "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm tracking-[-0.005em] text-left transition-colors cursor-pointer",
               isActive
@@ -264,7 +267,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                 : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
             )}
           >
-            <span className="truncate pr-1">{entry.name}</span>
+            <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
           </button>
         </div>
       </ContextMenuTrigger>
