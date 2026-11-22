@@ -380,3 +380,27 @@ kbd {
     --tw-exit-scale: 1;
   }
 }
+/* The controls use the active theme's surface scale against the glass. */
+.lightbox-control {
+  color: hsl(var(--popover-foreground) / 0.8);
+  transition: background-color 100ms var(--ease-ui), color 100ms var(--ease-ui), transform 100ms var(--ease-ui);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lightbox-control:hover {
+    background-color: hsl(var(--foreground) / 0.14);
+    color: hsl(var(--foreground));
+  }
+}
+
+.lightbox-control:active {
+  background-color: hsl(var(--foreground) / 0.24);
+  color: hsl(var(--foreground));
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lightbox-control:active {
+    transform: none;
+  }
+}
