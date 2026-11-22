@@ -5,6 +5,7 @@
 //! decides what counts as "inside".
 
 use std::path::{Component, Path, PathBuf};
+use std::sync::LazyLock;
 
 use pulldown_cmark::{Event, Options, Parser, Tag};
 use serde::Serialize;
@@ -15,13 +16,29 @@ pub fn percent_decode(s: &str) -> String {
     percent_encoding::percent_decode_str(s).decode_utf8_lossy().to_string()
 }
 
-/// Percent-encode each path segment (spaces become `%20`), keeping `/`.
+/// What can't be read as itself in a link; the same rule as `lib/links.ts`.
+static UNREADABLE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r"[[\p{Z}\p{C}]--[\x{200C}\x{200D}]]").unwrap());
+
+/// A path as a link destination: letters of any script as they are, whatever
+/// markdown or URLs give a meaning to percent-encoded (a space is `%20`).
 pub fn encode_path(p: &str) -> String {
-    p.split('/')
-        .map(|seg| percent_encoding::utf8_percent_encode(seg, percent_encoding::NON_ALPHANUMERIC).to_string())
-        .map(|s| s.replace("%2E", ".").replace("%2D", "-").replace("%5F", "_").replace("%7E", "~"))
-        .collect::<Vec<_>>()
-        .join("/")
+    let mut out = String::with_capacity(p.len());
+    let mut buf = [0; 4];
+    for c in p.chars() {
+        let s: &str = c.encode_utf8(&mut buf);
+        let literal = if c.is_ascii() {
+            c.is_ascii_alphanumeric() || "/.-_~".contains(c)
+        } else {
+            !UNREADABLE.is_match(s)
+        };
+        if literal {
+            out.push(c);
+        } else {
+            out.extend(percent_encoding::utf8_percent_encode(s, percent_encoding::NON_ALPHANUMERIC));
+        }
+    }
+    out
 }
 
 /// Lexically normalize `.` and `..` (no filesystem access).
@@ -79,7 +96,7 @@ pub fn resolve_href(base_dir: &Path, href: &str) -> Option<PathBuf> {
     Some(if p.is_absolute() { normalize(p) } else { normalize(&base_dir.join(p)) })
 }
 
-/// Relative href (percent-encoded) from `from_dir` to `to`.
+/// Relative href (see `encode_path`) from `from_dir` to `to`.
 pub fn relative_href(from_dir: &Path, to: &Path) -> String {
     let from: Vec<_> = from_dir.components().collect();
     let target: Vec<_> = to.components().collect();
@@ -379,6 +396,40 @@ mod tests {
         assert_eq!(relative_href(Path::new("/r/guides"), Path::new("/r/reference/api.md")), "../reference/api.md");
         assert_eq!(relative_href(Path::new("/r"), Path::new("/r/my notes/plan.md")), "my%20notes/plan.md");
         assert_eq!(relative_href(Path::new("/r/a"), Path::new("/r/a/b.md")), "b.md");
+    }
+
+    /// Same cases as `encodePath` in links.test.ts: both sides must write alike.
+    #[test]
+    fn paths_stay_readable() {
+        for (path, href) in [
+            ("έργα/σημειώσεις.md", "έργα/σημειώσεις.md"),
+            ("会議 メモ.md", "会議%20メモ.md"),
+            ("σχέδιο (2)#1?.md", "σχέδιο%20%282%29%231%3F.md"),
+            ("Cafe\u{301} 🚀.md", "Cafe\u{301}%20🚀.md"),
+            ("می\u{200c}خواهم.md", "می\u{200c}خواهم.md"),
+            ("a\u{a0}b.md", "a%C2%A0b.md"),
+            ("a\u{3000}b.md", "a%E3%80%80b.md"),
+            ("a\u{202e}b.md", "a%E2%80%AEb.md"),
+            ("50% off.md", "50%25%20off.md"),
+            ("%CE%B1.md", "%25CE%25B1.md"),
+        ] {
+            assert_eq!(encode_path(path), href);
+            let resolved = resolve_href(Path::new("/r"), href).unwrap();
+            assert_eq!(resolved, Path::new("/r").join(path), "{href}");
+            let source = format!("see [x]({href}) after\n");
+            assert_eq!(find_links(&source)[0].href, href, "parsed whole");
+        }
+    }
+
+    #[test]
+    fn encoded_and_readable_links_are_the_same_link() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("a.md"), "[1](%CE%B1.md) [2](α.md#τέλος)\n").unwrap();
+        let (old, new) = (root.join("α.md"), root.join("νέο όνομα.md"));
+        assert_eq!(inbound_counts(root, &old).unwrap(), (2, 1));
+        apply_inbound(root, &old, &new).unwrap();
+        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "[1](νέο%20όνομα.md) [2](νέο%20όνομα.md#τέλος)\n");
     }
 
     #[test]

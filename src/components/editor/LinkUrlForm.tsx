@@ -2,7 +2,7 @@ import type { Editor } from "@tiptap/core";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { isAllowedUri } from "@tiptap/extension-link";
-import { isAllowedLinkHref } from "@/lib/links";
+import { isAllowedLinkHref, readableHref } from "@/lib/links";
 import { resolveTypedHref } from "@/lib/openLink";
 import { paneNotePath } from "./extensions/PaneNote";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
@@ -12,13 +12,14 @@ import { Tip } from "@/components/ui/tooltip";
 
 /** Inline "Paste or type a link" form: sets, changes or (when empty) removes the link on the selection. */
 export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
-  const [href, setHref] = useState<string>(editor.getAttributes("link").href ?? "");
+  const [href, setHref] = useState<string>(readableHref(editor.getAttributes("link").href ?? ""));
 
   const apply = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = href.trim();
-    const unchanged = text === editor.getAttributes("link").href;
-    const url = !text || unchanged ? text : await resolveTypedHref(text, paneNotePath(editor));
+    const current: string | undefined = editor.getAttributes("link").href;
+    const unchanged = current !== undefined && (text === current || text === readableHref(current));
+    const url = !text ? text : unchanged ? current : await resolveTypedHref(text, paneNotePath(editor));
     if (editor.isDestroyed) return;
     if (url && !isAllowedLinkHref(url, (u) => !!isAllowedUri(u))) {
       toast.error("Enter a valid link.");

@@ -99,7 +99,7 @@ A new `frontmatter` module works on the raw text and never re-serializes the who
 - **Resolving and styling.** A TipTap mark extension decorates link marks by resolving `href` against the current file's directory, using the index plus a batched `stat` command for paths outside the root. The result is one of: `inside`, `outside`, `missing`, `nonMarkdown` or `web`.
 - **Clicking.** The click handler routes by that class. `nonMarkdown` calls `opener`'s `reveal_item_in_dir` and never `open_path`.
 - **Images.** These come through a custom URI scheme, `glade-img://`, registered in Rust. It serves only files whose MIME type is `image/*` and rejects everything else. This avoids granting the asset protocol broad `$HOME/**` read access.
-- **Mentions.** A mention inserts a link mark whose `href` is computed with a relative-path helper and percent-encoded.
+- **Mentions.** A mention inserts a link mark whose `href` is computed with a relative-path helper, percent-encoding only what markdown or URLs need (non-Latin letters stay readable).
 - **Outside files.** An outside file opens as a *loose overlay* in the folder window. That's a view state (`viewing: {kind: 'outside', path}`) and it isn't added to the tree.
 
 ### D8. Link maintenance on rename and move

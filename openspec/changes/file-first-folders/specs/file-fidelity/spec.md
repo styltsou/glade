@@ -58,6 +58,14 @@ When saving an edited file, the system SHALL keep the original text of markdown 
 - **WHEN** a file uses `*` list markers and aligned tables, and the user edits one paragraph elsewhere
 - **THEN** a diff of the saved file shows only that paragraph changed
 
+#### Scenario: Images inside text
+- **WHEN** a note has images in a sentence, a link, a list item, a heading or a table cell, and the user edits a different block
+- **THEN** those images and the text around them are byte-for-byte unchanged
+
+#### Scenario: Source the editor does not show
+- **WHEN** a note has link reference definitions or HTML comments between blocks, and the user edits, adds, deletes or moves a neighbouring block
+- **THEN** the definitions and comments are still in the saved file
+
 ### Requirement: Derived title
 The system SHALL display a note's title from its frontmatter `title`, else its first level-1 heading, else its filename without extension, and SHALL NOT write a title into the file.
 

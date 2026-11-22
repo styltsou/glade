@@ -51,7 +51,8 @@ async function hrefsFor(notePath: string, files: string[]): Promise<{ src: strin
 }
 
 function insertImages(editor: Editor, images: { src: string; alt: string }[], pos?: number) {
-  const nodes = images.map((i) => ({ type: "image", attrs: i }));
+  // Each on its own line; markdown can also hold them inside a sentence.
+  const nodes = images.map((i) => ({ type: "paragraph", content: [{ type: "image", attrs: i }] }));
   const chain = editor.chain().focus();
   if (pos === undefined) chain.insertContent(nodes).run();
   else chain.insertContentAt(pos, nodes).run();

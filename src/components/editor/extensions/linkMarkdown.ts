@@ -1,4 +1,5 @@
 import { defaultMarkdownSerializer } from "@tiptap/pm/markdown";
+import { readableHref } from "@/lib/links";
 import { repairSavedUrls } from "./repairSavedUrls";
 
 const link = defaultMarkdownSerializer.marks.link as any;
@@ -6,6 +7,8 @@ const link = defaultMarkdownSerializer.marks.link as any;
 /**
  * A URL saved as `<https://...>` is literal. tiptap-markdown escapes it anyway,
  * writing backslashes into any URL with `_` or `*` each time a note is saved.
+ *
+ * Links to files are written readable (see `readableHref`).
  */
 export const linkMarkdown = {
   parse: { setup: repairSavedUrls },
@@ -18,7 +21,7 @@ export const linkMarkdown = {
     },
     close(state: any, mark: any, parent: any, index: number) {
       delete state.esc;
-      return link.close(state, mark, parent, index);
+      return link.close(state, { ...mark, attrs: { ...mark.attrs, href: readableHref(mark.attrs.href) } }, parent, index);
     },
   },
 };

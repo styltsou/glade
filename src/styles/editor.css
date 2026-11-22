@@ -313,12 +313,43 @@
   opacity: 0.8;
 }
 
-.tiptap-editor img {
+/* Images are inline, as in markdown; ProseMirror's caret helper is also an img. */
+.tiptap-editor img:not(.ProseMirror-separator) {
+  display: inline-block;
   max-width: 100%;
   height: auto;
-  border-radius: var(--radius);
-  margin: 1rem 0;
+  /* Icons and badges: the corners of a picture would round them into dots and pills. */
+  border-radius: 2px;
+  vertical-align: middle;
   cursor: zoom-in;
+}
+
+/* On their own they get room around them. */
+.tiptap-editor p.image-paragraph {
+  margin: 1rem 0;
+}
+
+/* In a list item or cell they line up with the bullet or the row instead. */
+.tiptap-editor :is(li, td, th) p.image-paragraph {
+  margin: 0;
+}
+
+.tiptap-editor p.image-paragraph img:not(.ProseMirror-separator) {
+  vertical-align: bottom;
+}
+
+.tiptap-editor :is(li, td, th) p.image-paragraph img:not(.ProseMirror-separator) {
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.tiptap-editor img.ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.tiptap-editor a img:not(.ProseMirror-separator) {
+  cursor: pointer;
 }
 
 .tiptap-editor s {
@@ -723,7 +754,7 @@
   text-decoration-color: hsl(var(--primary));
 }
 
-.tiptap-editor img {
+.tiptap-editor p.image-single img:not(.ProseMirror-separator) {
   border-radius: var(--radius-lg);
 }
 

@@ -69,12 +69,24 @@ export function restoreNoteTitle(title: NoteTitle, body: string): string {
 export function withNoteTitle<T extends { eq: (other: T) => boolean }>(
   nodes: T[], original: T[], heading: T, index: number,
 ): T[] {
+  const find = (node: T | undefined) => {
+    if (!node) return -1;
+    const same = nodes.indexOf(node);
+    return same >= 0 ? same : nodes.findIndex((candidate) => candidate.eq(node));
+  };
   let at = index === 0 ? 0 : -1;
-  for (let i = index; at < 0 && i < original.length; i++) {
-    at = nodes.findIndex((node) => node === original[i] || node.eq(original[i]));
+  if (at < 0) {
+    // Beside whichever immediate neighbour survives. When both were edited in
+    // place, where it was. Searching on first would carry it past the edit.
+    const next = find(original[index]);
+    const previous = find(original[index - 1]);
+    if (next >= 0) at = next;
+    else if (previous >= 0) at = previous + 1;
+    else if (nodes.length === original.length) at = index;
   }
-  for (let i = index - 1; at < 0 && i >= 0; i--) {
-    const previous = nodes.findIndex((node) => node === original[i] || node.eq(original[i]));
+  for (let i = index + 1; at < 0 && i < original.length; i++) at = find(original[i]);
+  for (let i = index - 2; at < 0 && i >= 0; i--) {
+    const previous = find(original[i]);
     if (previous >= 0) at = previous + 1;
   }
   if (at < 0) at = Math.min(index, nodes.length);

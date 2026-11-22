@@ -27,13 +27,15 @@ import { pointsToNote } from "@/lib/autolink";
 import { useStore } from "@/store";
 import { AutoLink } from "./extensions/AutoLink";
 import { linkMarkdown } from "./extensions/linkMarkdown";
+import { SoftBreaks } from "./extensions/SoftBreaks";
+import { tableMarkdown } from "./tables/tableMarkdown";
 
 const lowlight = createLowlight(all);
 
 export const extensions = [
   // Column resizing is on (as in the mnemee editor); its plugin installs our
   // scrolling node view. Widths live for the session: markdown can't store them.
-  Table.configure({
+  Table.extend({ addStorage: () => ({ markdown: tableMarkdown }) }).configure({
     resizable: true,
     View: NoteTableView as never,
   }),
@@ -80,7 +82,9 @@ export const extensions = [
   TaskList,
   CustomTaskItem.configure({ nested: true }),
   Underline,
-  LocalImage.configure({ inline: false }),
+  // Inline, as in markdown: in sentences, links, headings, list items and cells.
+  LocalImage.configure({ inline: true }),
+  SoftBreaks,
   LinkBehavior,
   AutoLink.configure({
     isLocalNote: (path, from) => pointsToNote(path, from, Object.values(useStore.getState().idToPath)),

@@ -2,6 +2,7 @@ import { getMarkRange, type Editor } from "@tiptap/core";
 import { Check, Copy, PenLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { readableHref } from "@/lib/links";
 import { resolveTypedHref } from "@/lib/openLink";
 import { paneNotePath } from "./extensions/PaneNote";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
   const [editing, setEditing] = useState<ActiveLink | null>(null);
   const [copied, setCopied] = useState(false);
   const [label, setLabel] = useState("");
+  // A link around an image: only where it points can be edited here.
+  const [aroundImage, setAroundImage] = useState(false);
   const [href, setHref] = useState("");
   const closeTimer = useRef<number | undefined>(undefined);
   const copiedTimer = useRef<number | undefined>(undefined);
@@ -99,7 +102,12 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
     const range = rangeOf(hovered);
     if (!range || !hovered) return closeHover();
     setLabel(editor.state.doc.textBetween(range.from, range.to));
-    setHref(hovered.href);
+    let image = false;
+    editor.state.doc.nodesBetween(range.from, range.to, (node) => {
+      if (node.type.name === "image") image = true;
+    });
+    setAroundImage(image);
+    setHref(readableHref(hovered.href));
     setEditing(hovered);
     setHovered(null);
   };
@@ -111,7 +119,7 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
       return;
     }
     void navigator.clipboard
-      .writeText(hovered.href)
+      .writeText(readableHref(hovered.href))
       .then(() => {
         setCopied(true);
         window.clearTimeout(copiedTimer.current);
@@ -125,10 +133,19 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
     e.preventDefault();
     const nextLabel = label.trim();
     const typed = href.trim();
-    const nextHref =
-      !typed || typed === editing?.href ? typed : await resolveTypedHref(typed, paneNotePath(editor));
+    // The field shows the readable form; left alone, the link keeps the one it had.
+    const unchanged = !!editing && (typed === editing.href || typed === readableHref(editing.href));
+    const nextHref = !typed ? typed : unchanged ? editing.href : await resolveTypedHref(typed, paneNotePath(editor));
     const range = rangeOf(editing);
-    if (!range || !nextLabel || !nextHref) return;
+    if (!range || !nextHref) return;
+    if (aroundImage) {
+      // Replacing the text would take the image with it.
+      const done = editor.chain().focus().setTextSelection(range).setLink({ href: nextHref }).setTextSelection(range.to).run();
+      if (!done) return void toast.error("Enter a valid link.");
+      setEditing(null);
+      return;
+    }
+    if (!nextLabel) return;
     const source = editor.state.doc.resolve(range.from).nodeAfter;
     const marks =
       source?.marks.filter((m) => m.type.name !== "link").map((m) => ({ type: m.type.name, attrs: m.attrs })) ?? [];
@@ -165,8 +182,8 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
             onPointerLeave={scheduleClose}
           >
             <div ref={cardRef} className="flex items-center gap-2">
-              <span className="block max-w-56 min-w-0 flex-1 truncate px-1.5 py-1 text-xs leading-5" title={hovered.href}>
-                {hovered.href}
+              <span className="block max-w-56 min-w-0 flex-1 truncate px-1.5 py-1 text-xs leading-5" title={readableHref(hovered.href)}>
+                {readableHref(hovered.href)}
               </span>
               <div className="flex items-center">
                 <Tip label={copied ? "Copied" : "Copy link"} side="top">
@@ -191,20 +208,23 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
           <PopoverAnchor virtualRef={{ current: editing.anchor }} />
           <PopoverContent side="top" sideOffset={8} className={`w-[min(22rem,calc(100vw-2rem))] p-1.5 ${CARD}`}>
             <form className="grid gap-2" onSubmit={save}>
-              <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
-                Label
-                <input
-                  autoFocus
-                  className={FIELD}
-                  placeholder="Link text"
-                  value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  onKeyDown={closeOnEscape}
-                />
-              </label>
+              {!aroundImage && (
+                <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
+                  Label
+                  <input
+                    autoFocus
+                    className={FIELD}
+                    placeholder="Link text"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    onKeyDown={closeOnEscape}
+                  />
+                </label>
+              )}
               <label className="grid gap-1 px-1 text-xs font-medium text-muted-foreground">
                 Destination URL
                 <input
+                  autoFocus={aroundImage}
                   className={FIELD}
                   placeholder="https://example.com"
                   value={href}
@@ -216,7 +236,7 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" size="sm" disabled={!label.trim() || !href.trim()}>
+                <Button type="submit" size="sm" disabled={(!aroundImage && !label.trim()) || !href.trim()}>
                   Save
                 </Button>
               </div>

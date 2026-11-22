@@ -2,6 +2,8 @@ import { Node } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import { MermaidBlockView } from './MermaidBlockView'
 
+const wrappedRenderers = new WeakSet<object>()
+
 export const MermaidBlock = Node.create({
   name: 'mermaidBlock',
   group: 'block',
@@ -45,6 +47,9 @@ export const MermaidBlock = Node.create({
         },
         parse: {
           setup(markdownit: any) {
+            // tiptap-markdown runs setup before every parse; wrapping again each time nests without end.
+            if (wrappedRenderers.has(markdownit)) return
+            wrappedRenderers.add(markdownit)
             // Save original fence renderer
             const defaultFence = markdownit.renderer.rules.fence ||
               function (tokens: any, idx: any, options: any, _env: any, slf: any) {

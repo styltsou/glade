@@ -17,6 +17,17 @@ Choosing a note from the `@` mention picker SHALL insert a standard markdown lin
 - **WHEN** the chosen file is `my notes/plan.md` relative to the current file
 - **THEN** the link target is written as `my%20notes/plan.md`
 
+### Requirement: Readable link targets
+Link and image targets that point at files SHALL be written with letters of any script as text. Spaces, characters with a meaning in markdown or URLs, and invisible characters SHALL be percent-encoded. Percent-encoded and readable forms of a target SHALL resolve to the same file. Web addresses SHALL be left as they are.
+
+#### Scenario: Non-Latin file name
+- **WHEN** a link to `σημειώσεις έργου.md` is written by a mention, a rename, or a save of the block containing it
+- **THEN** the target is `σημειώσεις%20έργου.md`
+
+#### Scenario: Untouched encoded link
+- **WHEN** a note contains `[a](%CE%B1.md)` and the user edits a different block
+- **THEN** that link's bytes are unchanged, and it still opens `α.md`
+
 ### Requirement: Mention picker is scoped to the open folder
 The `@` mention picker SHALL only suggest markdown files inside the open root folder that are not excluded by ignore rules.
 
