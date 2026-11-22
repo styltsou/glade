@@ -130,8 +130,8 @@ pub struct LinkUpdates {
     pub files: usize,
 }
 
-/// How many links elsewhere in the folder point at `from` (a note that was
-/// just renamed or moved to `to`).
+/// How many links in the folder point at `from` or into it (a note or folder
+/// that was just renamed or moved to `to`).
 #[tauri::command]
 pub async fn preview_link_updates(window: tauri::Window, from: String, to: String) -> Result<LinkUpdates, AppError> {
     let root = root_for(&window)?;

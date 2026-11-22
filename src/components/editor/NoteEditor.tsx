@@ -51,7 +51,6 @@ import { cn } from "@/lib/utils";
 import { formatRelativeDate } from "@/lib/dates";
 
 interface NoteEditorProps {
-	beforeRename?: () => Promise<void>;
 	activeNote: {
 		title: string;
 		path: string;
@@ -169,7 +168,6 @@ function BubbleButton({
 }
 
 export function NoteEditor({
-	beforeRename,
 	activeNote,
 	editor,
 	isRawMode,
@@ -562,7 +560,6 @@ export function NoteEditor({
 				{editor && !isRawMode && <CaretLinkPopover editor={editor} />}
 
 				<EditableTitle
-					beforeRename={beforeRename}
 					title={activeNote.title}
 					path={activeNote.path}
 					created={activeNote.created}

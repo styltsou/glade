@@ -43,6 +43,7 @@ export function useSaveNote({
 		if (latestContentRef.current === lastSavedContentRef.current) return;
 
 		const content = latestContentRef.current;
+		const previous = lastSavedContentRef.current;
 		lastSavedContentRef.current = content;
 		pendingSaveRef.current = (async () => {
 			try {
@@ -53,6 +54,8 @@ export function useSaveNote({
 					setSaveStatusWithRef("idle");
 				}, 2000);
 			} catch {
+				// Not on disk, so still unsaved: the next flush must try again.
+				if (lastSavedContentRef.current === content) lastSavedContentRef.current = previous;
 				setSaveStatusWithRef("unsaved");
 			} finally {
 				pendingSaveRef.current = null;

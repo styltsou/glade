@@ -39,6 +39,18 @@ fn known_hash(path: &Path) -> Option<u64> {
     KNOWN.lock().unwrap().as_ref().and_then(|m| m.get(path).copied())
 }
 
+/// A file or folder was moved by Glade: what it knew about the files follows,
+/// so the watcher doesn't report the new paths as someone else's change.
+pub fn record_moved(from: &Path, to: &Path) {
+    let mut guard = KNOWN.lock().unwrap();
+    let Some(known) = guard.as_mut() else { return };
+    known.retain(|path, _| !path.starts_with(to));
+    *known = std::mem::take(known)
+        .into_iter()
+        .map(|(path, hash)| (crate::links::relocate(&path, from, to).unwrap_or(path), hash))
+        .collect();
+}
+
 /// Write a file and remember its content so the watcher ignores our own write.
 pub fn write_file(path: &Path, content: impl AsRef<[u8]>) -> io::Result<()> {
     std::fs::write(path, content.as_ref())?;

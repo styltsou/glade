@@ -4,13 +4,12 @@ import { formatTooltipDate } from "@/lib/dates";
 import { Tip } from "@/components/ui/tooltip";
 
 interface EditableTitleProps {
-  beforeRename?: () => Promise<void>;
   title: string;
   path: string;
   created?: string | null;
 }
 
-export function EditableTitle({ title, path, created, beforeRename }: EditableTitleProps) {
+export function EditableTitle({ title, path, created }: EditableTitleProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState("");
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -29,9 +28,7 @@ export function EditableTitle({ title, path, created, beforeRename }: EditableTi
     try {
       const trimmed = tempTitle.trim();
       if (trimmed && trimmed !== title) {
-        await beforeRename?.();
         await renameNote(path, trimmed);
-        await useStore.getState().reloadNote(path);
       }
       setIsEditingTitle(false);
     } finally {

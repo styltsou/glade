@@ -1,6 +1,9 @@
 import { StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "sonner";
 import { offerLinkUpdates } from "@/lib/linkUpdates";
+import { changeFiles, isWithin, relocatePath, scheduleWrite } from "@/lib/fileChanges";
+import * as T from "@/lib/tabs";
 import { isAbsolutePath } from "@/lib/links";
 import type { VaultEntry, NoteData, PropertyValue } from "@/types";
 
@@ -72,7 +75,92 @@ import type { StoreState } from "../index";
 /** The most recently requested note; stale reads must not replace it. */
 let latestSelect = "";
 
-export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set, get) => ({
+const errorText = (e: unknown) => String(e).replace(/^(Error|Invalid path): /, "");
+
+/** Every piece of state that refers to a note or folder by path, after a move. */
+function movedState(s: StoreState, from: string, to: string): Partial<StoreState> {
+  const move = (path: string) => relocatePath(path, from, to);
+  const moveKeys = <V,>(map: Record<string, V>): Record<string, V> =>
+    Object.fromEntries(Object.entries(map).map(([path, value]) => [move(path), value]));
+  return {
+    tabsState: T.renamePath(s.tabsState, from, to),
+    closedTabs: T.renameClosed(s.closedTabs, from, to),
+    expandedFolders: s.expandedFolders.map(move),
+    pinnedNotePaths: s.pinnedNotePaths.map(move),
+    backStack: s.backStack.map(move),
+    currentFolder: s.currentFolder === null ? null : move(s.currentFolder),
+    noteEditMode: moveKeys(s.noteEditMode),
+    noteScrollPositions: moveKeys(s.noteScrollPositions),
+    isRawMode: moveKeys(s.isRawMode),
+    tocOpen: moveKeys(s.tocOpen),
+    tocInitialized: moveKeys(s.tocInitialized),
+  };
+}
+
+type SetState = Parameters<StateCreator<StoreState>>[0];
+type GetState = Parameters<StateCreator<StoreState>>[1];
+
+/** The file operations the note actions share. */
+function createFileOps(set: SetState, get: GetState) {
+  const readNote = (path: string) => invoke<NoteData>("read_note", { path });
+
+  const writeNote = async (path: string, content: string, force = false) => {
+    await invoke("write_note", { path, content, force });
+    const note = await readNote(path);
+    set((state: StoreState) => ({
+      activeNote: state.activeNote?.path === path ? note : state.activeNote,
+      noteCache: { ...state.noteCache, [path]: note },
+      vaultError: null,
+    }));
+  };
+
+  /** Change files without losing or undoing what open editors hold. */
+  const changeOpenFiles = (scope: string | null, apply: () => Promise<string | null>) =>
+    changeFiles<NoteData>({
+      scope,
+      apply,
+      save: writeNote,
+      read: readNote,
+      commit: (to, notes) =>
+        set((state: StoreState) => {
+          // Cached copies of what changed are stale; only the re-read ones stay.
+          const noteCache = Object.fromEntries(
+            Object.entries(state.noteCache).filter(([path]) => !isWithin(path, scope)),
+          );
+          for (const [path, note] of notes) noteCache[path] = note;
+
+          const moved = scope !== null && to !== null && to !== scope;
+          let activeNote = state.activeNote;
+          if (activeNote && isWithin(activeNote.path, scope)) {
+            const path = moved ? relocatePath(activeNote.path, scope, to) : activeNote.path;
+            activeNote = notes.get(path) ?? { ...activeNote, id: path, path };
+          }
+          return { ...(moved ? movedState(state, scope, to) : {}), noteCache, activeNote };
+        }),
+    });
+
+  /** After `from` became `to`: refresh the tree, then offer to fix links to it. */
+  const afterMove = async (from: string, to: string) => {
+    await get().refreshTree();
+    await offerLinkUpdates(from, to, async (update) => {
+      await changeOpenFiles(null, async () => {
+        await update();
+        return null;
+      });
+    });
+  };
+
+  return { writeNote, changeOpenFiles, afterMove };
+}
+
+export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set, get) =>
+  noteActions(set, get, createFileOps(set, get));
+
+const noteActions = (
+  set: SetState,
+  get: GetState,
+  { writeNote, changeOpenFiles, afterMove }: ReturnType<typeof createFileOps>,
+): NoteSlice => ({
   selectNote: async (path: string, partial?: Partial<NoteData>) => {
     await get().openNote(path, "active", partial);
   },
@@ -132,28 +220,23 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     }
   },
 
-  saveNote: async (path: string, content: string, force?: boolean) => {
-    try {
-      await invoke("write_note", { path, content, force: force ?? false });
-      const note = await invoke<NoteData>("read_note", { path });
-      
-      set((state: StoreState) => ({
-        activeNote: state.activeNote?.path === path ? note : state.activeNote,
-        noteCache: { ...state.noteCache, [path]: note },
-        vaultError: null
-      }));
-    } catch (e) {
-      set({ vaultError: String(e) });
-      // The file changed on disk since it was loaded: let the editor offer
-      // "Keep mine" / "Load theirs" instead of silently overwriting.
-      if (String(e).startsWith("Conflict")) {
-        const root = get().target;
-        const abs = isAbsolutePath(path) ? path : `${root?.path ?? ""}/${path}`;
-        get().handleExternalChange({ path: abs, kind: "modified" });
+  saveNote: (path: string, content: string, force?: boolean) =>
+    scheduleWrite(path, async (current) => {
+      try {
+        await writeNote(current, content, force);
+      } catch (e) {
+        set({ vaultError: String(e) });
+        // The file changed or went away since it was loaded: let the editor
+        // ask, instead of silently overwriting it or bringing it back.
+        const changed = String(e).startsWith("Conflict");
+        if (changed || String(e).startsWith("Not found")) {
+          const root = get().target;
+          const abs = isAbsolutePath(current) ? current : `${root?.path ?? ""}/${current}`;
+          get().handleExternalChange({ path: abs, kind: changed ? "modified" : "removed" });
+        }
         throw e;
       }
-    }
-  },
+    }),
 
   createNote: async (folder?: string) => {
     try {
@@ -174,67 +257,40 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
       
       set((state: StoreState) => ({
         entries: newEntries,
-        activeNote: note,
+        idToPath: { ...state.idToPath, [note.id]: note.path },
         noteCache: { ...state.noteCache, [note.path]: note },
         vaultError: null
       }));
+      get().hideHome();
+      await get().openNote(note.path, "active", note);
     } catch (e) {
       set({ vaultError: String(e) });
+      toast.error("Couldn't create the note", { description: errorText(e) });
     }
   },
 
   renameNote: async (path: string, newTitle: string) => {
-    const newEntries = updateEntryInTree(get().entries, path, { name: newTitle });
-    
-    const { noteCache, activeNote, pinnedNotes } = get();
-    
-    const newPinned = pinnedNotes.map(n => n.path === path ? { ...n, title: newTitle } : n);
-
-    const newCache = { ...noteCache };
-    if (newCache[path]) {
-      newCache[path] = { ...newCache[path]!, title: newTitle };
-    }
-    
-    if (activeNote?.path === path) {
-      set({ 
-        entries: newEntries,
-        activeNote: { ...activeNote, title: newTitle },
-        noteCache: newCache,
-        pinnedNotes: newPinned,
-      });
-    } else {
-      set({ 
-        entries: newEntries, 
-        noteCache: newCache,
-        pinnedNotes: newPinned,
-      });
-    }
-    
+    set({ entries: updateEntryInTree(get().entries, path, { name: newTitle }) });
     try {
-      const newPath = await invoke<string>("rename_note", { path, newTitle });
-      if (newPath !== path) {
-        // Title came from the file name, so the file itself was renamed.
-        get().tabsRenamePath(path, newPath);
-        await offerLinkUpdates(path, newPath);
-        await get().loadVault();
-        await get().selectNote(newPath);
-      }
-      get().loadFolderNotes();
+      const to = (await changeOpenFiles(path, () => invoke<string>("rename_note", { path, newTitle })))!;
+      // A different path means the title came from the file name.
+      if (to !== path) await afterMove(path, to);
+      else await get().refreshTree();
     } catch (e) {
       await get().loadVault();
       set({ vaultError: String(e) });
+      toast.error("Couldn't rename the note", { description: errorText(e) });
     }
   },
 
   renameFolder: async (path: string, newName: string) => {
     try {
-      await invoke("rename_folder", { path, newName });
-      await get().loadVault();
-      await get().loadTags();
-      get().loadFolderNotes();
+      const to = (await changeOpenFiles(path, () => invoke<string>("rename_folder", { path, newName })))!;
+      if (to !== path) await afterMove(path, to);
     } catch (e) {
       await get().loadVault();
       set({ vaultError: String(e) });
+      toast.error("Couldn't rename the folder", { description: errorText(e) });
     }
   },
 
@@ -371,20 +427,16 @@ export const createNoteSlice: StateCreator<StoreState, [], [], NoteSlice> = (set
     set({ entries: newEntries });
     
     try {
-      await invoke("move_entry", { fromPath, toPath });
-      get().tabsRenamePath(fromPath, toPath);
-      await offerLinkUpdates(fromPath, toPath);
-      await get().loadVault();
-      await get().loadTags();
-      get().loadFolderNotes();
-
-      const { activeNote } = get();
-      if (activeNote?.path === fromPath) {
-        set({ activeNote: { ...activeNote, path: toPath } as NoteData });
-      }
+      await changeOpenFiles(fromPath, async () => {
+        await invoke("move_entry", { fromPath, toPath });
+        return toPath;
+      });
     } catch (e) {
       set({ entries: originalEntries, vaultError: String(e) });
+      toast.error(`Couldn't move "${fromPath.split("/").pop()}"`, { description: errorText(e) });
+      return;
     }
+    await afterMove(fromPath, toPath);
   },
 
   tocOpen: {},

@@ -13,7 +13,10 @@ import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
 import { TableOfContents, TOC_GUTTER } from "@/components/editor/TableOfContents";
 import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/editor/SearchHighlight";
+import { toast } from "sonner";
 import { useStore } from "@/store";
+import { registerEditor } from "@/lib/fileChanges";
+import { isDocumentEdit } from "@/lib/editorUpdates";
 import { extensions } from "./editor/extensions";
 import { useSaveNote } from "@/hooks/useSaveNote";
 import { splitNoteTitle, restoreNoteTitle, type NoteTitle } from "@/lib/noteTitle";
@@ -94,7 +97,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const lastSavedContentRef = useRef<string>("");
   const latestContentRef = useRef<string>("");
   const pendingSaveRef = useRef<Promise<void> | null>(null);
-  const skipUpdateRef = useRef(false);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
@@ -119,6 +121,30 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     savedTimeoutRef,
     blockedRef: conflictRef,
   });
+
+  // Lets renames and moves flush this editor and carry it to the new path.
+  useEffect(
+    () =>
+      registerEditor({
+        path: () => currentPathRef.current,
+        content: () => latestContentRef.current,
+        unsaved: () => latestContentRef.current !== lastSavedContentRef.current,
+        blocked: () => conflictRef.current,
+        markSaved: (content) => {
+          const previous = lastSavedContentRef.current;
+          lastSavedContentRef.current = content;
+          if (latestContentRef.current === content) setSaveStatusWithRef("idle");
+          return () => {
+            lastSavedContentRef.current = previous;
+            setSaveStatusWithRef("unsaved");
+          };
+        },
+        follow: (to) => {
+          currentPathRef.current = to;
+        },
+      }),
+    [setSaveStatusWithRef],
+  );
 
   // One set of gutter controls (+ and drag grip) per editor instance.
   const blockControls = useMemo(createBlockDragHandleExtension, []);
@@ -160,15 +186,12 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         }
       }
     },
-    onUpdate: ({ editor }) => {
+    onUpdate: (update) => {
       if (!activeNote || isLoadingRef.current) return;
 
-      // Skip the first onUpdate after loading content (fires during setContent)
-      if (skipUpdateRef.current) {
-        skipUpdateRef.current = false;
-        return;
-      }
+      if (!isDocumentEdit(update)) return;
 
+      const { editor } = update;
       const markdown = getMarkdown(editor);
 
       // Skip if content hasn't actually changed
@@ -321,8 +344,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         // Set refs BEFORE setContent so onUpdate sees correct values
         lastSavedContentRef.current = activeNote.body || "";
         latestContentRef.current = activeNote.body || "";
-        // Skip the first onUpdate (fires during setContent)
-        skipUpdateRef.current = true;
         // Use setContent with emitUpdate: false to avoid focusing
         const title = splitNoteTitle(activeNote.body || "");
         editor.commands.setContent(title.body, { emitUpdate: false });
@@ -400,7 +421,10 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     return () => {
       const path = currentPathRef.current;
       if (path && !conflictRef.current && latestContentRef.current !== lastSavedContentRef.current) {
-        void useStore.getState().saveNote(path, latestContentRef.current);
+        useStore
+          .getState()
+          .saveNote(path, latestContentRef.current)
+          .catch((e) => toast.error(`Couldn't save "${path}"`, { description: String(e) }));
       }
     };
   }, []);
@@ -422,7 +446,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     const currentlyRaw = isRawModeMap[activeNote.path] ?? false;
     if (currentlyRaw) {
       isLoadingRef.current = true;
-      skipUpdateRef.current = true;
       const source = restoreNoteTitle(rawTitleRef.current, rawContent);
       latestContentRef.current = source;
       editor.commands.setContent(splitNoteTitle(source).body, { emitUpdate: false });
@@ -683,11 +706,18 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const handleKeepMine = useCallback(async () => {
     if (!editor || !activeNote) return;
     const markdown = getMarkdown(editor);
+    const previous = lastSavedContentRef.current;
     latestContentRef.current = markdown;
     lastSavedContentRef.current = markdown;
     setConflict(null);
-    await saveNote(activeNote.path, markdown, true);
-  }, [editor, activeNote, getMarkdown, saveNote]);
+    try {
+      await saveNote(activeNote.path, markdown, true);
+    } catch (e) {
+      lastSavedContentRef.current = previous;
+      setConflict(conflict);
+      toast.error("Couldn't save the note", { description: String(e) });
+    }
+  }, [editor, activeNote, getMarkdown, saveNote, conflict]);
 
   const handleLoadTheirs = useCallback(async () => {
     if (!activeNote) return;
@@ -798,7 +828,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           isRawMode={isRawMode}
           rawContent={rawContent}
           onRawChange={onRawChange}
-          beforeRename={saveNow}
           scrollRef={scrollRef}
           onScroll={handleScroll}
           findQuery={findQuery}

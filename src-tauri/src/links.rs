@@ -223,18 +223,22 @@ pub fn rewrite_links(source: &str, mut f: impl FnMut(&str) -> Option<String>) ->
     (out, count)
 }
 
-/// New href for a link in `source_dir` after its target moved from `old` to
-/// `new`, if that link pointed at `old`.
-fn retarget(source_dir: &Path, href: &str, old: &Path, new: &Path) -> Option<String> {
-    let target = resolve_href(source_dir, href)?;
-    if target != old {
-        return None;
-    }
-    let (_, rest) = split_href(href);
-    Some(format!("{}{}", relative_href(source_dir, new), rest))
+/// Where `path` is after `old` (a file, or a folder holding it) moved to `new`.
+pub fn relocate(path: &Path, old: &Path, new: &Path) -> Option<PathBuf> {
+    let rest = path.strip_prefix(old).ok()?;
+    // Joining an empty path would add a trailing slash.
+    Some(if rest.as_os_str().is_empty() { new.to_path_buf() } else { new.join(rest) })
 }
 
-/// Links in other files that point at `old`: how many links in how many files.
+/// New href for a link in `source_dir` after `old` moved to `new`, if that
+/// link pointed at `old` or into it.
+fn retarget(source_dir: &Path, href: &str, old: &Path, new: &Path) -> Option<String> {
+    let target = relocate(&resolve_href(source_dir, href)?, old, new)?;
+    let (_, rest) = split_href(href);
+    Some(format!("{}{}", relative_href(source_dir, &target), rest))
+}
+
+/// Links that point at `old` or into it: how many links in how many files.
 pub fn inbound_counts(root: &Path, old: &Path) -> Result<(usize, usize), crate::error::AppError> {
     let mut links = 0;
     let mut files = 0;
@@ -244,7 +248,7 @@ pub fn inbound_counts(root: &Path, old: &Path) -> Result<(usize, usize), crate::
         let dir = path.parent().unwrap_or(root);
         let n = find_links(&content)
             .iter()
-            .filter(|l| resolve_href(dir, &l.href).as_deref() == Some(old))
+            .filter(|l| resolve_href(dir, &l.href).map_or(false, |t| t.starts_with(old)))
             .count();
         if n > 0 {
             links += n;
@@ -254,14 +258,12 @@ pub fn inbound_counts(root: &Path, old: &Path) -> Result<(usize, usize), crate::
     Ok((links, files))
 }
 
-/// Rewrite links in other files that point at `old` so they reach `new`.
+/// Rewrite links that point at `old` or into it so they reach `new`, including
+/// a moved note's links to itself. Running it again changes nothing.
 pub fn apply_inbound(root: &Path, old: &Path, new: &Path) -> Result<usize, crate::error::AppError> {
     let mut changed_files = 0;
     for rel in vault::scan_root(root)?.files {
         let path = root.join(&rel);
-        if path == new {
-            continue;
-        }
         let Ok(content) = std::fs::read_to_string(&path) else { continue };
         let dir = path.parent().unwrap_or(root).to_path_buf();
         let (updated, n) = rewrite_links(&content, |h| retarget(&dir, h, old, new));
@@ -273,14 +275,41 @@ pub fn apply_inbound(root: &Path, old: &Path, new: &Path) -> Result<usize, crate
     Ok(changed_files)
 }
 
-/// Rewrite the moved file's own relative links so they still reach the same
-/// targets from its new directory.
-pub fn rewrite_outbound(content: &str, old_dir: &Path, new_dir: &Path) -> (String, usize) {
+/// Rewrite the relative links of the notes that moved from `old` to `new`
+/// (one note, or a folder of them) so they still reach the same targets.
+/// Links that still work keep their exact text.
+pub fn rewrite_moved(root: &Path, old: &Path, new: &Path) -> Result<(), crate::error::AppError> {
+    let files = if new.is_dir() {
+        vault::scan_root(root)?.files.iter().map(|rel| root.join(rel)).filter(|p| p.starts_with(new)).collect()
+    } else if vault::is_markdown(new) {
+        vec![new.to_path_buf()]
+    } else {
+        vec![]
+    };
+    for path in files {
+        let Some(was) = relocate(&path, new, old) else { continue };
+        let (Some(old_dir), Some(new_dir)) = (was.parent(), path.parent()) else { continue };
+        let Ok(content) = std::fs::read_to_string(&path) else { continue };
+        let (updated, n) = rewrite_outbound(&content, old_dir, new_dir, old, new);
+        if n > 0 {
+            crate::watch::write_file(&path, updated)?;
+        }
+    }
+    Ok(())
+}
+
+/// Rewrite relative links in content that went from `old_dir` to `new_dir` as
+/// part of moving `old` to `new`.
+fn rewrite_outbound(content: &str, old_dir: &Path, new_dir: &Path, old: &Path, new: &Path) -> (String, usize) {
     rewrite_links(content, |href| {
-        let target = resolve_href(old_dir, href)?;
         let (path_part, rest) = split_href(href);
         // Leave absolute and file:// links as they are.
         if Path::new(&percent_decode(path_part)).is_absolute() || path_part.starts_with("file://") {
+            return None;
+        }
+        let target = resolve_href(old_dir, href)?;
+        let target = relocate(&target, old, new).unwrap_or(target);
+        if resolve_href(new_dir, href).as_ref() == Some(&target) {
             return None;
         }
         Some(format!("{}{}", relative_href(new_dir, &target), rest))
@@ -389,9 +418,33 @@ mod tests {
     #[test]
     fn move_rewrites_outbound_links() {
         let content = "[API](../reference/api.md) [abs](/x/y.md) [web](https://a.b)\n";
-        let (out, n) = rewrite_outbound(content, Path::new("/r/guides"), Path::new("/r"));
+        let (out, n) = rewrite_outbound(content, Path::new("/r/guides"), Path::new("/r"), Path::new("/r/guides/a.md"), Path::new("/r/a.md"));
         assert_eq!(n, 1);
         assert_eq!(out, "[API](reference/api.md) [abs](/x/y.md) [web](https://a.b)\n");
+    }
+
+    #[test]
+    fn moving_a_folder_keeps_links_in_and_out_of_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir_all(root.join("box/d")).unwrap();
+        fs::create_dir_all(root.join("d2")).unwrap();
+        fs::write(root.join("box/d/in.md"), "[up](../index.md#top) [sib](./sib.md) [me](../d/in.md)\n").unwrap();
+        fs::write(root.join("index.md"), "[in](d/in.md#x) [folder](d) [not it](d2/in.md)\n").unwrap();
+        let (old, new) = (root.join("d"), root.join("box/d"));
+
+        rewrite_moved(root, &old, &new).unwrap();
+        // Only the link that broke changes; `./sib.md` and `../d/in.md` still resolve.
+        let inside = "[up](../../index.md#top) [sib](./sib.md) [me](../d/in.md)\n";
+        assert_eq!(fs::read_to_string(root.join("box/d/in.md")).unwrap(), inside);
+
+        assert_eq!(inbound_counts(root, &old).unwrap(), (2, 1));
+        for _ in 0..2 {
+            apply_inbound(root, &old, &new).unwrap();
+            let index = fs::read_to_string(root.join("index.md")).unwrap();
+            assert_eq!(index, "[in](box/d/in.md#x) [folder](box/d) [not it](d2/in.md)\n");
+            assert_eq!(fs::read_to_string(root.join("box/d/in.md")).unwrap(), inside);
+        }
     }
 
     #[test]

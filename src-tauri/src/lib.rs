@@ -5,6 +5,7 @@ mod launch;
 mod integration_tests;
 mod links;
 mod migration;
+mod relocate;
 mod config;
 mod error;
 mod types;

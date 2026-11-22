@@ -14,6 +14,11 @@ fn stem_of(path: &Path) -> String {
         .unwrap_or_else(|| "Untitled".into())
 }
 
+/// The extension of a note, as written (`md`, `MDX`, `markdown`...).
+fn extension_of(path: &Path) -> String {
+    path.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_else(|| "md".into())
+}
+
 fn relative_of(root: &Path, full: &Path) -> String {
     full.strip_prefix(root)
         .unwrap_or(full)
@@ -61,9 +66,13 @@ pub fn write_body(full_path: &Path, content: &str) -> Result<bool, AppError> {
 }
 
 /// Like `write_body`, but refuses to overwrite a file that changed on disk
-/// since Glade last read or wrote it, unless `force` is set.
+/// since Glade last read or wrote it, or to bring back one that is gone
+/// (renamed, moved, deleted), unless `force` is set.
 pub fn write_body_checked(full_path: &Path, content: &str, force: bool) -> Result<bool, AppError> {
-    if !force && full_path.exists() && crate::watch::disk_state(full_path) == crate::watch::DiskState::Modified {
+    if !force && !full_path.exists() {
+        return Err(AppError::NotFound(format!("{} was moved or deleted", full_path.display())));
+    }
+    if !force && crate::watch::disk_state(full_path) == crate::watch::DiskState::Modified {
         return Err(AppError::Conflict(format!("{} changed on disk", full_path.display())));
     }
     let existing = if full_path.exists() {
@@ -158,8 +167,8 @@ pub async fn remove_property(window: tauri::Window, path: String, key: String) -
     Ok(note_data(path, &full, &updated))
 }
 
-/// A file stem not used by any sibling markdown file (case-insensitive).
-fn unique_stem(dir: &Path, base: &str, ignore: Option<&Path>, is_copy: bool) -> String {
+/// A stem for which `stem.ext` is not taken in `dir` (case-insensitive).
+fn unique_stem(dir: &Path, base: &str, ext: &str, ignore: Option<&Path>, is_copy: bool) -> String {
     let mut taken = std::collections::HashSet::new();
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -167,12 +176,11 @@ fn unique_stem(dir: &Path, base: &str, ignore: Option<&Path>, is_copy: bool) -> 
             if Some(path.as_path()) == ignore {
                 continue;
             }
-            if path.is_file() && path.extension().map_or(false, |e| e == "md") {
-                taken.insert(stem_of(&path).to_lowercase());
-            }
+            taken.insert(entry.file_name().to_string_lossy().to_lowercase());
         }
     }
-    if !taken.contains(&base.to_lowercase()) {
+    let is_taken = |stem: &str| taken.contains(&format!("{stem}.{ext}").to_lowercase());
+    if !is_taken(base) {
         return base.to_string();
     }
     let without_copy = if is_copy {
@@ -192,7 +200,7 @@ fn unique_stem(dir: &Path, base: &str, ignore: Option<&Path>, is_copy: bool) -> 
         } else {
             format!("{} {}", without_copy, counter)
         };
-        if !taken.contains(&candidate.to_lowercase()) {
+        if !is_taken(&candidate) {
             return candidate;
         }
         counter += 1;
@@ -223,7 +231,7 @@ pub async fn create_note(window: tauri::Window, folder: Option<String>) -> Resul
         fs::create_dir_all(&target_dir)?;
     }
 
-    let stem = unique_stem(&target_dir, "Untitled", None, false);
+    let stem = unique_stem(&target_dir, "Untitled", "md", None, false);
     let full_path = target_dir.join(format!("{}.md", stem));
     crate::watch::write_file(&full_path, "")?;
 
@@ -256,14 +264,20 @@ pub fn rename_at(root: &Path, path: &str, new_title: &str) -> Result<String, App
         }
         None => {
             let parent = full_path.parent().unwrap_or(root);
-            let stem = unique_stem(parent, &filename_from_title(new_title), Some(&full_path), false);
-            let new_full = parent.join(format!("{}.md", stem));
-            if new_full != full_path {
-                fs::rename(&full_path, &new_full)?;
-            }
-            let new_rel = relative_of(root, &new_full);
+            let ext = extension_of(&full_path);
+            let stem = unique_stem(parent, &filename_from_title(new_title), &ext, Some(&full_path), false);
+            let new_full = parent.join(format!("{}.{}", stem, ext));
+            crate::relocate::rename_no_replace(&full_path, &new_full)?;
+            // An absolute path (loose or outside file) stays absolute.
+            let new_rel = if Path::new(path).is_absolute() {
+                new_full.to_string_lossy().to_string()
+            } else {
+                relative_of(root, &new_full)
+            };
             if new_rel != path {
-                workspace_state::rename_path(root, path, &new_rel)?;
+                if let Err(e) = workspace_state::rename_path(root, path, &new_rel) {
+                    eprintln!("glade: could not update pins after renaming {path}: {e}");
+                }
             }
             Ok(new_rel)
         }
@@ -291,8 +305,9 @@ pub async fn duplicate_note(window: tauri::Window, path: String) -> Result<NoteD
 
     let content = fs::read_to_string(&full_path)?;
     let parent = full_path.parent().unwrap_or(&vault_path);
-    let stem = unique_stem(parent, &stem_of(&full_path), None, true);
-    let new_full = parent.join(format!("{}.md", stem));
+    let ext = extension_of(&full_path);
+    let stem = unique_stem(parent, &stem_of(&full_path), &ext, None, true);
+    let new_full = parent.join(format!("{}.{}", stem, ext));
 
     let new_content = if frontmatter::title_source(&content) != TitleSource::Filename {
         let title = frontmatter::derive_title(&content, &stem_of(&full_path));
@@ -457,6 +472,39 @@ changed
         let before = fs::read(root.join("a.md")).unwrap();
         workspace_state::pin(root, "a.md").unwrap();
         assert_eq!(fs::read(root.join("a.md")).unwrap(), before);
+    }
+
+    #[test]
+    fn rename_keeps_the_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        for (file, renamed) in [("a.mdx", "New.mdx"), ("b.markdown", "New.markdown"), ("c.MD", "New.MD")] {
+            fs::write(root.join(file), "no heading\n").unwrap();
+            assert_eq!(rename_at(root, file, "New").unwrap(), renamed);
+        }
+        // A taken name is numbered per extension.
+        fs::write(root.join("d.mdx"), "no heading\n").unwrap();
+        assert_eq!(rename_at(root, "d.mdx", "New").unwrap(), "New 1.mdx");
+        assert_eq!(unique_stem(root, "New", "mdx", None, true), "New (copy)");
+    }
+
+    #[test]
+    fn rename_of_an_absolute_path_stays_absolute() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("loose.md");
+        fs::write(&file, "x\n").unwrap();
+        let renamed = rename_at(dir.path(), file.to_str().unwrap(), "Named").unwrap();
+        assert_eq!(renamed, dir.path().join("Named.md").to_string_lossy());
+    }
+
+    #[test]
+    fn saving_never_brings_back_a_file_that_is_gone() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("old-folder/n.md");
+        assert!(matches!(write_body(&file, "body\n"), Err(AppError::NotFound(_))));
+        assert!(!file.parent().unwrap().exists());
+        // "Save again" is the explicit way to.
+        assert!(write_body_checked(&file, "body\n", true).unwrap());
     }
 
     #[test]

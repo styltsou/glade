@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 use crate::config;
 use crate::error::AppError;
 use crate::types::{AppConfig, VaultEntry};
@@ -56,7 +57,7 @@ pub async fn create_folder(window: tauri::Window, path: String) -> Result<(), Ap
 
 /// Rename a folder inside the vault.
 #[tauri::command]
-pub async fn rename_folder(window: tauri::Window, path: String, new_name: String) -> Result<(), AppError> {
+pub async fn rename_folder(window: tauri::Window, path: String, new_name: String) -> Result<String, AppError> {
     let new_name = new_name.trim();
     
     if new_name.is_empty() {
@@ -83,33 +84,26 @@ pub async fn rename_folder(window: tauri::Window, path: String, new_name: String
     let parent = full_path.parent().unwrap_or(&vault_path);
     let new_full_path = parent.join(new_name);
 
-    if new_full_path.exists() {
-        return Err(AppError::InvalidPath(format!("Folder already exists: {}", new_name)));
-    }
-
-    fs::rename(&full_path, &new_full_path)?;
-
     let new_rel = new_full_path
         .strip_prefix(&vault_path)
         .unwrap_or(&new_full_path)
         .to_string_lossy()
         .to_string();
-    workspace_state::rename_path(&vault_path, &path, &new_rel)?;
+    move_at(&vault_path, &path, &new_rel)?;
 
     vault::invalidate_vault_cache();
     
-    Ok(())
+    Ok(new_rel)
 }
 
-/// Move a file or directory to a new location in the vault.
-#[tauri::command]
-pub async fn move_entry(window: tauri::Window, from_path: String, to_path: String) -> Result<(), AppError> {
-    let vault_path = crate::workspace::root_for(&window)?;
-    let full_from = crate::workspace::resolve_inside(&vault_path, &from_path)?;
-    let full_to = crate::workspace::resolve_inside(&vault_path, &to_path)?;
+/// Move or rename a file or folder inside `root`, never replacing anything.
+/// Moved notes keep pointing at the same targets from where they are now.
+fn move_at(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
+    let full_from = crate::workspace::resolve_inside(root, from)?;
+    let full_to = crate::workspace::resolve_inside(root, to)?;
 
     if !full_from.exists() {
-        return Err(AppError::NotFound(format!("Entry not found: {}", from_path)));
+        return Err(AppError::NotFound(format!("Entry not found: {}", from)));
     }
 
     // Ensure parent of destination exists
@@ -119,22 +113,24 @@ pub async fn move_entry(window: tauri::Window, from_path: String, to_path: Strin
         }
     }
 
-    fs::rename(&full_from, &full_to)?;
-    workspace_state::rename_path(&vault_path, &from_path, &to_path)?;
+    crate::relocate::rename_no_replace(&full_from, &full_to)?;
 
-    // A moved note keeps pointing at the same targets from its new folder.
-    if vault::is_markdown(&full_to) {
-        if let (Some(old_dir), Some(new_dir)) = (full_from.parent(), full_to.parent()) {
-            if old_dir != new_dir {
-                if let Ok(content) = fs::read_to_string(&full_to) {
-                    let (updated, n) = crate::links::rewrite_outbound(&content, old_dir, new_dir);
-                    if n > 0 {
-                        crate::watch::write_file(&full_to, updated)?;
-                    }
-                }
-            }
-        }
+    // The move has happened: report it as done whatever follows, or the window
+    // would go on saving to the old path.
+    if let Err(e) = workspace_state::rename_path(root, from, to) {
+        eprintln!("glade: could not update pins after moving {from}: {e}");
     }
+    if let Err(e) = crate::links::rewrite_moved(root, &full_from, &full_to) {
+        eprintln!("glade: could not update links after moving {from}: {e}");
+    }
+    Ok(())
+}
+
+/// Move a file or directory to a new location in the vault.
+#[tauri::command]
+pub async fn move_entry(window: tauri::Window, from_path: String, to_path: String) -> Result<(), AppError> {
+    let vault_path = crate::workspace::root_for(&window)?;
+    move_at(&vault_path, &from_path, &to_path)?;
 
     // Invalidate vault tree cache
     vault::invalidate_vault_cache();

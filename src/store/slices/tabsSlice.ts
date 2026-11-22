@@ -44,7 +44,6 @@ export interface TabsSlice {
   focusGroup: (index: number) => void;
   setTabRatio: (ratio: number) => void;
   reorderTabs: (group: number, from: number, to: number) => void;
-  tabsRenamePath: (from: string, to: string) => void;
   tabsRemovePath: (path: string) => void;
   resetTabs: (state?: T.TabsState) => void;
 }
@@ -172,11 +171,6 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
     setTabRatio: (ratio) => set({ tabsState: T.setRatio(get().tabsState, ratio) }),
     reorderTabs: (group, from, to) => set({ tabsState: T.reorder(get().tabsState, group, from, to) }),
 
-    tabsRenamePath: (from, to) =>
-      set({
-        tabsState: T.renamePath(get().tabsState, from, to),
-        closedTabs: T.renameClosed(get().closedTabs, from, to),
-      }),
     tabsRemovePath: (path) => {
       // A deleted note can't come back, so drop it from the closed stack too.
       set({ closedTabs: T.removeClosed(get().closedTabs, path) });
