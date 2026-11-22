@@ -44,6 +44,7 @@ Developers, technical writers and people who keep markdown in folders (repos, Ob
 - Slash commands, bubble menu, task lists, syntax-highlighted code blocks, Mermaid diagrams, images (served through a read-only `glade-img://` protocol).
 - Block handles (`+` and drag grip) on any block, including nested list items; tables with add/remove/move/resize controls; preview rail with heading marks.
 - The first H1 is the note title (filename if none); it is shown in the title field and preserved in the file.
+- An untitled note's file is named after its first title. From then on title and file name are independent, and Rename file (F2) changes the file.
 - Frontmatter shown as collapsible properties; edits change only the lines touched.
 - Per-note read/edit mode, find and replace, table of contents.
 

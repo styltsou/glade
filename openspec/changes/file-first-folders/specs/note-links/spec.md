@@ -109,7 +109,7 @@ The system SHALL compute backlinks only from markdown files inside the open root
 - **THEN** `c.md`'s backlinks list shows `a.md` and `b.md`
 
 ### Requirement: Keep links valid on rename and move
-When the user renames or moves a markdown file within the root, the system SHALL offer to update links to it from other files in the root, and SHALL rewrite the moved file's own relative links so they still reach the same targets.
+When the user renames or moves a markdown file within the root, the system SHALL offer to update links to it from other files in the root (updating them without asking when an untitled file gets its first name), and SHALL rewrite the moved file's own relative links so they still reach the same targets.
 
 #### Scenario: Rename with inbound links
 - **WHEN** the user renames `c.md` to `concepts.md` and `a.md` links to `c.md`

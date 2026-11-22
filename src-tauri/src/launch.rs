@@ -162,6 +162,28 @@ pub fn startup(app: &AppHandle) {
     }
 }
 
+/// A note's file was renamed from `window`: recents follow, and so does the
+/// window itself when that file is what it shows.
+pub fn file_renamed(window: &tauri::Window, from: &Path, to: &Path) {
+    let (old, new) = (from.to_string_lossy().to_string(), to.to_string_lossy().to_string());
+    if let Ok(mut cfg) = config::load_config() {
+        if cfg.recent_files.contains(&old) {
+            cfg.recent_files.retain(|p| *p != new);
+            for p in cfg.recent_files.iter_mut().filter(|p| **p == old) {
+                *p = new.clone();
+            }
+            if let Err(e) = config::save_config(&cfg) {
+                eprintln!("glade: could not update recent files: {e}");
+            }
+        }
+    }
+    let workspaces = window.state::<Workspaces>();
+    if workspaces.target(window.label()) == Some(Target::File(from.to_path_buf())) {
+        workspaces.set_target(window.label(), Target::File(to.to_path_buf()));
+        watch::restart(window.app_handle(), window.label());
+    }
+}
+
 #[tauri::command]
 pub async fn open_path_cmd(app: AppHandle, window: tauri::Window, path: String) -> Result<(), AppError> {
     open_path(&app, Path::new(&path), Some(window.label()))

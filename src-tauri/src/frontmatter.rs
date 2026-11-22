@@ -671,23 +671,52 @@ pub fn derive_title(content: &str, filename_stem: &str) -> String {
         .unwrap_or_else(|| filename_stem.to_string())
 }
 
-/// Change the title at its source. Returns `None` when the title comes from
-/// the file name (caller must rename the file instead).
-pub fn set_title(content: &str, new_title: &str) -> Option<Result<String, FmError>> {
-    match title_source(content) {
-        TitleSource::Heading => {
-            let body = body_of(content);
-            let body_off = content.len() - body.len();
-            let (start, end, _) = first_h1(body)?;
-            Some(Ok(format!(
-                "{}# {}{}",
-                &content[..body_off + start],
-                new_title,
-                &content[body_off + end..]
-            )))
-        }
-        TitleSource::Filename => None,
+/// A `# ` line that reads back as exactly `title`. The title field is plain
+/// text, so markdown is escaped, but only where it would change what is read.
+fn heading_line(title: &str) -> String {
+    let title = title.replace(['\r', '\n'], " ");
+    let title = title.trim();
+    let plain = format!("# {title}");
+    if first_h1(&plain).map_or(false, |(_, _, read)| read == title) {
+        return plain;
     }
+    let mut line = String::from("# ");
+    for c in title.chars() {
+        if r"\`*_[]<>&!~#".contains(c) {
+            line.push('\\');
+        }
+        line.push(c);
+    }
+    line
+}
+
+/// Set the title: replace the first H1, or add one at the top of the body.
+/// The title field is a view of that heading, so nothing else changes.
+pub fn set_title(content: &str, new_title: &str) -> String {
+    let body = body_of(content);
+    let body_off = content.len() - body.len();
+    let line = heading_line(new_title);
+    if let Some((start, end, _)) = first_h1(body) {
+        return format!("{}{}{}", &content[..body_off + start], line, &content[body_off + end..]);
+    }
+
+    let eol = if content.contains("\r\n") { "\r\n" } else { "\n" };
+    // After the frontmatter, a byte order mark and any leading blank lines.
+    let mut at = body_off;
+    if at == 0 && content.starts_with('\u{feff}') {
+        at = '\u{feff}'.len_utf8();
+    }
+    for part in content[at..].split_inclusive('\n') {
+        if !part.trim().is_empty() {
+            break;
+        }
+        at += part.len();
+    }
+    let (before, after) = content.split_at(at);
+    // A closing fence, or blank spaces, at the end of a file with no newline.
+    let break_before = if before.is_empty() || before == "\u{feff}" || before.ends_with('\n') { "" } else { eol };
+    let gap = if after.is_empty() { "" } else { eol };
+    format!("{before}{break_before}{line}{eol}{gap}{after}")
 }
 
 #[cfg(test)]
@@ -857,13 +886,41 @@ mod tests {
     #[test]
     fn title_edit_by_source() {
         let c = "---\ntitle: Old\nx: 1\n---\n# Heading\n";
-        assert_eq!(set_title(c, "New").unwrap().unwrap(), "---\ntitle: Old\nx: 1\n---\n# New\n");
+        assert_eq!(set_title(c, "New"), "---\ntitle: Old\nx: 1\n---\n# New\n");
         let h = "intro\n\n# Old head\n\nbody\n";
-        assert_eq!(set_title(h, "New").unwrap().unwrap(), "intro\n\n# New\n\nbody\n");
-        assert_eq!(set_title("Title\n=====\r\n\r\nbody\r\n", "New").unwrap().unwrap(), "# New\r\n\r\nbody\r\n");
-        assert!(set_title("---\ntitle: Metadata\n---\nno heading", "x").is_none());
-        assert!(set_title("no heading", "x").is_none());
+        assert_eq!(set_title(h, "New"), "intro\n\n# New\n\nbody\n");
+        assert_eq!(set_title("Title\n=====\r\n\r\nbody\r\n", "New"), "# New\r\n\r\nbody\r\n");
         assert_eq!(title_source("no heading"), TitleSource::Filename);
+    }
+
+    #[test]
+    fn title_without_a_heading_adds_one_at_the_top_of_the_body() {
+        let t = |c: &str| set_title(c, "T");
+        assert_eq!(t(""), "# T\n");
+        assert_eq!(t("body\n"), "# T\n\nbody\n");
+        assert_eq!(t("body"), "# T\n\nbody");
+        assert_eq!(t("---\ntitle: Meta\n---\nbody\n"), "---\ntitle: Meta\n---\n# T\n\nbody\n");
+        assert_eq!(t("---\nx: 1\n---\n\nbody\n"), "---\nx: 1\n---\n\n# T\n\nbody\n");
+        assert_eq!(t("---\nx: 1\n---"), "---\nx: 1\n---\n# T\n");
+        assert_eq!(t("body\r\n"), "# T\r\n\r\nbody\r\n");
+        assert_eq!(t("\u{feff}body\n"), "\u{feff}# T\n\nbody\n");
+        assert_eq!(t("## Sub\n"), "# T\n\n## Sub\n");
+        for c in ["", "body", "---\nx: 1\n---\n\nbody\n", "    code\n"] {
+            assert_eq!(derive_title(&t(c), "file"), "T", "{c:?}");
+            assert_eq!(t(&t(c)), t(c), "repeating changes nothing: {c:?}");
+        }
+    }
+
+    #[test]
+    fn titles_read_back_as_typed() {
+        for title in [
+            "Plain", "C#", "Issue #", "#", "2*3*4", "*stars*", "a <b> tag", "Tom &amp; Jerry",
+            "[link](x.md)", "`tick", "back\\slash", "__init__", "1. First", "- dash", "Σημειώσεις", "![img](x)",
+        ] {
+            let out = set_title("body\n", title);
+            assert_eq!(derive_title(&out, "file"), title, "{out:?}");
+        }
+        assert_eq!(set_title("", "C# and my_var"), "# C# and my_var\n");
     }
 
     #[test]

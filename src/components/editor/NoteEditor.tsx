@@ -563,6 +563,9 @@ export function NoteEditor({
 					title={activeNote.title}
 					path={activeNote.path}
 					created={activeNote.created}
+					onDone={() => {
+						if (editor && isEditMode && !isRawMode) editor.commands.focus("start");
+					}}
 				/>
 
 				{activeNote.updated && (

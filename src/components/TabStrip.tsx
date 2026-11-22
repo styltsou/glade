@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/
 import { FileText, Folder, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
+import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 import { type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
 import { dragGhost, hitTest, sameDrop } from "@/lib/paneDnd";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,10 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
   const otherHas = (path: string) => !!otherGroup?.tabs.some((t) => t.path === path);
   const dropHere = useStore((s) => (s.tabDropTarget?.kind === "strip" && s.tabDropTarget.group === index ? s.tabDropTarget : null));
   const rootName = useStore((s) => (s.target ? baseName(s.target.path) : "Overview"));
+  const noteCache = useStore((s) => s.noteCache);
+  const entries = useStore((s) => s.entries);
+  /** A note's title; its file name until that is known. */
+  const noteLabel = (path: string) => noteCache[path]?.title || findEntryByPath(entries, path)?.name || baseName(path);
   const viewport = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -237,7 +242,7 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
       <AnimatePresence initial={false}>
       {group.tabs.map((tab, position) => {
         const active = tab.id === group.activeId;
-        const label = tab.path ? baseName(tab.path) : typeof tab.folder === "string" ? baseName(tab.folder) : rootName;
+        const label = tab.path ? noteLabel(tab.path) : typeof tab.folder === "string" ? baseName(tab.folder) : rootName;
         return <TabSlot key={tab.id} id={tab.id} transition={tabMotion} reordering={draggingId ? order : false} dragged={draggingId === tab.id} active={active} pin={flush && position > 0 ? "left-4" : "left-0"} flush={flush && position === 0}>
           <ContextMenu><ContextMenuTrigger asChild>
             <div onPointerDown={(e) => startTabDrag(e, tab, label)} className={cn("group relative flex h-full w-full items-center overflow-hidden rounded-lg transition-colors duration-100 has-[[role=tab]:focus-visible]:ring-1 has-[[role=tab]:focus-visible]:ring-inset has-[[role=tab]:focus-visible]:ring-ring/50", active

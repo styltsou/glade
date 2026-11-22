@@ -6,7 +6,7 @@ use serde::Serialize;
 use crate::error::AppError;
 use crate::links::{self, LinkInfo};
 use crate::vault;
-use crate::workspace::{resolve_inside, resolve_markdown, root_for};
+use crate::workspace::{resolve_markdown, root_for};
 
 /// Classify the links of a note (relative to the note's own directory).
 #[tauri::command]
@@ -135,7 +135,8 @@ pub struct LinkUpdates {
 #[tauri::command]
 pub async fn preview_link_updates(window: tauri::Window, from: String, to: String) -> Result<LinkUpdates, AppError> {
     let root = root_for(&window)?;
-    let old = links::normalize(&resolve_inside(&root, &from)?);
+    // Only compared with link targets, so it may be a file outside the folder.
+    let old = links::normalize(&root.join(&from));
     let (links, files) = links::inbound_counts(&root, &old)?;
     let _ = to;
     Ok(LinkUpdates { links, files })
@@ -145,8 +146,8 @@ pub async fn preview_link_updates(window: tauri::Window, from: String, to: Strin
 #[tauri::command]
 pub async fn apply_link_updates(window: tauri::Window, from: String, to: String) -> Result<usize, AppError> {
     let root = root_for(&window)?;
-    let old = links::normalize(&resolve_inside(&root, &from)?);
-    let new = links::normalize(&resolve_inside(&root, &to)?);
+    let old = links::normalize(&root.join(&from));
+    let new = links::normalize(&root.join(&to));
     let changed = links::apply_inbound(&root, &old, &new)?;
     vault::invalidate_vault_cache();
     Ok(changed)

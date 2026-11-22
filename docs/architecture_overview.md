@@ -57,7 +57,13 @@ graph TD
 
 The first document-level H1 supplies the note title. Without an H1, Glade uses the filename stem; a frontmatter `title` remains ordinary metadata. Code blocks and quoted headings do not supply titles.
 
-Rich and raw editing show the title in the title field and omit that one heading from the body. The editor preserves the original heading in Markdown saves, including its formatting on untouched titles. Renaming through the title field saves pending body edits first, then updates the H1 or renames the file when there is no H1. Additional H1 headings stay in the body.
+Rich and raw editing show the title in the title field and omit that one heading from the body. The editor preserves the original heading in Markdown saves, including its formatting on untouched titles. Editing the title changes that H1, or adds one at the top of the body, and leaves the file name alone. Additional H1 headings stay in the body.
+
+### File names
+
+A note's path is its address and is independent of its title, with one exception: a file still called `untitled` (or `untitled-N`) is named after its title, in kebab-case, when the title field is committed (`naming.rs`). That never happens on autosave. Rename file (F2) changes only the file, uses the typed name as is, and refuses a taken one.
+
+Renames, moves and link rewrites go through `lib/fileChanges.ts`, which saves open editors first and carries them to the new path. Setting a title and naming the file are two separate changes there: a content change may be retried over text typed meanwhile, a rename may not.
 
 ### Tabs and panes
 

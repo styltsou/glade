@@ -5,6 +5,7 @@ import { offerLinkUpdates } from "@/lib/linkUpdates";
 import { changeFiles, isWithin, relocatePath, scheduleWrite } from "@/lib/fileChanges";
 import * as T from "@/lib/tabs";
 import { isAbsolutePath } from "@/lib/links";
+import { isUntitled } from "@/lib/paths";
 import type { VaultEntry, NoteData, PropertyValue } from "@/types";
 
 export interface MissingLink {
@@ -28,8 +29,17 @@ export interface NoteSlice {
   /** Re-read a note from disk and replace what is shown (body included). */
   reloadNote: (path: string) => Promise<void>;
   createNote: (folder?: string) => Promise<void>;
-  renameNote: (path: string, newTitle: string) => Promise<void>;
-  renameFolder: (path: string, newName: string) => Promise<void>;
+  /** A just created note whose title field should take the keyboard. */
+  focusTitlePath: string | null;
+  clearFocusTitle: () => void;
+  /**
+   * Set a note's title (its H1; null leaves it as it is). An untitled note's
+   * file is then named after it, that once. Resolves to whether it was saved.
+   */
+  commitTitle: (path: string, title: string | null) => Promise<boolean>;
+  /** Rename only the file. Resolves to what went wrong, or null. */
+  renameFile: (path: string, name: string) => Promise<string | null>;
+  renameFolder: (path: string, newName: string) => Promise<string | null>;
   duplicateNote: (path: string) => Promise<void>;
   deleteEntry: (path: string) => Promise<void>;
   createFolder: (path: string) => Promise<void>;
@@ -83,6 +93,9 @@ function movedState(s: StoreState, from: string, to: string): Partial<StoreState
   const moveKeys = <V,>(map: Record<string, V>): Record<string, V> =>
     Object.fromEntries(Object.entries(map).map(([path, value]) => [move(path), value]));
   return {
+    // A window showing one file follows it; an open Rename dialog does too.
+    target: s.target?.kind === "file" ? { ...s.target, path: move(s.target.path) } : s.target,
+    renamePath: s.renamePath === null ? null : move(s.renamePath),
     tabsState: T.renamePath(s.tabsState, from, to),
     closedTabs: T.renameClosed(s.closedTabs, from, to),
     expandedFolders: s.expandedFolders.map(move),
@@ -124,8 +137,11 @@ function createFileOps(set: SetState, get: GetState) {
       commit: (to, notes) =>
         set((state: StoreState) => {
           // Cached copies of what changed are stale; only the re-read ones stay.
+          // So is anything cached for a name the moved file now has.
           const noteCache = Object.fromEntries(
-            Object.entries(state.noteCache).filter(([path]) => !isWithin(path, scope)),
+            Object.entries(state.noteCache).filter(
+              ([path]) => !isWithin(path, scope) && !(to !== null && isWithin(path, to)),
+            ),
           );
           for (const [path, note] of notes) noteCache[path] = note;
 
@@ -139,15 +155,25 @@ function createFileOps(set: SetState, get: GetState) {
         }),
     });
 
-  /** After `from` became `to`: refresh the tree, then offer to fix links to it. */
-  const afterMove = async (from: string, to: string) => {
+  /**
+   * After `from` became `to`: refresh the tree, then fix links to it, asking
+   * first unless Glade chose the new name itself. A window showing one file
+   * has no folder to look for links in.
+   */
+  const afterMove = async (from: string, to: string, confirm = true) => {
     await get().refreshTree();
-    await offerLinkUpdates(from, to, async (update) => {
-      await changeOpenFiles(null, async () => {
-        await update();
-        return null;
-      });
-    });
+    if (get().target?.kind === "file") return;
+    await offerLinkUpdates(
+      from,
+      to,
+      async (update) => {
+        await changeOpenFiles(null, async () => {
+          await update();
+          return null;
+        });
+      },
+      confirm,
+    );
   };
 
   return { writeNote, changeOpenFiles, afterMove };
@@ -262,6 +288,12 @@ const noteActions = (
         vaultError: null
       }));
       get().hideHome();
+      // Straight to typing: the title first, then the body.
+      set((state: StoreState) => ({
+        focusTitlePath: note.path,
+        noteEditMode: { ...state.noteEditMode, [note.path]: true },
+        isRawMode: { ...state.isRawMode, [note.path]: false },
+      }));
       await get().openNote(note.path, "active", note);
     } catch (e) {
       set({ vaultError: String(e) });
@@ -269,28 +301,58 @@ const noteActions = (
     }
   },
 
-  renameNote: async (path: string, newTitle: string) => {
-    set({ entries: updateEntryInTree(get().entries, path, { name: newTitle }) });
+  focusTitlePath: null,
+  clearFocusTitle: () => set({ focusTitlePath: null }),
+
+  commitTitle: async (path: string, title: string | null) => {
+    if (title !== null) {
+      set({ entries: updateEntryInTree(get().entries, path, { name: title }) });
+      try {
+        await changeOpenFiles(path, async () => {
+          await invoke("set_note_title", { path, title });
+          return path;
+        });
+      } catch (e) {
+        await get().loadVault();
+        set({ vaultError: String(e) });
+        toast.error("Couldn't change the title", { description: errorText(e) });
+        return false;
+      }
+    }
+
+    // A step of its own: a rewrite may be redone over what was typed meanwhile,
+    // a rename may not.
+    let to = path;
+    if (isUntitled(path)) {
+      try {
+        to = (await changeOpenFiles(path, () => invoke<string>("name_untitled_note", { path })))!;
+      } catch (e) {
+        toast.error("Couldn't name the file", { description: errorText(e) });
+      }
+    }
+    if (to !== path) void afterMove(path, to, false);
+    else if (title !== null) void get().refreshTree();
+    return true;
+  },
+
+  renameFile: async (path: string, name: string) => {
     try {
-      const to = (await changeOpenFiles(path, () => invoke<string>("rename_note", { path, newTitle })))!;
-      // A different path means the title came from the file name.
-      if (to !== path) await afterMove(path, to);
-      else await get().refreshTree();
+      const to = (await changeOpenFiles(path, () => invoke<string>("rename_note_file", { path, name })))!;
+      // Not awaited: the dialog closes before the question about links.
+      if (to !== path) void afterMove(path, to);
+      return null;
     } catch (e) {
-      await get().loadVault();
-      set({ vaultError: String(e) });
-      toast.error("Couldn't rename the note", { description: errorText(e) });
+      return errorText(e);
     }
   },
 
   renameFolder: async (path: string, newName: string) => {
     try {
       const to = (await changeOpenFiles(path, () => invoke<string>("rename_folder", { path, newName })))!;
-      if (to !== path) await afterMove(path, to);
+      if (to !== path) void afterMove(path, to);
+      return null;
     } catch (e) {
-      await get().loadVault();
-      set({ vaultError: String(e) });
-      toast.error("Couldn't rename the folder", { description: errorText(e) });
+      return errorText(e);
     }
   },
 

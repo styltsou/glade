@@ -58,7 +58,7 @@ The process-wide statics in `vault.rs` move into `Workspace`.
 - **Walk.** `ignore::WalkBuilder` handles `.gitignore`, `.ignore` and global git excludes, plus hard-coded excludes for `.git`, `node_modules` and `target`. It walks in parallel.
 - **Index contents.** For each markdown file:
   - mtime and size
-  - title (`title:`, then the first H1, then the filename)
+  - title (the first H1, then the filename)
   - tags
   - a preview
   - outbound links parsed with `pulldown-cmark` (already a dependency)

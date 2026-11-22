@@ -23,6 +23,7 @@ const LABELS: Record<ListedCommand, string> = {
   "open-mode-picker": "Light, dark or system",
   "new-note": "New note",
   "new-folder": "New folder",
+  "rename-file": "Rename file or folder",
   delete: "Delete note or folder",
   "toggle-edit-mode": "Switch between reading and editing",
   "toggle-raw-mode": "Show raw markdown",
@@ -42,7 +43,7 @@ type Row = { label: string; shortcuts: Shortcut[]; keys?: string[] };
 
 const GROUPS: { heading: string; rows: (ListedCommand | Row)[] }[] = [
   { heading: "General", rows: ["toggle-command-palette", "show-shortcuts", "open-settings", "open-mode-picker"] },
-  { heading: "Notes", rows: ["new-note", "new-folder", "delete", "toggle-edit-mode", "toggle-raw-mode", "toggle-toc"] },
+  { heading: "Notes", rows: ["new-note", "new-folder", "rename-file", "delete", "toggle-edit-mode", "toggle-raw-mode", "toggle-toc"] },
   {
     heading: "Tabs and panes",
     rows: [

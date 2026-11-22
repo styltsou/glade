@@ -33,7 +33,6 @@ import type { Target } from "@/types";
 function SharedDialogs() {
   const renameOpen = useStore((state) => state.renameOpen);
   const renamePath = useStore((state) => state.renamePath);
-  const renameInitialTitle = useStore((state) => state.renameInitialTitle);
   const renameIsFolder = useStore((state) => state.renameIsFolder);
   const closeRename = useStore((state) => state.closeRename);
 
@@ -49,7 +48,7 @@ function SharedDialogs() {
 
 
   const createFolder = useStore((state) => state.createFolder);
-  const renameNote = useStore((state) => state.renameNote);
+  const renameFile = useStore((state) => state.renameFile);
   const renameFolder = useStore((state) => state.renameFolder);
   const deleteEntry = useStore((state) => state.deleteEntry);
   const exportOpen = useStore((state) => state.exportOpen);
@@ -64,17 +63,11 @@ function SharedDialogs() {
       <RenameDialog
         isOpen={renameOpen}
         onOpenChange={(open) => { if (!open) closeRename(); }}
-        initialTitle={renameInitialTitle}
+        path={renamePath}
         isFolder={renameIsFolder}
-        onRename={(newTitle) => {
-          if (renamePath) {
-            if (renameIsFolder) {
-              renameFolder(renamePath, newTitle);
-            } else {
-              renameNote(renamePath, newTitle);
-            }
-          }
-          closeRename();
+        onRename={async (name) => {
+          if (!renamePath) return null;
+          return renameIsFolder ? renameFolder(renamePath, name) : renameFile(renamePath, name);
         }}
       />
       <DeleteConfirmDialog

@@ -6,6 +6,7 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/popover";
 import type { NoteCard as NoteCardType } from "@/types";
 import { formatShortDate } from "@/lib/dates";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
 interface NoteCardProps {
   card: NoteCardType;
@@ -225,9 +227,10 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           Open to the side
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => openRename(card.path, card.title)}>
+        <ContextMenuItem onClick={() => openRename(card.path)}>
           <PencilIcon className="mr-2 h-4 w-4" />
-          Rename
+          Rename file
+          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={() => duplicateNote(card.path)}>
           <CopyIcon className="mr-2 h-4 w-4" />

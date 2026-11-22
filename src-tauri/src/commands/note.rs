@@ -4,6 +4,7 @@ use std::path::Path;
 use crate::config;
 use crate::error::AppError;
 use crate::frontmatter::{self, TitleSource};
+use crate::naming;
 use crate::types::{NoteCard, NoteData};
 use crate::vault;
 use crate::workspace_state;
@@ -167,8 +168,9 @@ pub async fn remove_property(window: tauri::Window, path: String, key: String) -
     Ok(note_data(path, &full, &updated))
 }
 
-/// A stem for which `stem.ext` is not taken in `dir` (case-insensitive).
-fn unique_stem(dir: &Path, base: &str, ext: &str, ignore: Option<&Path>, is_copy: bool) -> String {
+/// `base`, or the first `base-2`, `base-3`... for which no `stem.ext` is in
+/// `dir` (case-insensitive). `ignore` is the file being named.
+fn unique_stem(dir: &Path, base: &str, ext: &str, ignore: Option<&Path>) -> String {
     let mut taken = std::collections::HashSet::new();
     if let Ok(entries) = fs::read_dir(dir) {
         for entry in entries.flatten() {
@@ -180,41 +182,24 @@ fn unique_stem(dir: &Path, base: &str, ext: &str, ignore: Option<&Path>, is_copy
         }
     }
     let is_taken = |stem: &str| taken.contains(&format!("{stem}.{ext}").to_lowercase());
-    if !is_taken(base) {
-        return base.to_string();
-    }
-    let without_copy = if is_copy {
-        let re = regex::Regex::new(r"\s*\(copy(?:\s+\d+)?\)$").unwrap();
-        re.replace(base, "").to_string()
-    } else {
-        base.to_string()
-    };
+    let mut stem = base.to_string();
     let mut counter = 1;
-    loop {
-        let candidate = if is_copy {
-            if counter == 1 {
-                format!("{} (copy)", without_copy)
-            } else {
-                format!("{} (copy {})", without_copy, counter)
-            }
-        } else {
-            format!("{} {}", without_copy, counter)
-        };
-        if !is_taken(&candidate) {
-            return candidate;
-        }
+    while is_taken(&stem) {
         counter += 1;
+        stem = format!("{base}-{counter}");
     }
+    stem
 }
 
-/// Make a title safe to use as a file name.
-fn filename_from_title(title: &str) -> String {
-    let cleaned: String = title
-        .chars()
-        .map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') || c.is_control() { '-' } else { c })
-        .collect();
-    let cleaned = cleaned.trim().trim_start_matches('.').trim().to_string();
-    if cleaned.is_empty() { "Untitled".into() } else { cleaned }
+/// The stem for a copy of `stem`. A copy of an untitled note is untitled too,
+/// so its first title still names it.
+fn copy_stem(dir: &Path, stem: &str, ext: &str) -> String {
+    let base = if naming::is_untitled(stem) {
+        naming::UNTITLED.to_string()
+    } else {
+        format!("{}-copy", naming::without_copy_suffix(stem))
+    };
+    unique_stem(dir, &base, ext, None)
 }
 
 /// Create a new, empty note in the given folder (or the root). No frontmatter.
@@ -231,7 +216,7 @@ pub async fn create_note(window: tauri::Window, folder: Option<String>) -> Resul
         fs::create_dir_all(&target_dir)?;
     }
 
-    let stem = unique_stem(&target_dir, "Untitled", "md", None, false);
+    let stem = unique_stem(&target_dir, naming::UNTITLED, "md", None);
     let full_path = target_dir.join(format!("{}.md", stem));
     crate::watch::write_file(&full_path, "")?;
 
@@ -240,56 +225,124 @@ pub async fn create_note(window: tauri::Window, folder: Option<String>) -> Resul
     Ok(note_data(relative_of(&vault_path, &full_path), &full_path, ""))
 }
 
-/// Rename a note by editing its title where it lives: the
-/// first H1, or the file name when there is no H1. Returns the note's
-/// (possibly new) path relative to `root`.
-pub fn rename_at(root: &Path, path: &str, new_title: &str) -> Result<String, AppError> {
+/// Set a note's title, which is its first H1. Never renames the file.
+pub fn set_title_at(root: &Path, path: &str, title: &str) -> Result<(), AppError> {
     let full_path = crate::workspace::resolve_markdown(root, path)?;
-
     if !full_path.exists() {
         return Err(AppError::NotFound(format!("Note not found: {}", path)));
     }
-
-    let content = fs::read_to_string(&full_path)?;
-    let new_title = new_title.trim();
-
-    match frontmatter::set_title(&content, new_title) {
-        Some(edited) => {
-            let updated = edited
-                .map_err(|e| AppError::InvalidPath(format!("Cannot update title: {}", e)))?;
-            if updated != content {
-                crate::watch::write_file(&full_path, updated)?;
-            }
-            Ok(path.to_string())
-        }
-        None => {
-            let parent = full_path.parent().unwrap_or(root);
-            let ext = extension_of(&full_path);
-            let stem = unique_stem(parent, &filename_from_title(new_title), &ext, Some(&full_path), false);
-            let new_full = parent.join(format!("{}.{}", stem, ext));
-            crate::relocate::rename_no_replace(&full_path, &new_full)?;
-            // An absolute path (loose or outside file) stays absolute.
-            let new_rel = if Path::new(path).is_absolute() {
-                new_full.to_string_lossy().to_string()
-            } else {
-                relative_of(root, &new_full)
-            };
-            if new_rel != path {
-                if let Err(e) = workspace_state::rename_path(root, path, &new_rel) {
-                    eprintln!("glade: could not update pins after renaming {path}: {e}");
-                }
-            }
-            Ok(new_rel)
-        }
+    if title.trim().is_empty() {
+        return Err(AppError::InvalidPath("A title can't be empty".into()));
     }
+    let content = fs::read_to_string(&full_path)?;
+    let updated = frontmatter::set_title(&content, title);
+    if updated != content {
+        crate::watch::write_file(&full_path, updated)?;
+    }
+    Ok(())
+}
+
+/// Give a note's file a new stem, keeping its folder and extension. Returns
+/// its new path, in the same form (relative or absolute) as `path`.
+fn rename_stem(root: &Path, path: &str, stem: &str) -> Result<String, AppError> {
+    let full_path = crate::workspace::resolve_markdown(root, path)?;
+    let new_full = full_path.with_file_name(format!("{}.{}", stem, extension_of(&full_path)));
+    crate::relocate::rename_no_replace(&full_path, &new_full)?;
+    // An absolute path (loose or outside file) stays absolute.
+    let new_path = if Path::new(path).is_absolute() {
+        new_full.to_string_lossy().to_string()
+    } else {
+        relative_of(root, &new_full)
+    };
+    if let Err(e) = workspace_state::rename_path(root, path, &new_path) {
+        eprintln!("glade: could not update pins after renaming {path}: {e}");
+    }
+    Ok(new_path)
+}
+
+/// The once-only naming: a file still called `untitled` is named after its
+/// title. Any other file, and one without a title yet, keeps its name.
+pub fn name_untitled_at(root: &Path, path: &str) -> Result<String, AppError> {
+    let full_path = crate::workspace::resolve_markdown(root, path)?;
+    if !naming::is_untitled(&stem_of(&full_path)) {
+        return Ok(path.to_string());
+    }
+    let content = fs::read_to_string(&full_path)?;
+    if frontmatter::title_source(&content) == TitleSource::Filename {
+        return Ok(path.to_string());
+    }
+    let Some(name) = naming::slug(&frontmatter::derive_title(&content, "")) else {
+        return Ok(path.to_string());
+    };
+    if naming::is_untitled(&name) {
+        return Ok(path.to_string());
+    }
+    let parent = full_path.parent().unwrap_or(root);
+    let stem = unique_stem(parent, &name, &extension_of(&full_path), Some(&full_path));
+    rename_stem(root, path, &stem)
+}
+
+/// Rename a note's file to exactly the name the user typed.
+pub fn rename_file_at(root: &Path, path: &str, name: &str) -> Result<String, AppError> {
+    let full_path = crate::workspace::resolve_markdown(root, path)?;
+    if !full_path.exists() {
+        return Err(AppError::NotFound(format!("Note not found: {}", path)));
+    }
+    // An existing name is never judged, only a new one.
+    if name.trim() == stem_of(&full_path) {
+        return Ok(path.to_string());
+    }
+    let stem = naming::checked_stem(name, &extension_of(&full_path)).map_err(AppError::InvalidPath)?;
+    if stem == stem_of(&full_path) {
+        return Ok(path.to_string());
+    }
+    rename_stem(root, path, &stem)
+}
+
+/// The name a note's title would give its file, when the file has another.
+fn title_file_name_at(root: &Path, path: &str) -> Result<Option<String>, AppError> {
+    let full_path = crate::workspace::resolve_markdown(root, path)?;
+    let content = fs::read_to_string(&full_path)?;
+    if frontmatter::title_source(&content) == TitleSource::Filename {
+        return Ok(None);
+    }
+    Ok(naming::slug(&frontmatter::derive_title(&content, "")).filter(|name| *name != stem_of(&full_path)))
 }
 
 #[tauri::command]
-pub async fn rename_note(window: tauri::Window, path: String, new_title: String) -> Result<String, AppError> {
-    let vault_path = crate::workspace::root_for(&window)?;
-    let result = rename_at(&vault_path, &path, &new_title)?;
+pub async fn set_note_title(window: tauri::Window, path: String, title: String) -> Result<(), AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    set_title_at(&root, &path, &title)?;
     vault::invalidate_vault_cache();
-    Ok(result)
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn name_untitled_note(window: tauri::Window, path: String) -> Result<String, AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    let renamed = name_untitled_at(&root, &path)?;
+    if renamed != path {
+        crate::launch::file_renamed(&window, &root.join(&path), &root.join(&renamed));
+        vault::invalidate_vault_cache();
+    }
+    Ok(renamed)
+}
+
+#[tauri::command]
+pub async fn rename_note_file(window: tauri::Window, path: String, name: String) -> Result<String, AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    let renamed = rename_file_at(&root, &path, &name)?;
+    if renamed != path {
+        crate::launch::file_renamed(&window, &root.join(&path), &root.join(&renamed));
+        vault::invalidate_vault_cache();
+    }
+    Ok(renamed)
+}
+
+#[tauri::command]
+pub async fn title_file_name(window: tauri::Window, path: String) -> Result<Option<String>, AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    title_file_name_at(&root, &path)
 }
 
 /// Duplicate a note. The copy is byte-identical except that a title stored in
@@ -306,14 +359,12 @@ pub async fn duplicate_note(window: tauri::Window, path: String) -> Result<NoteD
     let content = fs::read_to_string(&full_path)?;
     let parent = full_path.parent().unwrap_or(&vault_path);
     let ext = extension_of(&full_path);
-    let stem = unique_stem(parent, &stem_of(&full_path), &ext, None, true);
+    let stem = copy_stem(parent, &stem_of(&full_path), &ext);
     let new_full = parent.join(format!("{}.{}", stem, ext));
 
     let new_content = if frontmatter::title_source(&content) != TitleSource::Filename {
         let title = frontmatter::derive_title(&content, &stem_of(&full_path));
         frontmatter::set_title(&content, &format!("{} (copy)", title))
-            .and_then(|r| r.ok())
-            .unwrap_or(content.clone())
     } else {
         content.clone()
     };
@@ -446,27 +497,21 @@ changed
     }
 
     #[test]
-    fn rename_edits_title_where_it_lives() {
+    fn title_edits_change_the_h1_and_never_the_file() {
         let dir = tempfile::tempdir().unwrap();
         let cfg = tempfile::tempdir().unwrap();
         std::env::set_var("GLADE_CONFIG_DIR", cfg.path());
         let root = dir.path();
 
         fs::write(root.join("a.md"), "---\ntitle: Metadata\nx: 1\n---\n# Old\n\nbody\n").unwrap();
-        assert_eq!(rename_at(root, "a.md", "New").unwrap(), "a.md");
+        set_title_at(root, "a.md", "New").unwrap();
         assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "---\ntitle: Metadata\nx: 1\n---\n# New\n\nbody\n");
 
-        fs::write(root.join("b.md"), "# Old\n\ntext\n").unwrap();
-        assert_eq!(rename_at(root, "b.md", "New").unwrap(), "b.md");
-        assert_eq!(fs::read_to_string(root.join("b.md")).unwrap(), "# New\n\ntext\n");
-
-        // Title from the file name: the file is renamed, content untouched, pin follows.
-        fs::write(root.join("c.md"), "no heading\n").unwrap();
-        workspace_state::pin(root, "c.md").unwrap();
-        assert_eq!(rename_at(root, "c.md", "Fresh / name").unwrap(), "Fresh - name.md");
-        assert!(!root.join("c.md").exists());
-        assert_eq!(fs::read_to_string(root.join("Fresh - name.md")).unwrap(), "no heading\n");
-        assert_eq!(workspace_state::load(root).unwrap().pinned, vec!["Fresh - name.md"]);
+        fs::write(root.join("README.md"), "no heading\n").unwrap();
+        set_title_at(root, "README.md", "My project").unwrap();
+        assert_eq!(fs::read_to_string(root.join("README.md")).unwrap(), "# My project\n\nno heading\n");
+        assert_eq!(name_untitled_at(root, "README.md").unwrap(), "README.md");
+        assert!(set_title_at(root, "README.md", " ").is_err());
 
         // Pinning never touches the file.
         let before = fs::read(root.join("a.md")).unwrap();
@@ -475,17 +520,77 @@ changed
     }
 
     #[test]
-    fn rename_keeps_the_extension() {
+    fn the_first_title_names_an_untitled_file_once() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        for (file, renamed) in [("a.mdx", "New.mdx"), ("b.markdown", "New.markdown"), ("c.MD", "New.MD")] {
-            fs::write(root.join(file), "no heading\n").unwrap();
-            assert_eq!(rename_at(root, file, "New").unwrap(), renamed);
+        fs::write(root.join("untitled.md"), "").unwrap();
+        assert_eq!(name_untitled_at(root, "untitled.md").unwrap(), "untitled.md", "no title yet");
+
+        set_title_at(root, "untitled.md", "Meeting Notes").unwrap();
+        assert_eq!(name_untitled_at(root, "untitled.md").unwrap(), "meeting-notes.md");
+        assert_eq!(fs::read_to_string(root.join("meeting-notes.md")).unwrap(), "# Meeting Notes\n");
+
+        set_title_at(root, "meeting-notes.md", "Retro").unwrap();
+        assert_eq!(name_untitled_at(root, "meeting-notes.md").unwrap(), "meeting-notes.md");
+    }
+
+    #[test]
+    fn generated_names_are_numbered_and_keep_folder_and_extension() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir(root.join("sub")).unwrap();
+        fs::write(root.join("sub/Plan.mdx"), "taken").unwrap();
+        fs::write(root.join("sub/Untitled 1.mdx"), "# Plan\n").unwrap();
+        assert_eq!(name_untitled_at(root, "sub/Untitled 1.mdx").unwrap(), "sub/plan-2.mdx");
+        assert_eq!(fs::read_to_string(root.join("sub/Plan.mdx")).unwrap(), "taken");
+
+        for nameless in ["🚀", "Untitled"] {
+            fs::write(root.join("untitled.md"), format!("# {nameless}\n")).unwrap();
+            assert_eq!(name_untitled_at(root, "untitled.md").unwrap(), "untitled.md");
         }
-        // A taken name is numbered per extension.
-        fs::write(root.join("d.mdx"), "no heading\n").unwrap();
-        assert_eq!(rename_at(root, "d.mdx", "New").unwrap(), "New 1.mdx");
-        assert_eq!(unique_stem(root, "New", "mdx", None, true), "New (copy)");
+        assert_eq!(unique_stem(root, naming::UNTITLED, "md", None), "untitled-2");
+    }
+
+    #[test]
+    fn copies_are_named_after_the_original() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        assert_eq!(copy_stem(root, "plan", "md"), "plan-copy");
+        fs::write(root.join("plan-copy.md"), "").unwrap();
+        assert_eq!(copy_stem(root, "plan", "md"), "plan-copy-2");
+        assert_eq!(copy_stem(root, "plan-copy", "md"), "plan-copy-2");
+        assert_eq!(copy_stem(root, "plan (copy 3)", "md"), "plan-copy-2");
+        fs::write(root.join("untitled.md"), "").unwrap();
+        assert_eq!(copy_stem(root, "untitled", "md"), "untitled-2");
+    }
+
+    #[test]
+    fn rename_file_uses_the_typed_name_and_leaves_content_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        for (file, renamed) in [("a.mdx", "My File.mdx"), ("b.markdown", "My File.markdown"), ("c.MD", "My File.MD")] {
+            fs::write(root.join(file), "# Title\n").unwrap();
+            assert_eq!(rename_file_at(root, file, "My File").unwrap(), renamed);
+            assert_eq!(fs::read_to_string(root.join(renamed)).unwrap(), "# Title\n");
+        }
+
+        // A taken name is refused, not numbered.
+        fs::write(root.join("d.mdx"), "d").unwrap();
+        assert!(rename_file_at(root, "d.mdx", "My File").is_err());
+        assert!(rename_file_at(root, "d.mdx", "../escape").is_err());
+        assert_eq!(fs::read_to_string(root.join("d.mdx")).unwrap(), "d");
+    }
+
+    #[test]
+    fn use_title_is_only_offered_when_the_name_differs() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::write(root.join("old.md"), "# New Plan\n").unwrap();
+        fs::write(root.join("new-plan.md"), "# New Plan\n").unwrap();
+        fs::write(root.join("bare.md"), "text\n").unwrap();
+        assert_eq!(title_file_name_at(root, "old.md").unwrap().as_deref(), Some("new-plan"));
+        assert_eq!(title_file_name_at(root, "new-plan.md").unwrap(), None);
+        assert_eq!(title_file_name_at(root, "bare.md").unwrap(), None);
     }
 
     #[test]
@@ -493,7 +598,7 @@ changed
         let dir = tempfile::tempdir().unwrap();
         let file = dir.path().join("loose.md");
         fs::write(&file, "x\n").unwrap();
-        let renamed = rename_at(dir.path(), file.to_str().unwrap(), "Named").unwrap();
+        let renamed = rename_file_at(dir.path(), file.to_str().unwrap(), "Named").unwrap();
         assert_eq!(renamed, dir.path().join("Named.md").to_string_lossy());
     }
 

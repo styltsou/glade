@@ -69,10 +69,16 @@ function key(element: HTMLElement, value: string) {
 }
 
 describe("editor tab controls", () => {
-  it("labels tabs by filename and shows the full path in our tooltip, not a native title", () => {
+  it("labels tabs by filename until a title is known and shows the full path in our tooltip, not a native title", () => {
     const controls = render(["drafts/plan.md", "archive/plan.md"]);
     expect(controls().map((tab) => tab.getAttribute("aria-label"))).toEqual(["plan.md", "plan.md"]);
     expect(controls().every((tab) => !tab.title && tab.dataset.slot === "tooltip-trigger")).toBe(true);
+  });
+
+  it("labels tabs by title", () => {
+    useStore.setState({ noteCache: { "drafts/plan.md": { title: "Launch plan" } as any } });
+    const controls = render(["drafts/plan.md"]);
+    expect(controls()[0].getAttribute("aria-label")).toBe("Launch plan");
   });
 
   it("moves focus and selection with arrows and Home/End, wrapping at the ends", () => {

@@ -13,6 +13,7 @@ export type GlobalCommand =
   | `go-to-tab-${TabDigit}`
   | "new-note"
   | "new-folder"
+  | "rename-file"
   | "delete"
   | "open-settings"
   | "open-mode-picker"
@@ -51,6 +52,7 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "show-shortcuts", code: "Slash", mod: true, shiftKey: true },
   { command: "new-note", code: "KeyN", mod: true },
   { command: "new-folder", code: "KeyN", mod: true, shiftKey: true },
+  { command: "rename-file", key: "F2" },
   { command: "delete", code: "KeyD", mod: true },
   { command: "open-settings", key: ",", mod: true },
   { command: "open-settings", code: "Comma", mod: true },

@@ -6,11 +6,13 @@ import { toast } from "sonner";
  * After a note or folder was renamed or moved, offer to update links to it
  * elsewhere in the open folder. Links in files outside the folder can't be
  * found and are never touched. `run` applies the update around open editors.
+ * Without `confirm` the links are updated without asking.
  */
 export async function offerLinkUpdates(
   oldPath: string,
   newPath: string,
   run: (update: () => Promise<void>) => Promise<void>,
+  confirm = true,
 ): Promise<boolean> {
   if (oldPath === newPath) return false;
   try {
@@ -19,11 +21,13 @@ export async function offerLinkUpdates(
       to: newPath,
     });
     if (links === 0) return false;
-    const yes = await ask(
-      `Update ${links} link${links === 1 ? "" : "s"} in ${files} note${files === 1 ? "" : "s"} to the new location?`,
-      { title: "Update links", kind: "info", okLabel: "Update", cancelLabel: "Leave as is" },
-    );
-    if (!yes) return false;
+    if (confirm) {
+      const yes = await ask(
+        `Update ${links} link${links === 1 ? "" : "s"} in ${files} note${files === 1 ? "" : "s"} to the new location?`,
+        { title: "Update links", kind: "info", okLabel: "Update", cancelLabel: "Leave as is" },
+      );
+      if (!yes) return false;
+    }
   } catch {
     return false;
   }

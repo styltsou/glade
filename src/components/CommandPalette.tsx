@@ -26,6 +26,7 @@ import {
   Palette as PaletteIcon,
   PanelLeft as PanelLeftIcon,
   Pencil as PencilIcon,
+  PencilLine as PencilLineIcon,
   Search as SearchIcon,
   Sun as SunIcon,
   Trash2 as TrashIcon,
@@ -85,6 +86,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "new-note", label: "New note", icon: FilePlusIcon },
       { id: "new-folder", label: "New folder", icon: FolderPlusIcon },
       { id: "duplicate-note", label: "Duplicate note", icon: CopyIcon },
+      { id: "rename-file", label: "Rename file", icon: PencilLineIcon },
       { id: "add-property", label: "Add property", icon: ListPlusIcon },
       { id: "export-note", label: "Export note", icon: DownloadIcon },
     ],
@@ -147,6 +149,7 @@ function isAvailable(id: CommandId): boolean {
     case "toggle-raw-mode":
       return !!note;
     case "delete":
+    case "rename-file":
       return !!note || (inWorkspace && inFolder && !!s.currentFolder);
     case "toggle-sidebar":
       return inFolder && !s.homeOpen;
@@ -187,6 +190,8 @@ function liveLabel(def: CommandDef): string {
       return s.homeOpen ? "Close Home" : "Go to Home";
     case "delete":
       return note ? "Delete note" : "Delete folder";
+    case "rename-file":
+      return note ? "Rename file" : "Rename folder";
     default:
       return def.label;
   }
@@ -219,6 +224,10 @@ function runCommand(id: CommandId): boolean {
       break;
     case "export-note":
       s.setExportOpen(true);
+      break;
+    case "rename-file":
+      if (note) s.openRename(note.path);
+      else if (s.currentFolder) s.openRename(s.currentFolder, true);
       break;
     case "delete":
       if (note) s.openDelete(note.path, note.title);
@@ -325,6 +334,8 @@ export function CommandPalette() {
   // Delete asks again inline: the row turns into its own confirmation.
   const [confirmDelete, setConfirmDelete] = useState<"click" | "key" | null>(null);
   const pointerSelect = useRef(false);
+  /** The command that closed the palette put the keyboard somewhere itself. */
+  const keepFocus = useRef(false);
   // Re-render on store changes so labels and availability stay current.
   useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.propertiesOpen, s.noteEditMode]));
 
@@ -501,6 +512,11 @@ export function CommandPalette() {
       <DialogContent
         data-command-palette
         showCloseButton={false}
+        onCloseAutoFocus={(event) => {
+          if (!keepFocus.current) return;
+          keepFocus.current = false;
+          event.preventDefault();
+        }}
         onEscapeKeyDown={(event) => {
           // Esc first cancels a pending delete, then closes.
           if (confirmDelete) {
@@ -655,6 +671,7 @@ export function CommandPalette() {
                                 else setConfirmDelete(byPointer ? "click" : "key");
                                 return;
                               }
+                              keepFocus.current = item.id === "new-note" || item.id === "rename-file";
                               handleOpenChange(false);
                               runCommand(item.id);
                             }}

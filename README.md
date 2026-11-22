@@ -56,7 +56,7 @@ Glade opens markdown where it already lives — in a notes folder, inside a code
 - **Tabs & split views** — Compact tabs live in the window bar, one row per pane, with up to two panes. Each note and folder overview is open at most once: opening it again focuses its tab, in whichever pane it is. `Cmd/Ctrl+\` moves the current tab into a new pane beside it. Click a note to open it in the current tab; Ctrl/Cmd-click or middle-click opens a new tab; Alt-click opens it in the other pane. Tabs open and close like a browser's and are restored per folder. Drag a tab, or a note or folder from the sidebar, onto a tab bar to place it, onto a pane to open it there, or onto the left or right edge of a single pane to split; Esc cancels a drag. `Ctrl/Cmd+T` new tab, `Ctrl/Cmd+W` close, `Ctrl/Cmd+Tab` cycle, `Ctrl/Cmd+1–9` jump. Right-click a tab to split, move it to the other pane, or close the others.
 - **Read/Edit Mode** — Toggle per-note between editable rich text and read-only view (`Cmd/Ctrl+E`).
 - **Raw Markdown Mode** — Switch to a CodeMirror-based raw editor with syntax highlighting (`Cmd/Ctrl+Shift+R`).
-- **Editable Titles** — Click the note title to rename inline.
+- **Titles and file names** — The title is the note's first H1; click it to edit. A new note's file takes its name from the first title you give it, and later title edits never move it. Rename the file itself with F2, the sidebar menu or the file name in the breadcrumb.
 
 ### 💾 Storage & Portability
 

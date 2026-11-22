@@ -95,7 +95,7 @@ export function FolderCard({ folder }: FolderCardProps) {
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
-          onClick={() => openRename(folder.path, folder.name, true)}
+          onClick={() => openRename(folder.path, true)}
         >
           <PencilIcon className="mr-2 h-4 w-4" />
           Rename

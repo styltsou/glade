@@ -4,6 +4,18 @@ export function baseName(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
+/** A file name split into its stem and its extension (`.md`, with the dot). */
+export function splitExtension(path: string): { stem: string; ext: string } {
+  const name = baseName(path);
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? { stem: name.slice(0, dot), ext: name.slice(dot) } : { stem: name, ext: "" };
+}
+
+/** Whether a note's file still waits for its first title to name it. */
+export function isUntitled(path: string): boolean {
+  return /^untitled(?:[- ][0-9]+)?$/i.test(splitExtension(path).stem);
+}
+
 /** Directory part of a path. */
 export function dirName(path: string): string {
   const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));

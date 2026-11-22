@@ -154,7 +154,7 @@ export function NoteHeader({
       )}
 
       <div className="flex items-center pl-3 h-full min-w-0">
-        <Breadcrumbs path={parentPath} activeItem={noteTitle} />
+        <Breadcrumbs path={parentPath} file={notePath} />
       </div>
 
       <div className={cn("flex items-center gap-1 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px pr-1")}>

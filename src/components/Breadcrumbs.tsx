@@ -16,11 +16,13 @@ import { baseName, dirName, shortenPath } from "@/lib/paths";
 import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
 import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { ArrowLeft, Ellipsis, Folder } from "lucide-react";
 
 interface BreadcrumbsProps {
   path?: string | null;
-  activeItem?: string;
+  /** The note this trail ends in, shown by file name. */
+  file?: string;
   className?: string;
 }
 
@@ -28,6 +30,7 @@ interface BreadcrumbsProps {
 function LooseFileCrumb({ filePath, className }: { filePath: string; className?: string }) {
   const openPath = useStore((state) => state.openPath);
   const home = useStore((state) => state.homeDir);
+  const openRename = useStore((state) => state.openRename);
   const canGoBack = useStore((state) => state.backStack.length > 0);
   const goBack = useStore((state) => state.goBack);
   const [repoRoot, setRepoRoot] = useState<string | null>(null);
@@ -47,7 +50,10 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
         </button></Tip>
       )}
       <Tip label={filePath}><span className="truncate text-muted-foreground">
-        {shortenPath(dir, home)}/<span className="font-semibold text-foreground">{baseName(filePath)}</span>
+        {shortenPath(dir, home)}/
+        <button className="font-semibold text-foreground hover:underline underline-offset-4" onClick={() => openRename(filePath)}>
+          {baseName(filePath)}
+        </button>
       </span></Tip>
       <button className="shrink-0 text-xs text-muted-foreground hover:text-foreground" onClick={() => openPath(dir)}>
         Open containing folder
@@ -61,9 +67,10 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
   );
 }
 
-export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
+export function Breadcrumbs({ path, file, className }: BreadcrumbsProps) {
   const currentFolder = useStore((state) => state.currentFolder);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
+  const openRename = useStore((state) => state.openRename);
   const rootName = useStore((state) => (state.target ? baseName(state.target.path) : "Folder"));
 
   const panePath = usePanePath();
@@ -81,7 +88,7 @@ export function Breadcrumbs({ path, activeItem, className }: BreadcrumbsProps) {
   const items: Crumb[] = [
     { key: "root", label: rootName, folderPath: null },
     ...segments.map((folder, i) => ({ key: segments.slice(0, i + 1).join("/"), label: folder, folderPath: segments.slice(0, i + 1).join("/") })),
-    ...(activeItem ? [{ key: "active", label: activeItem, folderPath: undefined }] : []),
+    ...(file ? [{ key: "active", label: baseName(file), folderPath: undefined, onRename: () => openRename(file) }] : []),
   ];
 
   return (
@@ -98,6 +105,8 @@ interface Crumb {
   label: string;
   /** Folder to open when clicked; `undefined` = the current (non-link) item. */
   folderPath: string | null | undefined;
+  /** The note's file name renames it when clicked. */
+  onRename?: () => void;
 }
 
 /**
@@ -154,7 +163,16 @@ function CollapsingCrumbs({
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          {isLast ? (
+          {item.onRename ? (
+            <button
+              type="button"
+              aria-current="page"
+              onClick={item.onRename}
+              className="max-w-[480px] cursor-pointer truncate rounded-sm font-semibold text-foreground underline-offset-4 hover:underline"
+            >
+              {content}
+            </button>
+          ) : isLast ? (
             <BreadcrumbPage className="max-w-[480px] truncate font-semibold text-foreground">{content}</BreadcrumbPage>
           ) : (
             <BreadcrumbLink
@@ -165,7 +183,10 @@ function CollapsingCrumbs({
             </BreadcrumbLink>
           )}
         </TooltipTrigger>
-        <TooltipContent side="bottom">{item.label}</TooltipContent>
+        <TooltipContent side="bottom">
+          {item.label}
+          {item.onRename && <span className="ml-2 opacity-60">Rename {formatShortcut(bindingFor("rename-file")!)}</span>}
+        </TooltipContent>
       </Tooltip>
     );
   };

@@ -17,11 +17,14 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Tip } from "@/components/ui/tooltip";
+import { NoteTipLabel } from "./NoteTipLabel";
 import { MarqueeText } from "@/components/ui/marquee-text";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
@@ -105,6 +108,9 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
   const isOverFolder = dropTarget === entry.path;
   const isPinned = !entry.is_dir && pinnedNotePaths.includes(entry.path);
 
+  // A note made from this menu takes the keyboard (its title field).
+  const madeNote = useRef(false);
+
   // Children stay mounted while they animate closed, and mount one frame
   // before they animate open, so the transition has a start and an end.
   const [childrenMounted, setChildrenMounted] = useState(expanded);
@@ -180,7 +186,14 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             </div>
           </ContextMenuTrigger>
 
-          <ContextMenuContent className="w-48">
+          <ContextMenuContent
+            className="w-48"
+            onCloseAutoFocus={(e) => {
+              if (!madeNote.current) return;
+              madeNote.current = false;
+              e.preventDefault();
+            }}
+          >
             <ContextMenuItem onClick={() => navigateToFolder(entry.path)}>
               <FolderOpen className="mr-2 h-4 w-4" />
               Open folder
@@ -190,7 +203,12 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               Open to the side
             </ContextMenuItem>
             <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => createNote(entry.path)}>
+            <ContextMenuItem
+              onClick={() => {
+                madeNote.current = true;
+                void createNote(entry.path);
+              }}
+            >
               <PlusIcon className="mr-2 h-4 w-4" />
               New note
             </ContextMenuItem>
@@ -199,7 +217,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
               New folder
             </ContextMenuItem>
             <ContextMenuSeparator />
-            <ContextMenuItem onClick={() => openRename(entry.path, entry.name, true)}>
+            <ContextMenuItem onClick={() => openRename(entry.path, true)}>
               <PencilIcon className="mr-2 h-4 w-4" />
               Rename folder
             </ContextMenuItem>
@@ -256,7 +274,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     <ContextMenu>
       <ContextMenuTrigger>
         <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
-          <Tip label={entry.name} side="right">
+          <Tip label={<NoteTipLabel title={entry.name} path={entry.path} />} side="right">
             <button
               onClick={handleClick}
               onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
@@ -285,9 +303,10 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           Open to the side
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => openRename(entry.path, entry.name)}>
+        <ContextMenuItem onClick={() => openRename(entry.path)}>
           <PencilIcon className="mr-2 h-4 w-4" />
-          Rename
+          Rename file
+          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={() => duplicateNote(entry.path)}>
           <CopyIcon className="mr-2 h-4 w-4" />

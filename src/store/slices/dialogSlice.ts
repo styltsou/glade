@@ -1,12 +1,11 @@
 import { StateCreator } from "zustand";
 
 export interface DialogSlice {
-  // Rename dialog
+  // Rename dialog (a note's file or a folder; titles are edited in the note)
   renameOpen: boolean;
   renamePath: string | null;
-  renameInitialTitle: string;
   renameIsFolder: boolean;
-  openRename: (path: string, title: string, isFolder?: boolean) => void;
+  openRename: (path: string, isFolder?: boolean) => void;
   closeRename: () => void;
 
   // Create Folder dialog
@@ -33,12 +32,11 @@ import type { StoreState } from "../index";
 export const createDialogSlice: StateCreator<StoreState, [], [], DialogSlice> = (set) => ({
   renameOpen: false,
   renamePath: null,
-  renameInitialTitle: "",
   renameIsFolder: false,
-  openRename: (path, title, isFolder = false) =>
-    set({ renameOpen: true, renamePath: path, renameInitialTitle: title, renameIsFolder: isFolder }),
-  closeRename: () =>
-    set({ renameOpen: false, renamePath: null, renameInitialTitle: "", renameIsFolder: false }),
+  openRename: (path, isFolder = false) =>
+    set({ renameOpen: true, renamePath: path, renameIsFolder: isFolder }),
+  // The path stays, so the dialog doesn't empty while it fades out.
+  closeRename: () => set({ renameOpen: false }),
 
   createFolderOpen: false,
   createFolderParentPath: null,

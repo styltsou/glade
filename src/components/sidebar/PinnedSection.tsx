@@ -17,10 +17,13 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { NoteTipLabel } from "./NoteTipLabel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import type { NoteCard } from "@/types";
 
 const PINNED_MIN_HEIGHT = 40;
@@ -170,7 +173,7 @@ function PinnedItem({
     <ContextMenu>
       <ContextMenuTrigger>
         <div className="relative group/note">
-          <Tip label={name} side="right">
+          <Tip label={<NoteTipLabel title={name} path={path} />} side="right">
             <button
               onClick={onClick}
               className={cn(
@@ -195,9 +198,10 @@ function PinnedItem({
           Open to the side
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => openRename(path, name)}>
+        <ContextMenuItem onClick={() => openRename(path)}>
           <PencilIcon className="mr-2 h-4 w-4" />
-          Rename
+          Rename file
+          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem onClick={() => duplicateNote(path)}>
           <CopyIcon className="mr-2 h-4 w-4" />

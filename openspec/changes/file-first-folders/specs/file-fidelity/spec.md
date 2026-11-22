@@ -67,19 +67,50 @@ When saving an edited file, the system SHALL keep the original text of markdown 
 - **THEN** the definitions and comments are still in the saved file
 
 ### Requirement: Derived title
-The system SHALL display a note's title from its frontmatter `title`, else its first level-1 heading, else its filename without extension, and SHALL NOT write a title into the file.
+The system SHALL display a note's title from its first level-1 heading, else its filename without extension; a frontmatter `title` is ordinary metadata. The title field is a view of that heading: the system SHALL write a title into the file only when the user edits it, and then only as that heading.
 
 #### Scenario: No title key
 - **WHEN** a file `setup.md` has no `title` key and starts with `# Getting set up`
 - **THEN** the displayed title is "Getting set up"
 
-#### Scenario: Rename from title
-- **WHEN** the user edits the displayed title of a note whose title comes from its filename
-- **THEN** the file is renamed and its content is not modified
-
 #### Scenario: Edit title from its source
-- **WHEN** the user edits the displayed title of a note whose title comes from a `title` key or an H1
-- **THEN** only that `title` line or that H1 line changes, and the file is not renamed
+- **WHEN** the user edits the displayed title of a note that has a level-1 heading
+- **THEN** only that heading line changes, and the file is not renamed
+
+#### Scenario: Title a note without a heading
+- **WHEN** the user edits the displayed title of `README.md`, which has no level-1 heading
+- **THEN** a level-1 heading with that title is added at the top of the body, and the file is not renamed
+
+#### Scenario: Title left untouched
+- **WHEN** the user opens the title field and leaves it unchanged
+- **THEN** the file's content is not modified
+
+### Requirement: File names
+A note's file name SHALL follow its title only once, while the file is untitled (`untitled` or `untitled-N`, case-insensitive, a space also allowed before N). Names the system generates SHALL be lowercase kebab-case in the title's own script; names the user types SHALL be used as typed.
+
+#### Scenario: Create a note
+- **WHEN** the user creates a note in a folder that already has `untitled.md`
+- **THEN** `untitled-2.md` is created empty, opened in editing mode, with its title field focused
+
+#### Scenario: First title
+- **WHEN** the user finishes typing the title "Meeting Notes" on `untitled.md`
+- **THEN** the body starts with `# Meeting Notes`, the file becomes `meeting-notes.md` (or `meeting-notes-2.md` if taken), and links to it are updated without asking
+
+#### Scenario: Later titles
+- **WHEN** the user changes the title of `meeting-notes.md` to "Retro"
+- **THEN** the heading changes and the file is still `meeting-notes.md`
+
+#### Scenario: Autosave
+- **WHEN** an untitled note is autosaved while a title or heading is still being typed
+- **THEN** the file is not renamed
+
+#### Scenario: Rename file
+- **WHEN** the user renames a note's file to `My File`
+- **THEN** the file becomes `My File` with its original extension, and its content is not modified
+
+#### Scenario: Rename file to a taken name
+- **WHEN** the user renames a note's file to the name of another file in that folder
+- **THEN** the rename is refused with a message in the dialog, and neither file changes
 
 ### Requirement: Derived timestamps
 The system SHALL take created and modified times from the filesystem, and SHALL only read (never write) `created`/`updated`/`date` frontmatter values.

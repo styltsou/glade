@@ -71,7 +71,8 @@ export function moveEntryInTree(
   if (!movingEntry) return entries;
 
   const updatedEntry = updatePathsRecursive(movingEntry, fromPath, toPath);
-  updatedEntry.name = toPath.split("/").pop() || updatedEntry.name;
+  // A note is listed by its title, which a move doesn't change.
+  if (updatedEntry.is_dir) updatedEntry.name = toPath.split("/").pop() || updatedEntry.name;
 
   const targetParentPath = toPath.substring(0, toPath.lastIndexOf('/'));
   
