@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import { Table } from "@tiptap/extension-table";
@@ -38,8 +38,15 @@ const x   =   1;
 [r]: https://example.com
 `;
 
+// Destroy every editor after its test: a live one can flush a DOM update after
+// the test environment is torn down ("document is not defined").
+const editors: Editor[] = [];
+afterEach(() => {
+	editors.splice(0).forEach((editor) => editor.destroy());
+});
+
 function makeEditor(content: string) {
-	return new Editor({
+	return track(new Editor({
 		extensions: [
 			StarterKit,
 			Table,
@@ -49,7 +56,12 @@ function makeEditor(content: string) {
 			Markdown.configure({ html: true }),
 		],
 		content,
-	});
+	}));
+}
+
+function track(editor: Editor) {
+	editors.push(editor);
+	return editor;
 }
 
 function topLevel(editor: Editor): object[] {
