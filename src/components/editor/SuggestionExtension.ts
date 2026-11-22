@@ -1,4 +1,5 @@
 import { Extension } from '@tiptap/core';
+import { OPEN_LINK_FORM_EVENT } from "./LinkUrlForm";
 import { Suggestion } from '@tiptap/suggestion';
 import { PluginKey } from 'prosemirror-state';
 import { escapeForRegEx } from '@tiptap/core';
@@ -189,13 +190,9 @@ function executeSlashCommand(editor: any, range: { from: number; to: number }, c
     case "horizontalRule":
       editor.chain().focus().setHorizontalRule().run();
       break;
-    case "link": {
-      const url = window.prompt("Enter URL:");
-      if (url) {
-        editor.chain().focus().setLink({ href: url }).run();
-      }
+    case "link":
+      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT));
       break;
-    }
   }
 }
 

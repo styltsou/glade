@@ -534,6 +534,31 @@
   border-color: hsl(var(--primary) / 50%);
 }
 
+/* Web links: bold text color, underlined, with a matching link icon. The class is an editor
+   decoration, which ProseMirror renders as spans *inside* the <a>; styling the
+   <a> through :has() keeps it to one icon when a link has mixed formatting. */
+.tiptap-editor a.editor-link:has(.link-web) {
+  color: inherit;
+  font-weight: 600;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.tiptap-editor a.editor-link:has(.link-web):hover {
+  text-decoration-color: currentColor;
+}
+
+.tiptap-editor a.editor-link:has(.link-web)::after {
+  content: "";
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-left: 0.25em;
+  vertical-align: -0.1em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'/%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
 /* Links to files outside the open folder, broken links, reveal-only links */
 .tiptap-editor .link-outside::after {
   content: " ↗";

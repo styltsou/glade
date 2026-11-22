@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { Editor } from "@tiptap/react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { LinkUrlForm } from "./LinkUrlForm";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Bold, Italic, Strikethrough,
@@ -146,30 +149,31 @@ export function BlockGroup({ editor }: GroupProps) {
 }
 
 export function InsertGroup({ editor }: GroupProps) {
+  const [linkOpen, setLinkOpen] = useState(false);
   const value = editor?.isFocused && editor?.isActive("link") ? "link" : "";
 
   return (
-    <ToggleGroup type="single" value={value} variant="outline" size="sm">
-      <ToggleGroupItem
-        value="hr"
-        onClick={() => editor?.chain().focus().setHorizontalRule().run()}
-      >
-        <Minus className="h-4 w-4" />
-      </ToggleGroupItem>
-      <ToggleGroupItem
-        value="link"
-        data-state={editor?.isActive("link") ? "on" : "off"}
-        onClick={() => {
-          if (editor?.isActive("link")) {
-            editor.chain().focus().unsetLink().run();
-          } else {
-            const url = window.prompt("Enter URL:");
-            if (url) editor?.chain().focus().setLink({ href: url }).run();
-          }
-        }}
-      >
-        <Link2 className="h-4 w-4" />
-      </ToggleGroupItem>
-    </ToggleGroup>
+    <Popover open={linkOpen && !!editor} onOpenChange={setLinkOpen}>
+      <PopoverAnchor asChild>
+        <ToggleGroup type="single" value={value} variant="outline" size="sm">
+          <ToggleGroupItem
+            value="hr"
+            onClick={() => editor?.chain().focus().setHorizontalRule().run()}
+          >
+            <Minus className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem
+            value="link"
+            data-state={editor?.isActive("link") ? "on" : "off"}
+            onClick={() => setLinkOpen((o) => !o)}
+          >
+            <Link2 className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </PopoverAnchor>
+      <PopoverContent align="start" className="w-auto border-0 bg-transparent p-0 shadow-none">
+        {editor && <LinkUrlForm editor={editor} onDone={() => setLinkOpen(false)} />}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
+import { PluginKey } from "@tiptap/pm/state";
 import {
 	Bold,
 	Italic,
@@ -36,6 +37,8 @@ import { TagInput } from "@/components/TagInput";
 import { RawEditor } from "./RawEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { Backlinks } from "./Backlinks";
+import { LinkInteractionPopover } from "./LinkPopover";
+import { CaretLinkPopover, LinkUrlForm } from "./LinkUrlForm";
 import { TableControls } from "./tables/TableControls";
 import { MentionList, MentionListHandle } from "./MentionList";
 import {
@@ -135,6 +138,8 @@ function getCurrentBlockType(editor: Editor): string {
 	return "paragraph";
 }
 
+const BUBBLE_MENU_KEY = new PluginKey("noteBubbleMenu");
+
 function BubbleButton({
 	children,
 	onClick,
@@ -178,6 +183,7 @@ export function NoteEditor({
 	isEditMode = false,
 }: NoteEditorProps) {
 	const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
+	const [linkFormOpen, setLinkFormOpen] = useState(false);
 	const [blockSelectedIndex, setBlockSelectedIndex] = useState(0);
 	const [currentBlockType, setCurrentBlockType] = useState("paragraph");
 
@@ -331,12 +337,22 @@ export function NoteEditor({
 			}
 
 			if (e.key === "Escape") {
+				// Left to bubble, so the suggestion plugin sees it first and exits.
+				if (e.eventPhase === Event.CAPTURING_PHASE) return;
 				e.preventDefault();
 				e.stopPropagation();
 				if (suggestionVisible) closeSuggestion();
 				if (slashVisible) closeSlash();
 				return;
 			}
+
+			// The rest must be taken before the editor acts on them (Enter would split
+			// the paragraph), but only when there is something to choose.
+			if (e.eventPhase !== Event.CAPTURING_PHASE || e.isComposing) return;
+			const hasItems =
+				(suggestionVisible && suggestionItems.length > 0) ||
+				(slashVisible && slashItems.length > 0);
+			if (!hasItems) return;
 
 			if (
 				e.key === "Tab" ||
@@ -359,9 +375,32 @@ export function NoteEditor({
 			}
 		};
 
+		document.addEventListener("keydown", handleKeyDown, true);
 		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [suggestionVisible, slashVisible]);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown, true);
+			document.removeEventListener("keydown", handleKeyDown);
+		};
+	}, [suggestionVisible, slashVisible, suggestionItems.length, slashItems.length]);
+
+	// The menu changes width when the link form replaces the toolbar; re-center it on the selection.
+	useEffect(() => {
+		if (!editor) return;
+		const id = requestAnimationFrame(() => {
+			editor.view.dispatch(editor.state.tr.setMeta(BUBBLE_MENU_KEY, "updatePosition"));
+		});
+		return () => cancelAnimationFrame(id);
+	}, [editor, linkFormOpen]);
+
+	// A new selection abandons an open link form.
+	useEffect(() => {
+		if (!editor) return;
+		const close = () => setLinkFormOpen(false);
+		editor.on("selectionUpdate", close);
+		return () => {
+			editor.off("selectionUpdate", close);
+		};
+	}, [editor]);
 
 	// Update editor editable state when isEditMode changes
 	useEffect(() => {
@@ -378,7 +417,10 @@ export function NoteEditor({
 		>
 			<div className="max-w-215 mx-auto">
 				{editor && (
-					<BubbleMenu editor={editor}>
+					<BubbleMenu editor={editor} pluginKey={BUBBLE_MENU_KEY}>
+						{linkFormOpen ? (
+							<LinkUrlForm editor={editor} onDone={() => setLinkFormOpen(false)} />
+						) : (
 						<div
 							data-suggestion-menu="true"
 							className="flex items-center bg-popover border shadow-lg rounded-md p-0.5 gap-0.5"
@@ -472,13 +514,7 @@ export function NoteEditor({
 
 							<BubbleButton
 								onClick={() => {
-									if (editor.isActive("link")) {
-										editor.chain().focus().unsetLink().run();
-									} else {
-										const url = window.prompt("Enter URL:");
-										if (url)
-											editor.chain().focus().setLink({ href: url }).run();
-									}
+									setLinkFormOpen(true);
 								}}
 								isActive={editor.isActive("link")}
 							>
@@ -518,8 +554,12 @@ export function NoteEditor({
 								<Code className="h-4 w-4" />
 							</BubbleButton>
 						</div>
+						)}
 					</BubbleMenu>
 				)}
+
+				{editor && !isRawMode && <LinkInteractionPopover editor={editor} />}
+				{editor && !isRawMode && <CaretLinkPopover editor={editor} />}
 
 				<EditableTitle
 					beforeRename={beforeRename}
@@ -538,6 +578,7 @@ export function NoteEditor({
 				<div className="mb-8">
 					<TagInput />
 					<PropertiesPanel />
+					<Backlinks />
 				</div>
 
 				{isRawMode ? (
@@ -554,8 +595,6 @@ export function NoteEditor({
 				)}
 
 				{editor && isEditMode && !isRawMode && <TableControls editor={editor} />}
-
-				<Backlinks />
 
 				{suggestionVisible && suggestionPosition && (
 					<MentionList

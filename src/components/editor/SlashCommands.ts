@@ -1,4 +1,5 @@
 import { Extension } from '@tiptap/core';
+import { OPEN_LINK_FORM_EVENT } from "./LinkUrlForm";
 import { Suggestion } from '@tiptap/suggestion';
 import { PluginKey } from 'prosemirror-state';
 import type { SuggestionProps, SuggestionKeyDownProps } from '@tiptap/suggestion';
@@ -126,13 +127,10 @@ export function executeSlashCommand(editor: Editor, range: { from: number; to: n
     case "horizontalRule":
       editor.chain().focus().setHorizontalRule().run();
       break;
-    case "link": {
-      const url = window.prompt("Enter URL:");
-      if (url) {
-        editor.chain().focus().setLink({ href: url }).run();
-      }
+    case "link":
+      // Handled by CaretLinkPopover: an inline form at the caret, not a system dialog.
+      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT));
       break;
-    }
     case "image":
       void pickImage(editor, (editor.storage as any)?.paneNote?.path);
       break;

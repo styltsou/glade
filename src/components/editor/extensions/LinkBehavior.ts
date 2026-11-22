@@ -2,6 +2,7 @@ import { Extension } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { classifyLinks, openLink, type LinkInfo } from "@/lib/openLink";
+import { isOpenableWebHref } from "@/lib/links";
 import { paneNotePath } from "./PaneNote";
 
 const TTL_MS = 5000;
@@ -16,7 +17,7 @@ const CLASS_BY_KIND: Partial<Record<LinkInfo["kind"], string>> = {
 
 /**
  * Link presentation and navigation: marks links to files outside the open
- * folder (↗, full path on hover), broken links, and reveal-only file links, and
+ * folder (↗, full path on hover), web links (icon), broken links, and reveal-only file links, and
  * routes clicks (read mode, or Ctrl/Cmd+click while editing).
  */
 export const LinkBehavior = Extension.create({
@@ -36,13 +37,18 @@ export const LinkBehavior = Extension.create({
         props: {
           decorations(state) {
             const from = paneNotePath(editor);
-            if (!from) return null;
             const decorations: Decoration[] = [];
             state.doc.descendants((node, pos) => {
               if (!node.isText) return;
               const mark = node.marks.find((m) => m.type.name === "link");
               if (!mark) return;
-              const hit = cache.get(keyOf(from, mark.attrs.href));
+              const href = String(mark.attrs.href ?? "");
+              const hit = from ? cache.get(keyOf(from, href)) : undefined;
+              // A scheme settles it at once; only schemeless links wait for the disk check.
+              if (isOpenableWebHref(href) || hit?.info.url) {
+                decorations.push(Decoration.inline(pos, pos + node.nodeSize, { class: "link-web" }));
+                return;
+              }
               const cls = hit && CLASS_BY_KIND[hit.info.kind];
               if (!hit || !cls) return;
               decorations.push(

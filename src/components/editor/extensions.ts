@@ -23,6 +23,10 @@ import { NoteTableView } from "./tables/tableView";
 import { TableActiveCell } from "./tables/tableActiveCell";
 import { LocalImage } from "./extensions/LocalImage";
 import { isAllowedLinkHref } from "@/lib/links";
+import { pointsToNote } from "@/lib/autolink";
+import { useStore } from "@/store";
+import { AutoLink } from "./extensions/AutoLink";
+import { linkMarkdown } from "./extensions/linkMarkdown";
 
 const lowlight = createLowlight(all);
 
@@ -40,12 +44,22 @@ export const extensions = [
   StarterKit.configure({
     heading: { levels: [1, 2, 3, 4] },
     codeBlock: false,
+    // Configured below. StarterKit's copy would also window.open() every clicked link.
+    link: false,
   }),
   CustomCodeBlock.configure({
     lowlight,
     HTMLAttributes: { class: "code-block" },
   }),
-  Link.configure({
+  Link.extend({
+    // Not inclusive: text typed right after a link or @ reference is plain text.
+    inclusive: false,
+    // AutoLink does all the detecting; the built-in takes file names for websites.
+    addPasteRules: () => [],
+    addStorage: () => ({ markdown: linkMarkdown }),
+  }).configure({
+    autolink: false,
+    linkOnPaste: false,
     openOnClick: false,
     isAllowedUri: (url, ctx) => isAllowedLinkHref(url, ctx.defaultValidate),
     HTMLAttributes: { class: "editor-link" },
@@ -68,6 +82,9 @@ export const extensions = [
   Underline,
   LocalImage.configure({ inline: false }),
   LinkBehavior,
+  AutoLink.configure({
+    isLocalNote: (path, from) => pointsToNote(path, from, Object.values(useStore.getState().idToPath)),
+  }),
   PaneNote,
   BubbleMenu.configure({
     element: null,
