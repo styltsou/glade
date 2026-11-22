@@ -14,6 +14,7 @@ import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WelcomeHome } from "@/components/WelcomeHome";
 import { PaneArea } from "@/components/PaneArea";
+import { FRAME_GAP, pageCorner, useSidebarVisible } from "@/lib/surfaces";
 import { FolderSwitcher } from "@/components/FolderSwitcher";
 import { MissingLinkDialog } from "@/components/MissingLinkDialog";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
@@ -117,6 +118,8 @@ function App() {
   const openPath = useStore((state) => state.openPath);
   const isReady = workspaceReady;
   const showWelcome = !target || homeOpen;
+  const sidebarVisible = useSidebarVisible();
+  const firstGroup = useStore((state) => state.tabsState.groups[0]);
 
   useEffect(() => {
     initWorkspace();
@@ -276,16 +279,22 @@ function App() {
     <TooltipProvider disableHoverableContent>
       <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
         <TitleBar />
-        <div className="flex flex-1 overflow-hidden w-full">
+        {/* The frame. Pulled up 1px so the pages' top edge runs under the tabs. */}
+        <div className="-mt-px flex min-h-0 w-full flex-1 overflow-hidden bg-sidebar">
           {!showWelcome && target?.kind === "folder" && <Sidebar />}
-          <div key={showWelcome ? "home" : "doc"} className="flex-1 overflow-hidden flex flex-col">
-              {showWelcome ? (
-                <WelcomeHome />
-              ) : rootMissing ? (
-                <RootMissing />
-              ) : restoring ? (
-                // Saved tabs are still loading: show nothing rather than a flash of the overview.
-                <div className="flex-1" />
+          <div
+            key={showWelcome ? "home" : "doc"}
+            style={{ marginLeft: sidebarVisible ? 0 : FRAME_GAP, marginRight: FRAME_GAP, marginBottom: FRAME_GAP }}
+            className="sidebar-motion flex min-w-0 flex-1 flex-col overflow-hidden"
+          >
+              {showWelcome || rootMissing || restoring ? (
+                <div
+                  {...pageCorner(sidebarVisible, showWelcome ? undefined : firstGroup)}
+                  className="surface-page flex min-h-0 flex-1 flex-col overflow-hidden"
+                >
+                  {/* While saved tabs load the page stays blank rather than flashing the overview. */}
+                  {showWelcome ? <WelcomeHome /> : rootMissing ? <RootMissing /> : null}
+                </div>
               ) : (
                 <PaneArea />
               )}

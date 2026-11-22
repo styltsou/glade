@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Tip } from "@/components/ui/tooltip";
 import { MarqueeText } from "@/components/ui/marquee-text";
 import {
   Pencil as PencilIcon,
@@ -169,18 +170,19 @@ function PinnedItem({
     <ContextMenu>
       <ContextMenuTrigger>
         <div className="relative group/note">
-          <button
-            onClick={onClick}
-            title={name}
-            className={cn(
-              "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm text-left transition-colors cursor-pointer",
-              active
-                ? "bg-sidebar-accent text-foreground font-medium"
-                : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
-            )}
-          >
-            <MarqueeText>{name}</MarqueeText>
-          </button>
+          <Tip label={name} side="right">
+            <button
+              onClick={onClick}
+              className={cn(
+                "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm text-left transition-colors cursor-pointer",
+                active
+                  ? "bg-sidebar-accent text-foreground font-medium"
+                  : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
+              )}
+            >
+              <MarqueeText>{name}</MarqueeText>
+            </button>
+          </Tip>
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-48">

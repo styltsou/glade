@@ -6,6 +6,7 @@ import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
 import { baseName } from "@/lib/paths";
+import { FRAME_GAP, useSidebarVisible } from "@/lib/surfaces";
 import { Tip } from "@/components/ui/tooltip";
 
 const appWindow = getCurrentWindow();
@@ -34,7 +35,7 @@ export function TitleBar() {
   }, []);
 
   const folderOpen = target?.kind === "folder" && !homeOpen;
-  const sidebarVisible = folderOpen && !sidebarCollapsed;
+  const sidebarVisible = useSidebarVisible();
   // The left section is as wide as the sidebar when it is open, and just fits
   // the toggle and the folder name when it is closed. Both widths are plain
   // pixels so CSS can transition between them in step with the sidebar itself.
@@ -46,6 +47,8 @@ export function TitleBar() {
   }, [label]);
   // padding 6 + toggle 32 + gap 2 + menu (padding 20, gap 8, chevron 14, text ≤ 118) + padding 6
   const collapsedWidth = 6 + (folderOpen ? 34 : 0) + Math.min(42 + labelWidth, 160) + 6;
+  const leftWidth = sidebarVisible ? sidebarWidth : collapsedWidth;
+  const pagesLeft = sidebarVisible ? sidebarWidth : FRAME_GAP;
 
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
@@ -69,15 +72,17 @@ export function TitleBar() {
 
   return (
     <div
-      className="relative flex h-10 shrink-0 items-center border-b border-border/70 bg-background select-none"
+      className="relative z-[1] flex h-10 shrink-0 items-center select-none"
       onMouseDown={handleDragStart}
     >
+      {/* Stops 1px short, so the pages' top edge shows in the last row. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 bottom-px -z-10 bg-sidebar" />
       <span ref={measureRef} aria-hidden className="pointer-events-none invisible absolute whitespace-nowrap text-[13px] font-semibold tracking-[-0.01em]">
         {label}
       </span>
       <div
-        style={{ width: sidebarVisible ? sidebarWidth : collapsedWidth }}
-        className={`sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden border-r pl-1.5 pr-1.5 ${sidebarVisible ? "border-sidebar-border/70 bg-sidebar" : "border-transparent bg-background"}`}
+        style={{ width: leftWidth }}
+        className="sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden pl-1.5 pr-1.5"
       >
       {/* Sidebar toggle */}
       {folderOpen && <Tip label={`Toggle sidebar (${formatShortcut(bindingFor("toggle-sidebar")!)})`}><button
@@ -94,12 +99,12 @@ export function TitleBar() {
       <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
       </div>
-      {target && !homeOpen ? <TabStrip trailingInset={112} paneOffset={(sidebarVisible ? sidebarWidth : 0) - (sidebarVisible ? sidebarWidth : collapsedWidth)} /> : <div className="h-full flex-1" />}
-      <div className="absolute right-1.5 top-0 flex h-full items-center bg-background">
+      {target && !homeOpen ? <TabStrip trailingInset={114 - FRAME_GAP} paneOffset={pagesLeft - leftWidth} /> : <div className="h-full flex-1" />}
+      <div className="absolute right-1 top-0 flex h-full items-center">
 
 
       {/* Window controls */}
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex shrink-0 items-center gap-1">
         <Tip label="Minimize"><button onClick={handleMinimize} aria-label="Minimize" className={iconButton}>
           <Minus className="h-4 w-4" />
         </button></Tip>

@@ -320,11 +320,11 @@ kbd {
   letter-spacing: 0;
 }
 
-/* The sidebar and the title-bar section above it open and close together:
-   same property, duration and curve. While the sidebar is being resized they
+/* The sidebar, the title-bar section above it, the pages' inset and the tabs'
+   start all move together: same duration and curve. While the sidebar is being resized they
    follow the pointer instead. */
 .sidebar-motion {
-  transition-property: width, background-color, border-color;
+  transition-property: width, margin-left, padding-left;
   transition-duration: 180ms;
   transition-timing-function: var(--ease-ui);
 }

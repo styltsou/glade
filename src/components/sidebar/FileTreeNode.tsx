@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/context-menu";
 import { sortEntries } from "./file-tree-helpers";
 import { cn } from "@/lib/utils";
+import { Tip } from "@/components/ui/tooltip";
 import { MarqueeText } from "@/components/ui/marquee-text";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
@@ -160,21 +161,22 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         <ContextMenu>
           <ContextMenuTrigger>
             <div className="relative group/folder">
-              <button
-                onClick={handleClick}
-                onMouseDown={handleMouseDown}
-                title={entry.name}
-                className={cn(
-                  "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-sidebar-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
-                )}
-              >
-                {expanded ? (
-                  <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
-                ) : (
-                  <Folder className="size-4 shrink-0 text-muted-foreground" />
-                )}
-                <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
-              </button>
+              <Tip label={entry.name} side="right">
+                <button
+                  onClick={handleClick}
+                  onMouseDown={handleMouseDown}
+                  className={cn(
+                    "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-sidebar-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
+                  )}
+                >
+                  {expanded ? (
+                    <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <Folder className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
+                </button>
+              </Tip>
             </div>
           </ContextMenuTrigger>
 
@@ -254,21 +256,22 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     <ContextMenu>
       <ContextMenuTrigger>
         <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
-          <button
-            onClick={handleClick}
-            onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
-            onMouseDown={handleMouseDown}
-            onMouseEnter={() => prefetchNote(entry.path)}
-            title={entry.name}
-            className={cn(
-              "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm tracking-[-0.005em] text-left transition-colors cursor-pointer",
-              isActive
-                ? "bg-foreground/[0.09] text-foreground font-medium shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
-                : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
-            )}
-          >
-            <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
-          </button>
+          <Tip label={entry.name} side="right">
+            <button
+              onClick={handleClick}
+              onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
+              onMouseDown={handleMouseDown}
+              onMouseEnter={() => prefetchNote(entry.path)}
+              className={cn(
+                "flex items-center w-full rounded-lg py-[7px] px-2.5 text-sm tracking-[-0.005em] text-left transition-colors cursor-pointer",
+                isActive
+                  ? "bg-foreground/[0.09] text-foreground font-medium shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.04)]"
+                  : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
+              )}
+            >
+              <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
+            </button>
+          </Tip>
         </div>
       </ContextMenuTrigger>
 

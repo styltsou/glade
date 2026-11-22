@@ -1,0 +1,111 @@
+/*
+ * Frame and pages (see lib/surfaces.ts).
+ *
+ * One 1px edge, the same colour on every page and every side, runs around a
+ * page, through the curves and over its active tab. Differing edges made the
+ * pages and the gap between them look uneven, so focus is shown by dimming the
+ * other pane's tab labels, never a shape or an edge.
+ * The content row is pulled up 1px so a page's top edge lies in the title bar's
+ * last row of pixels, where the active tab paints over it.
+ */
+
+@property --flush {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.surface-page,
+.tab-surface {
+  --edge: color-mix(in srgb, hsl(var(--border)) 70%, hsl(var(--background)));
+  background-color: hsl(var(--background));
+}
+
+.surface-page {
+  --flush: 0;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  /* Only --flush is animated: the corner moves with the sidebar, but changes
+     hands at once when another tab is picked. */
+  transition: --flush 180ms var(--ease-ui);
+}
+
+.surface-page[data-flush] {
+  --flush: 1;
+}
+
+.surface-page[data-first-active] {
+  border-top-left-radius: calc(var(--radius-lg) * (1 - var(--flush)));
+}
+
+/* Its first tab is being dragged away from the corner. */
+.surface-page[data-lifted] {
+  border-top-left-radius: var(--radius-lg);
+}
+
+/* The active tab's shape: behind its 32px label, reaching 4px down to the page. */
+.tab-surface {
+  position: absolute;
+  inset: 0 0 -4px;
+  border: 1px solid var(--edge);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  pointer-events: none;
+}
+
+/* The curves out into the page: a 9px square holding an 8px concave arc and its 1px edge. */
+.tab-surface::before,
+.tab-surface::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  width: 9px;
+  height: 9px;
+  background-image: radial-gradient(
+    circle at var(--curve-center),
+    transparent 7.75px,
+    var(--edge) 8.25px,
+    var(--edge) 8.75px,
+    hsl(var(--background)) 9.25px
+  );
+}
+
+.tab-surface::before {
+  --curve-center: 0 0;
+  left: -9px;
+  transform-origin: right;
+  transition: transform 180ms var(--ease-ui);
+}
+
+.tab-surface::after {
+  --curve-center: 100% 0;
+  right: -9px;
+}
+
+/* Flush with the page's edge there's nothing to curve into. */
+.tab-surface[data-flush]::before {
+  transform: scaleX(0);
+}
+
+[data-lifted] > .tab-surface[data-flush]::before {
+  transform: none;
+  transition: none;
+}
+
+/* Inactive tabs have no fill, so a hairline separates two of them; it gives way to the hover fill. */
+[data-tab-id]:not([data-active]) + [data-tab-id]:not([data-active])::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: -2px;
+  width: 1px;
+  height: 16px;
+  background-color: hsl(var(--foreground) / 0.14);
+  pointer-events: none;
+}
+
+[data-tab-id]:hover::before,
+[data-tab-id]:hover + [data-tab-id]::before,
+[data-dragging-tab] [data-tab-id]::before {
+  visibility: hidden;
+}

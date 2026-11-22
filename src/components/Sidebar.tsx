@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
+import { ResizeGrip } from "@/components/ResizeGrip";
+import { FRAME_GAP } from "@/lib/surfaces";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -18,6 +20,8 @@ export function Sidebar() {
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
   const [isResizing, setIsResizing] = useState(false);
+  /** Where in the grab area the press landed, so the width follows the pointer without jumping. */
+  const grab = useRef(0);
 
   useEffect(() => {
     loadVault();
@@ -35,6 +39,7 @@ export function Sidebar() {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    grab.current = e.clientX - sidebarWidth;
     setIsResizing(true);
   };
 
@@ -42,7 +47,7 @@ export function Sidebar() {
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(200, Math.min(600, e.clientX));
+      const newWidth = Math.max(200, Math.min(600, e.clientX - grab.current));
       setSidebarWidth(newWidth);
     };
 
@@ -68,7 +73,8 @@ export function Sidebar() {
     <div className="relative h-full flex shrink-0">
       <aside
         style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
-        className={`flex flex-col h-full bg-sidebar select-none border-r border-sidebar-border/70 overflow-hidden sidebar-motion ${sidebarCollapsed ? "border-r-0" : ""}`}
+        // No border: the page's own edge divides them. pt-px offsets the content row's 1px pull-up.
+        className="flex flex-col h-full bg-sidebar select-none pt-px overflow-hidden sidebar-motion"
         aria-hidden={sidebarCollapsed}
       >
         <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
@@ -79,11 +85,16 @@ export function Sidebar() {
         </div>
       </aside>
 
-      {/* Resize handle */}
+      {/* Resize handle: the same as between panes, spanning the pages' height. It starts 1px
+          inside the strip, so the file tree's scrollbar thumb stays as reachable as before. */}
       {!sidebarCollapsed && (
-        <div
+        <ResizeGrip
+          before={-1}
+          dragging={isResizing}
+          aria-label="Resize sidebar"
           onMouseDown={handleMouseDown}
-          className="absolute right-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-primary/30 transition-colors z-20"
+          className="top-0 z-20"
+          style={{ right: 0, bottom: FRAME_GAP }}
         />
       )}
     </div>

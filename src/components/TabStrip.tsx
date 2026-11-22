@@ -6,6 +6,7 @@ import { baseName } from "@/lib/paths";
 import { type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
 import { dragGhost, hitTest, sameDrop } from "@/lib/paneDnd";
 import { cn } from "@/lib/utils";
+import { FRAME_GAP, paneBox, tabsStartFlush, useSidebarVisible } from "@/lib/surfaces";
 import { Tip } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
@@ -13,35 +14,50 @@ import { bindingFor, formatShortcut } from "@/lib/keybindings";
 /** A tab's width when the bar has room, and the narrowest it shrinks to. */
 const TAB_WIDTH = 192;
 const TAB_MIN = 44;
+/** Motion has no default unit for min-width (a bare 44 is dropped as invalid CSS), so it gets px strings. */
+const MIN_SHUT = "0px";
+const MIN_OPEN = `${TAB_MIN}px`;
+/** Room an active tab's curve needs beside it. */
+const CURVE = 8;
 
 /**
  * One tab's slot. While a tab is dragged within its bar, the other slots slide
  * to their new places (short ease-out, no spring); the dragged slot follows
  * the pointer instead. A closing slot (animating out) is never a drop slot.
+ *
+ * The slot doesn't clip: the active tab's shape reaches past it into the page.
+ * When the bar scrolls, the active slot pins at either end (`pin` is its left
+ * inset, with room for its curve), so a page is never cut off from its tab.
+ * Sticky insets count from inside the scroller's padding (4px at the end).
  */
-function TabSlot({ id, transition, reordering, dragged, children }: { id: string; transition: object; reordering: string | false; dragged: boolean; children: React.ReactNode }) {
+function TabSlot({ id, transition, reordering, dragged, active, pin, flush, children }: { id: string; transition: object; reordering: string | false; dragged: boolean; active: boolean; pin: string; flush: boolean; children: React.ReactNode }) {
   const present = useIsPresent();
+  // A closing tab hands its shape over at once.
+  const joined = active && present;
   return (
     <motion.div
       data-tab-id={id}
       data-exiting={present ? undefined : ""}
       data-dragging={dragged ? "" : undefined}
+      data-active={joined ? "" : undefined}
       layout={dragged ? false : "position"}
       layoutDependency={reordering || "idle"}
-      initial={{ width: 0, minWidth: 0, opacity: 0, marginRight: 0 }}
-      animate={{ width: TAB_WIDTH, minWidth: TAB_MIN, opacity: 1, marginRight: 4 }}
-      exit={{ width: 0, minWidth: 0, opacity: 0, marginRight: 0 }}
+      initial={{ width: 0, minWidth: MIN_SHUT, opacity: 0, marginRight: 0 }}
+      animate={{ width: TAB_WIDTH, minWidth: MIN_OPEN, opacity: 1, marginRight: 4 }}
+      exit={{ width: 0, minWidth: MIN_SHUT, opacity: 0, marginRight: 0 }}
       transition={transition}
       // Like a browser's tabs: one width each, shrinking together when the bar
       // runs out of room, down to TAB_MIN; past that the bar scrolls.
-      className={cn("@container/tab relative h-8 shrink", dragged ? "z-20 overflow-visible" : "overflow-hidden")}
+      className={cn("@container/tab relative h-8 shrink", dragged ? "z-20" : joined && cn("sticky right-1 z-10", pin))}
     >
+      {joined && <span aria-hidden className="tab-surface" data-flush={flush ? "" : undefined} />}
       {children}
     </motion.div>
   );
 }
 
-function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: number; inset: number; trailing: number }) {
+function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: number; lead: number; trailing: number }) {
+  const flush = tabsStartFlush(index, useSidebarVisible());
   const focused = useStore((s) => s.tabsState.focused === index);
   const split = useStore((s) => s.tabsState.groups.length > 1);
   const activate = useStore((s) => s.activateTab);
@@ -62,13 +78,32 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
   // After a live reorder re-renders the bar, put the dragged tab back under the pointer.
   const followRef = useRef<(() => void) | null>(null);
   const order = group.tabs.map((t) => t.id).join(",");
-  useLayoutEffect(() => { followRef.current?.(); }, [order]);
+  // Also when a drag starts: a pinned tab lets go, which moves its slot.
+  useLayoutEffect(() => { followRef.current?.(); }, [order, draggingId]);
   // Tabs open and close like a browser's: they grow from and shrink to nothing,
   // and the neighbours follow the width as it changes.
   const tabMotion = reduceMotion
     ? { duration: 0 }
     : { duration: 0.14, ease: [0.23, 1, 0.32, 1] as const, layout: { duration: 0.15, ease: [0.23, 1, 0.32, 1] as const } };
-  useLayoutEffect(() => { viewport.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" }); }, [group.activeId, group.tabs.length]);
+  // Keep the active tab in view: when it changes, as it grows open, and as the bar resizes.
+  useLayoutEffect(() => {
+    const strip = viewport.current;
+    const button = strip?.querySelector<HTMLElement>('[data-tab-id]:not([data-exiting]) [aria-selected="true"]');
+    const slot = button?.closest<HTMLElement>("[data-tab-id]");
+    if (!strip || !button || !slot) return;
+    const reveal = () => {
+      // A pinned tab always counts as in view, so aim at its place in the row.
+      slot.style.position = "static";
+      button.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
+      slot.style.position = "";
+    };
+    reveal();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(reveal);
+    observer.observe(strip);
+    observer.observe(slot);
+    return () => observer.disconnect();
+  }, [group.activeId, group.tabs.length]);
   useEffect(() => {
     const element = viewport.current;
     if (!element) return;
@@ -94,6 +129,8 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
     const startX = e.clientX;
     const startY = e.clientY;
     const grab = startX - slot.getBoundingClientRect().left;
+    // Tabs travel between the strip's padding, which holds the curves.
+    const padLeft = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
     const store = useStore.getState;
     const indexOf = () => store().tabsState.groups[index]?.tabs.findIndex((t) => t.id === tab.id) ?? -1;
     const origIndex = indexOf();
@@ -102,16 +139,26 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
     let target: TabDrop | null = null;
     let lastX = startX;
 
+    // Pulled away from the page's corner, the tab gets its curve and the page its corner back.
+    const page = document.querySelector(`[data-pane-index="${index}"]`);
+    const setLifted = (lifted: boolean) => {
+      slot.toggleAttribute("data-lifted", lifted);
+      page?.toggleAttribute("data-lifted", lifted);
+    };
+
     /** Keep the dragged tab under the pointer (x only, clamped to the bar). */
     const follow = () => {
       if (!live) {
         slot.style.transform = "";
+        setLifted(false);
         return;
       }
       const rect = strip.getBoundingClientRect();
       const want = lastX - rect.left + strip.scrollLeft - grab;
-      const max = strip.scrollWidth - slot.offsetWidth;
-      slot.style.transform = `translateX(${Math.round(Math.min(Math.max(want, 0), max) - slot.offsetLeft)}px)`;
+      const max = strip.scrollWidth - slot.offsetWidth - CURVE;
+      const x = Math.max(Math.min(want, max), padLeft);
+      slot.style.transform = `translateX(${Math.round(x - slot.offsetLeft)}px)`;
+      setLifted(x - padLeft >= CURVE);
     };
     followRef.current = follow;
 
@@ -129,6 +176,7 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
       window.removeEventListener("keydown", onKey, true);
       followRef.current = null;
       if (!started) return;
+      setLifted(false);
       dragGhost.set(null);
       store().setTabDropTarget(null);
       document.documentElement.removeAttribute("data-dragging-tab");
@@ -181,18 +229,26 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
     window.addEventListener("keydown", onKey, true);
   };
 
-  const action = "press flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground";
-  return <div className="flex h-full min-w-0 items-center gap-0.5 px-1" style={{ paddingLeft: inset || undefined, paddingRight: trailing || undefined }}>
-    <div ref={viewport} role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} data-tab-strip={index} data-no-drag className="overlay-scroll relative flex h-full min-w-0 items-center overflow-x-auto overflow-y-hidden" style={{ flex: "0 1 auto", minWidth: group.tabs.length ? undefined : 48 }}>
+  const action = "press flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground";
+  // Not flush, the tabs start 4px in and the first curve overlaps the empty
+  // padding beside the folder name: the scroller reaches back for it.
+  return <div className="sidebar-motion pointer-events-auto flex h-full min-w-0 items-center pr-1" style={{ marginLeft: lead, paddingLeft: flush ? 0 : 4, paddingRight: trailing || undefined }}>
+    <div ref={viewport} role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} data-tab-strip={index} data-no-drag className="sidebar-motion overlay-scroll relative flex h-full min-w-0 items-center overflow-x-auto overflow-y-hidden pr-1 scroll-pl-4 scroll-pr-2" style={{ flex: "0 1 auto", marginLeft: flush ? 0 : -CURVE, paddingLeft: flush ? 0 : CURVE, minWidth: group.tabs.length ? undefined : 48 }}>
       <AnimatePresence initial={false}>
-      {group.tabs.map((tab) => {
+      {group.tabs.map((tab, position) => {
         const active = tab.id === group.activeId;
         const label = tab.path ? baseName(tab.path) : typeof tab.folder === "string" ? baseName(tab.folder) : rootName;
-        return <TabSlot key={tab.id} id={tab.id} transition={tabMotion} reordering={draggingId ? order : false} dragged={draggingId === tab.id}>
+        return <TabSlot key={tab.id} id={tab.id} transition={tabMotion} reordering={draggingId ? order : false} dragged={draggingId === tab.id} active={active} pin={flush && position > 0 ? "left-4" : "left-0"} flush={flush && position === 0}>
           <ContextMenu><ContextMenuTrigger asChild>
-            <div onPointerDown={(e) => startTabDrag(e, tab, label)} className={cn("group relative flex h-full w-full items-center rounded-lg transition-colors duration-100 has-[[role=tab]:focus-visible]:ring-1 has-[[role=tab]:focus-visible]:ring-inset has-[[role=tab]:focus-visible]:ring-ring/50", active ? focused ? "bg-[hsl(var(--gray-5))] text-foreground" : "bg-accent text-subtle-foreground" : "bg-muted/50 text-muted-foreground/70 hover:bg-[hsl(var(--gray-5))] hover:text-foreground",
-              // The tab being dragged keeps a solid fill; a dashed outline marks where it came from.
-              draggingId === tab.id && "text-muted-foreground outline-1 outline-dashed outline-border -outline-offset-1")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
+            <div onPointerDown={(e) => startTabDrag(e, tab, label)} className={cn("group relative flex h-full w-full items-center overflow-hidden rounded-lg transition-colors duration-100 has-[[role=tab]:focus-visible]:ring-1 has-[[role=tab]:focus-visible]:ring-inset has-[[role=tab]:focus-visible]:ring-ring/50", active
+                // The shape behind is the fill. No transition, or the hover fill would fade out over it.
+                ? "transition-none text-foreground"
+                : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
+              // The pane without focus dims its labels (not the shapes). By opacity, as
+              // in many themes the muted colour is almost the foreground's.
+              !focused && "opacity-65 hover:opacity-100",
+              // The tab being dragged keeps its shape (which also marks where it came from), with a quieter title.
+              draggingId === tab.id && "text-muted-foreground")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
               <Tip label={draggingId ? null : tab.path ?? (typeof tab.folder === "string" ? tab.folder : rootName)} align="start"><button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
                 if (e.altKey || e.ctrlKey || e.metaKey) return;
                 const at = group.tabs.findIndex((t) => t.id === tab.id);
@@ -232,9 +288,11 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
         </TabSlot>;
       })}
       </AnimatePresence>
-      {dropHere && <span aria-hidden className="pointer-events-none absolute top-1.5 bottom-1.5 z-10 w-0.5 -translate-x-[3px] rounded-full bg-primary" style={{ left: dropHere.x }} />}
+      {dropHere && <span aria-hidden className="pointer-events-none absolute top-1.5 bottom-1.5 z-30 w-0.5 -translate-x-[3px] rounded-full bg-primary" style={{ left: Math.max(dropHere.x, 3) }} />}
     </div>
-    <div className="flex shrink-0 items-center" data-no-drag>
+    {/* The same 4px from the last tab as between tabs and below them: it sits
+        over the scroller's end padding, which only holds that tab's curve. */}
+    <div className="relative -ml-1 flex shrink-0 items-center" data-no-drag>
       <Tip label="New tab (Ctrl+T)"><button type="button" aria-label="New tab" onClick={() => { focusGroup(index); newTab(); }} className={action}><Plus className="size-4" /></button></Tip>
     </div><div className="h-full min-w-1 flex-1" />
   </div>;
@@ -245,33 +303,24 @@ function GroupTabs({ group, index, inset, trailing }: { group: TabGroup; index: 
  *
  * `paneOffset` is (left edge of the pane area) − (left edge of this strip), in
  * pixels: 0 when the sidebar is open (the title-bar section is as wide as the
- * sidebar), negative when it is closed. The divider is then at
- * `ratio × stripWidth + (1 − ratio) × paneOffset`, which CSS computes in the
- * same frame as the panes, so nothing is measured and nothing lags. While the
- * sidebar opens or closes, the width uses the sidebar's own transition, so the
- * boundary moves in step with it.
+ * sidebar), negative when it is closed. The strip reaches back by that much and
+ * ends a gap short of the window, so it spans exactly the page area and splits
+ * with the pages' own `paneBox`: nothing is measured and nothing lags. The
+ * first group's tabs step forward again past the title-bar section, which
+ * stays clickable under the strip. Both margins use the sidebar's transition.
+ * `trailingInset` counts from the strip's end.
  */
 export function TabStrip({ trailingInset = 0, paneOffset = 0 }: { trailingInset?: number; paneOffset?: number }) {
   const state = useStore((s) => s.tabsState);
   const split = state.groups.length > 1;
   const last = state.groups.length - 1;
   return (
-    <div className="flex h-full min-w-0 flex-1">
-      {state.groups.map((group, index) => {
-        const style: React.CSSProperties =
-          split && index === 0
-            ? { width: `calc(${state.ratio * 100}% + ${(1 - state.ratio) * paneOffset}px)`, flex: "none" }
-            : { flex: "1 1 0%" };
-        return (
-          <div
-            key={group.id}
-            className={cn("h-full min-w-0", split && index === 0 && "sidebar-motion", index > 0 && "border-l border-border/60")}
-            style={style}
-          >
-            <GroupTabs group={group} index={index} inset={0} trailing={index === last ? trailingInset : 0} />
-          </div>
-        );
-      })}
+    <div className="sidebar-motion pointer-events-none flex h-full min-w-0 flex-1" style={{ marginLeft: paneOffset, paddingRight: FRAME_GAP }}>
+      {state.groups.map((group, index) => (
+        <div key={group.id} className="h-full min-w-0 flex-1" style={paneBox(index, split, state.ratio)}>
+          <GroupTabs group={group} index={index} lead={index === 0 ? -paneOffset : 0} trailing={index === last ? trailingInset : 0} />
+        </div>
+      ))}
     </div>
   );
 }
