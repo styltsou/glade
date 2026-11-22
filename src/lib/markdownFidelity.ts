@@ -62,6 +62,8 @@ export interface Fidelity {
 	spans: Array<{ first: number; count: number }>;
 	/** For each block, the tags in it whose partner is in another block. */
 	wrappers: Array<{ open: string; close: string }>;
+	/** For each node looked up, every original equal to it. Nodes are immutable, so it never changes. */
+	searched: WeakMap<object, number[]>;
 }
 
 /** A run of consecutive source blocks and how many nodes they became between them. */
@@ -189,6 +191,7 @@ export function createFidelity(
 		blockOf,
 		spans,
 		wrappers,
+		searched: new WeakMap(),
 		extraTrailing: Math.max(0, empties - baselineOf(core)),
 		baselineOf,
 	};
@@ -211,7 +214,7 @@ export function serializeWithFidelity(
 	serializeNode: (node: object) => string,
 	isEmpty: (node: object) => boolean = () => false,
 ): string {
-	const { source, originals, originalList } = fidelity;
+	const { source, originals, originalList, searched } = fidelity;
 	const eol = [source.leading, ...source.blocks, ...source.gaps, source.trailing]
 		.some((text) => text.includes("\r\n")) ? "\r\n" : "\n";
 	const { core: nodes, empties: rawEmpties } = splitTrailingEmpties(allNodes, isEmpty);
@@ -237,8 +240,14 @@ export function serializeWithFidelity(
 		let match: number | undefined;
 		if (expected !== undefined && !used.has(expected) && same(originalList[expected], node)) match = expected;
 		else {
-			const found = originalList.findIndex((o, i) => !used.has(i) && same(o, node));
-			if (found !== -1) match = found;
+			// All of them, not the first: which are already taken changes as the note is edited.
+			let equal = searched.get(node);
+			if (equal === undefined) {
+				equal = [];
+				for (const [i, o] of originalList.entries()) if (same(o, node)) equal.push(i);
+				searched.set(node, equal);
+			}
+			match = equal.find((i) => !used.has(i));
 		}
 		if (match === undefined) return;
 		idx[k] = match;

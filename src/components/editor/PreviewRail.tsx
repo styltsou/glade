@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { motion, useReducedMotion } from "motion/react";
@@ -9,6 +9,9 @@ type Section = {
   id: string;
   label: string;
   level: number;
+  /** Index of the heading among the note's top-level blocks. */
+  block: number;
+  /** Document position: moves with every edit above, so it is not compared. */
   position: number;
 };
 
@@ -37,13 +40,14 @@ export function shouldShowPreviewRail(
 
 function readSections(editor: Editor): Section[] {
   const sections: Section[] = [];
-  editor.state.doc.forEach((node, position) => {
+  editor.state.doc.forEach((node, position, block) => {
     if (node.type.name !== "heading") return;
 
     sections.push({
-      id: `section-${position}`,
+      id: `section-${sections.length}`,
       label: node.textContent.trim() || "Untitled section",
       level: Number(node.attrs.level) || 1,
+      block,
       position,
     });
   });
@@ -59,7 +63,8 @@ function sectionsAreEqual(previous: Section[], next: Section[] | null) {
       (section, index) =>
         section.id === next[index]?.id &&
         section.label === next[index]?.label &&
-        section.level === next[index]?.level,
+        section.level === next[index]?.level &&
+        section.block === next[index]?.block,
     )
   );
 }
@@ -85,7 +90,8 @@ export function isPreviewRailSectionHighlighted(
   return hoveredIndex === null ? isVisible : index === hoveredIndex;
 }
 
-export function PreviewRail({
+// Memoized: the editor around it renders on every keystroke, and a long note has hundreds of marks.
+export const PreviewRail = memo(function PreviewRail({
   editor,
   scrollContainerRef,
   noteKey,
@@ -107,6 +113,8 @@ export function PreviewRail({
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isPointerInteraction, setIsPointerInteraction] = useState(false);
   const [railHost, setRailHost] = useState<HTMLElement | null>(null);
+  // `sections` only changes when the rail looks different; current positions are kept here.
+  const latestSectionsRef = useRef(sections);
   const activeIdRef = useRef(activeId);
   const visibleSectionIdsRef = useRef(visibleSectionIds);
   const railRef = useRef<HTMLDivElement>(null);
@@ -153,6 +161,7 @@ export function PreviewRail({
   useEffect(() => {
     const refreshSections = () => {
       const nextSections = readSections(editor);
+      latestSectionsRef.current = nextSections;
       setSections((current) =>
         sectionsAreEqual(current, nextSections) ? current : nextSections,
       );
@@ -221,10 +230,11 @@ export function PreviewRail({
       const containerRect = container.getBoundingClientRect();
       const activeLine =
         containerRect.top + container.clientHeight * ACTIVE_SECTION_LINE;
-      let nextActiveId = sections[0]?.id ?? "";
+      const latestSections = latestSectionsRef.current;
+      let nextActiveId = latestSections[0]?.id ?? "";
       const sectionBoundaries: SectionBoundary[] = [];
 
-      for (const section of sections) {
+      for (const section of latestSections) {
         const node = editor.view.nodeDOM(section.position);
         if (!(node instanceof HTMLElement)) continue;
         const top = node.getBoundingClientRect().top;
@@ -272,7 +282,9 @@ export function PreviewRail({
 
   if (!isRailVisible || !railHost) return null;
 
-  function goToSection(section: Section) {
+  function goToSection(index: number) {
+    const section = latestSectionsRef.current[index];
+    if (!section) return;
     const container = scrollContainerRef.current;
     const node = editor.view.nodeDOM(section.position);
     if (!container || !(node instanceof HTMLElement)) return;
@@ -349,7 +361,7 @@ export function PreviewRail({
               onPointerEnter={() => setHoveredIndex(index)}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
-              onClick={() => goToSection(section)}
+              onClick={() => goToSection(index)}
             >
               <motion.span
                 aria-hidden="true"
@@ -419,7 +431,7 @@ export function PreviewRail({
                       )}
                       onPointerEnter={() => setHoveredIndex(index)}
                       onFocus={() => setHoveredIndex(index)}
-                      onClick={() => goToSection(section)}
+                      onClick={() => goToSection(index)}
                     >
                       <span className="min-w-0 break-words">
                         {section.label}
@@ -436,4 +448,4 @@ export function PreviewRail({
   );
 
   return createPortal(rail, railHost);
-}
+});

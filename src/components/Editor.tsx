@@ -1,4 +1,4 @@
-import { useEditor } from "@tiptap/react";
+import { useEditor, type UseEditorOptions } from "@tiptap/react";
 import { FileText as FileTextIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
@@ -149,8 +149,10 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   // One set of gutter controls (+ and drag grip) per editor instance.
   const blockControls = useMemo(createBlockDragHandleExtension, []);
 
-  const editor = useEditor({
-    extensions: [
+  // These two must keep their identity: after any render in which they differ,
+  // useEditor re-applies them with two more full view updates (so on every keystroke).
+  const editorExtensions = useMemo(
+    () => [
       ...extensions,
       blockControls.extension,
       SearchHighlight.configure({
@@ -159,8 +161,10 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         caseSensitive: true,
       }),
     ],
-    content: "",
-    editorProps: {
+    [blockControls],
+  );
+  const editorProps = useMemo<UseEditorOptions["editorProps"]>(
+    () => ({
       attributes: { class: "tiptap-editor" },
       handleClickOn: (_view, _pos, node, _nodePos) => {
         if (node.type.name === "mention" && node.attrs.id) {
@@ -177,7 +181,14 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         }
         return false;
       },
-    },
+    }),
+    [selectNote],
+  );
+
+  const editor = useEditor({
+    extensions: editorExtensions,
+    content: "",
+    editorProps,
     onSelectionUpdate: ({ editor }) => {
       if (!isLoadingRef.current) {
         cursorPositionRef.current = editor.state.selection.from;

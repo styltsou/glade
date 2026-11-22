@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import type { Editor } from "@tiptap/core";
 import type { Node } from "@tiptap/pm/model";
+import { serializeBlock } from "@/lib/blockSerializer";
 import { createFidelity, serializeWithFidelity, splitTrailingEmpties, type Fidelity } from "@/lib/markdownFidelity";
 import { blockLayout } from "@/lib/blockLayout";
 import { splitNoteTitle, restoreNoteTitle, withNoteTitle, type NoteTitle } from "@/lib/noteTitle";
@@ -53,7 +54,7 @@ export function useMarkdownFidelity() {
       // The hidden title is a stand-in: when rewritten along with the HTML around it, it is its own source.
       (node) => node === hidden?.heading
         ? hidden!.title.heading
-        : storage.serializer.serialize(editor.schema.topNodeType.create(null, node as any)).replace(/\n+$/, ""),
+        : serializeBlock(editor, node as Node).replace(/\n+$/, ""),
       isEmptyParagraph,
     );
   }, []);
