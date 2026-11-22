@@ -91,14 +91,34 @@
   padding-left: 0;
 }
 
-.tiptap-editor ul[data-type="taskList"] li {
+/* Only task items are flex: bullet and numbered items inside them keep their markers. */
+.tiptap-editor li[data-type="taskItem"] {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
+  margin-bottom: 0.5em;
 }
 
-.tiptap-editor ul[data-type="taskList"] li label {
-  margin-top: 0.15em;
+/* As tall as one line of text, so the checkbox centres on the item's first line. */
+.tiptap-editor li[data-type="taskItem"] > label {
+  height: 1.6em;
+  margin-top: 0;
+}
+
+/* Lists inside a task keep the same space around them as between tasks. */
+.tiptap-editor li[data-type="taskItem"] :is(ul, ol) {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.tiptap-editor li[data-type="taskItem"] :is(ul, ol):last-child {
+  margin-bottom: 0;
+}
+
+/* Task items sit in a node view wrapper, so there the wrapper is the last child. */
+.tiptap-editor li[data-type="taskItem"] :is(ul, ol) > li:last-child,
+.tiptap-editor li[data-type="taskItem"] ul[data-type="taskList"] > :last-child > li {
+  margin-bottom: 0;
 }
 
 .tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div {

@@ -14,7 +14,7 @@ export const CustomTaskItem = TaskItem.extend({
           data-type="taskItem"
           data-checked={checked ? "true" : "false"}
         >
-          <label contentEditable={false} className="cursor-pointer mt-[0.15em] flex items-center justify-center">
+          <label contentEditable={false} className="cursor-pointer flex items-center justify-center">
             <Checkbox
               className="cursor-pointer"
               checked={checked}
