@@ -591,6 +591,31 @@
   height: 1rem;
 }
 
+/* Dragging a block by its grip (blockPointerDrag.ts). */
+[data-dragging-block],
+[data-dragging-block] * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
+/* Like Notion: the block stays as it is; a see-through copy follows the pointer. */
+.note-block-drag-ghost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.note-block-drop-line {
+  position: fixed;
+  z-index: 61;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: hsl(var(--primary));
+  pointer-events: none;
+}
+
 /* ── Refinement pass: calmer, more typographic ─────────────────────────────── */
 .tiptap-editor {
   letter-spacing: -0.011em;

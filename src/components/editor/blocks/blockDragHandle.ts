@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/core";
 import DragHandle from "@tiptap/extension-drag-handle";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { startBlockDrag } from "./blockPointerDrag";
 
 /**
  * Floating block-gutter controls in the spirit of Notion: a "+" button and a
@@ -25,7 +26,6 @@ export function firstLineBox(block: Element, blockRect: DOMRect): { top: number;
 
 export function createBlockDragHandleExtension() {
 	let target: { editor: Editor; node: ProseMirrorNode; pos: number } | undefined;
-	let dragDataListenerAttached = false;
 
 	const preserveBlockControlsOnAlt = (event: KeyboardEvent) => {
 		if (event.key !== "Alt" || !controls.matches(":hover")) return;
@@ -130,23 +130,9 @@ export function createBlockDragHandleExtension() {
 			editor: Editor;
 			pos?: number;
 		}) => {
-			const wrapper = controls.parentElement;
-			if (wrapper && !dragDataListenerAttached) {
-				dragDataListenerAttached = true;
-				// The extension clears DataTransfer during dragstart. Populate it after
-				// its handler so browsers recognize the operation as a native drag.
-				wrapper.addEventListener("dragstart", (event) => {
-					if (
-						!(event.target instanceof Node) ||
-						!dragButtonMount.contains(event.target) ||
-						!event.dataTransfer ||
-						!target
-					)
-						return;
-					event.dataTransfer.setData("text/plain", target.node.textContent);
-					event.dataTransfer.effectAllowed = "copyMove";
-				});
-			}
+			// The grip drags with pointer events (blockPointerDrag); keep the
+			// extension's native drag of the whole controls from ever starting.
+			controls.draggable = false;
 			target = node && typeof pos === "number" && pos >= 0 ? { editor: targetEditor, node, pos } : undefined;
 		},
 	});
@@ -157,6 +143,10 @@ export function createBlockDragHandleExtension() {
 		addButtonMount,
 		dragButtonMount,
 		addBlock,
+		/** A press on the grip: drag the block it belongs to. */
+		startDrag: (event: PointerEvent) => {
+			if (target) startBlockDrag(event, target.editor, target.pos, controls);
+		},
 		clearAltGuard: () => document.removeEventListener("keydown", preserveBlockControlsOnAlt, true),
 	};
 }

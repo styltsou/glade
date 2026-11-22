@@ -144,7 +144,13 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 			{createPortal(
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<button type="button" draggable data-drag-handle="" aria-label="Drag block to move" className="note-block-drag-button">
+						<button
+							type="button"
+							data-drag-handle=""
+							aria-label="Drag block to move"
+							className="note-block-drag-button"
+							onPointerDown={(event) => blockControls.startDrag(event.nativeEvent)}
+						>
 							<svg viewBox="6 2 12 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 								<circle cx="9" cy="12" r="1" />
 								<circle cx="9" cy="5" r="1" />
