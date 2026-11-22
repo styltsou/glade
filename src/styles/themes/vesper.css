@@ -1,7 +1,25 @@
 /* Vesper: #101010 black, peach (#FFC799) and peppermint (#99FFE4).
-   Dark only.
+   Light mode is a derived paper variant: the same peach and peppermint,
+   darkened for contrast.
    Generated from the published palette (hex values in the comments
    are the source of truth). */
+
+[data-theme="vesper"] {
+  --tint-h: 30;
+  --tint-s: 25%;
+  --ink-h: 0;
+  --ink-s: 0%;
+  --surface-sink: 2.5%;
+  --gray-12: 0 0% 6.3%;
+  --sidebar: 30 14% 95.5%;
+  --brand: 27 85% 38%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 0 0% 38%;
+  --syntax-string: 164 80% 25%;
+  --syntax-number: 27 85% 38%;
+  --syntax-function: 27 85% 38%;
+  --syntax-comment: 0 0% 50%;
+}
 
 [data-theme="vesper"][data-mode="dark"] {
   --tint-h: 0;
@@ -9,6 +27,7 @@
   --ink-h: 0;
   --ink-s: 0%;
   --surface-lift: -0.7%;
+  --sidebar: var(--gray-2);
   --gray-12: 0 0% 100%;
   --brand: 27 100% 80%;
   --brand-foreground: 0 0% 6.3%;

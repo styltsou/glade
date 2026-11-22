@@ -157,7 +157,7 @@ export function NoteHeader({
         <Breadcrumbs path={parentPath} activeItem={noteTitle} />
       </div>
 
-      <div className={cn("flex items-center gap-1 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px transition-[padding] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]", isTocOpen ? "pr-1" : "pr-3")}>
+      <div className={cn("flex items-center gap-1 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px pr-1")}>
         {unsavedLingers && (
           <span aria-live="polite" className="mr-1 text-xs text-foreground/80 animate-in fade-in-0 duration-150">
             Unsaved

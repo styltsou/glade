@@ -11,6 +11,7 @@
 @import "@/styles/themes/linear.css";
 @import "@/styles/themes/raycast.css";
 @import "@/styles/themes/claude.css";
+@import "@/styles/themes/supabase.css";
 @import "@/styles/themes/vesper.css";
 @import "@/styles/themes/tokyo-night.css";
 @import "@/styles/themes/catppuccin.css";
@@ -18,9 +19,6 @@
 @import "@/styles/themes/everforest.css";
 @import "@/styles/themes/rose-pine.css";
 @import "@/styles/themes/monokai.css";
-@import "@/styles/themes/dracula.css";
 @import "@/styles/themes/nord.css";
-@import "@/styles/themes/solarized.css";
-@import "@/styles/themes/one.css";
 @import "@/styles/themes/github.css";
 @import "@/styles/themes/kanagawa.css";

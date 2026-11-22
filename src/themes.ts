@@ -4,12 +4,10 @@ export type ThemeId =
   | "linear"
   | "raycast"
   | "claude"
+  | "supabase"
   | "vesper"
   | "monokai"
-  | "dracula"
   | "nord"
-  | "solarized"
-  | "one"
   | "github"
   | "tokyo-night"
   | "catppuccin"
@@ -32,12 +30,10 @@ export const themes: ThemeMeta[] = [
   { id: "linear", label: "Linear" },
   { id: "raycast", label: "Raycast" },
   { id: "claude", label: "Claude" },
-  { id: "vesper", label: "Vesper", darkOnly: true },
-  { id: "monokai", label: "Monokai", darkOnly: true },
-  { id: "dracula", label: "Dracula" },
+  { id: "supabase", label: "Supabase" },
+  { id: "vesper", label: "Vesper" },
+  { id: "monokai", label: "Monokai" },
   { id: "nord", label: "Nord" },
-  { id: "solarized", label: "Solarized" },
-  { id: "one", label: "One Dark / Light" },
   { id: "github", label: "GitHub" },
   { id: "tokyo-night", label: "Tokyo Night" },
   { id: "catppuccin", label: "Catppuccin" },

@@ -20,8 +20,8 @@
 }
 
 [data-theme="gruvbox"][data-mode="dark"] {
-  --tint-h: 0;
-  --tint-s: 0%;
+  --tint-h: 20;
+  --tint-s: 5%;
   --ink-h: 35;
   --ink-s: 17.1%;
   --surface-lift: 8.7%;

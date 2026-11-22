@@ -1,0 +1,32 @@
+/* Supabase: charcoal dashboard (#1c1c1c) in dark, near-white (#fcfcfc) in
+   light, Supabase green (#3ecf8e) as the accent. */
+
+[data-theme="supabase"] {
+  --tint-h: 0;
+  --tint-s: 0%;
+  --ink-h: 0;
+  --ink-s: 0%;
+  --surface-sink: 1%;
+  --gray-12: 0 0% 9%;
+  --sidebar: 210 17% 97.5%;
+  --brand: 153 60% 36%;
+  --brand-foreground: 0 0% 100%;
+  --syntax-keyword: 270 50% 45%;
+  --syntax-string: 153 70% 28%;
+  --syntax-number: 28 80% 40%;
+  --syntax-function: 210 70% 42%;
+  --syntax-comment: 0 0% 50%;
+}
+
+[data-theme="supabase"][data-mode="dark"] {
+  --surface-lift: 4%;
+  --gray-12: 0 0% 93%;
+  --sidebar: 0 0% 9%;
+  --brand: 153 60% 53%;
+  --brand-foreground: 0 0% 9%;
+  --syntax-keyword: 280 70% 72%;
+  --syntax-string: 153 60% 58%;
+  --syntax-number: 28 90% 65%;
+  --syntax-function: 210 80% 70%;
+  --syntax-comment: 0 0% 45%;
+}
