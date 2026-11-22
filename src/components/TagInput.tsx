@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { X as Cross2Icon } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useStore } from "@/store";
 import { usePaneNote } from "@/components/editor/PaneContext";
 import { cn } from "@/lib/utils";
@@ -8,11 +9,34 @@ import type { TagCount } from "@/types";
 /** Same padding, border and type as a saved tag, so the box is the tag it will become. */
 const TAG_BOX = "px-3.5 border border-transparent text-[13px] font-medium";
 
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
+const TAG_SHOWN = { opacity: 1, scale: 1 };
+/** A removed tag is gone almost at once... */
+const TAG_EXIT = { opacity: 0, scale: 0.9, pointerEvents: "none" as const, transition: { duration: 0.08, ease: EASE_OUT } };
+/** ...while the tags after it slide back into its place. */
+const SLIDE_BACK = { duration: 0.12, ease: EASE_OUT };
+const NONE = { duration: 0 };
+
 export function TagInput() {
   const activeNote = usePaneNote();
   const updateNoteTags = useStore((state) => state.updateNoteTags);
   const allTags = useStore((state) => state.tags);
   const tags = activeNote?.tags ?? [];
+  const reduceMotion = useReducedMotion();
+
+  // Only a removal slides things. On an add the new tag takes the box's place
+  // and the box jumps straight to its new spot instead of travelling there.
+  const tagCount = useRef(tags.length);
+  const removing = tags.length < tagCount.current;
+  useEffect(() => {
+    tagCount.current = tags.length;
+  });
+  const tagMotion = reduceMotion
+    ? NONE
+    : { duration: 0.12, ease: EASE_OUT, layout: removing ? SLIDE_BACK : NONE };
+  // Measure positions only when the tags change, so a re-render mid-slide
+  // (typing, the exit finishing) can't cut the slide short.
+  const layoutKey = tags.join("\n");
 
   const [inputValue, setInputValue] = useState("");
   const [typedValue, setTypedValue] = useState("");
@@ -139,10 +163,22 @@ export function TagInput() {
   );
 
   return (
-    <div className="relative flex items-center gap-2 flex-wrap">
+    // Keyed by note: switching notes swaps the tags at once instead of animating them all.
+    <div key={activeNote?.path} className="relative flex items-center gap-2 flex-wrap">
+      {/* popLayout takes a leaving tag out of the flow right away, so the
+          others start sliding over while it fades. */}
+      <AnimatePresence initial={false} mode="popLayout">
       {tags.map((tag: string) => (
-        <span
+        <motion.span
           key={tag}
+          layout="position"
+          layoutDependency={layoutKey}
+          // No entrance: the box was already this tag, so it just stays put.
+          // A fade-in left a blank frame between the text and the tag.
+          initial={false}
+          animate={TAG_SHOWN}
+          exit={reduceMotion ? { opacity: 0, transition: NONE } : TAG_EXIT}
+          transition={tagMotion}
           // On hover the × sits ~12px from the text and ~14px from the edge,
           // measured to its strokes (the icon box has ~4.5px of empty space
           // around them, so the margin is 8px and the padding 10px).
@@ -160,10 +196,11 @@ export function TagInput() {
           >
             <Cross2Icon className="size-3.5 shrink-0 scale-75 transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] group-hover:scale-100" />
           </button>
-        </span>
+        </motion.span>
       ))}
+      </AnimatePresence>
 
-      <div className="relative" ref={containerRef}>
+      <motion.div layout="position" layoutDependency={layoutKey} transition={tagMotion} className="relative" ref={containerRef}>
         {/* Invisible copy of the text sizes the box; the input sits on top of it.
             (As a grid or flex item the input's own default width, about 20
             characters, would win.) */}
@@ -225,7 +262,7 @@ export function TagInput() {
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
