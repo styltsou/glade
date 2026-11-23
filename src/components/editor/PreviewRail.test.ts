@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getOutlineScrollAdjustment,
   getVisibleSectionIds,
   isPreviewRailSectionHighlighted,
   shouldShowPreviewRail,
 } from "./PreviewRail";
+
+describe("getOutlineScrollAdjustment", () => {
+  it("leaves comfortably visible headings in place", () => {
+    expect(getOutlineScrollAdjustment(100, 500, 200, 240)).toBe(0);
+  });
+
+  it("brings headings near or beyond either edge toward the center", () => {
+    expect(getOutlineScrollAdjustment(100, 500, 105, 145)).toBe(-175);
+    expect(getOutlineScrollAdjustment(100, 500, 520, 560)).toBe(240);
+  });
+});
 
 describe("shouldShowPreviewRail", () => {
   it("requires at least 1 heading", () => {

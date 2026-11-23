@@ -22,6 +22,7 @@ type SectionBoundary = Pick<Section, "id"> & {
 const SECTION_SCROLL_OFFSET = 72;
 const ACTIVE_SECTION_LINE = 0.28;
 const OUTLINE_CLOSE_DELAY = 250;
+const OUTLINE_EDGE_MARGIN = 24;
 const MIN_PREVIEW_RAIL_SECTIONS = 1;
 const MIN_PREVIEW_RAIL_OVERFLOW_RATIO = 0.25;
 
@@ -90,6 +91,22 @@ export function isPreviewRailSectionHighlighted(
   return hoveredIndex === null ? isVisible : index === hoveredIndex;
 }
 
+export function getOutlineScrollAdjustment(
+  viewportTop: number,
+  viewportBottom: number,
+  itemTop: number,
+  itemBottom: number,
+) {
+  const margin = Math.min(
+    OUTLINE_EDGE_MARGIN,
+    (viewportBottom - viewportTop) / 4,
+  );
+  if (itemTop >= viewportTop + margin && itemBottom <= viewportBottom - margin) {
+    return 0;
+  }
+  return (itemTop + itemBottom - viewportTop - viewportBottom) / 2;
+}
+
 // Memoized: the editor around it renders on every keystroke, and a long note has hundreds of marks.
 export const PreviewRail = memo(function PreviewRail({
   editor,
@@ -110,6 +127,7 @@ export const PreviewRail = memo(function PreviewRail({
   const [activeId, setActiveId] = useState(sections[0]?.id ?? "");
   const [visibleSectionIds, setVisibleSectionIds] = useState<string[]>([]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [railHoveredIndex, setRailHoveredIndex] = useState<number | null>(null);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isPointerInteraction, setIsPointerInteraction] = useState(false);
   const [railHost, setRailHost] = useState<HTMLElement | null>(null);
@@ -118,6 +136,8 @@ export const PreviewRail = memo(function PreviewRail({
   const activeIdRef = useRef(activeId);
   const visibleSectionIdsRef = useRef(visibleSectionIds);
   const railRef = useRef<HTMLDivElement>(null);
+  const outlineScrollRef = useRef<HTMLDivElement>(null);
+  const outlineNavRef = useRef<HTMLElement>(null);
   const closeTimerRef = useRef<number | undefined>(undefined);
 
   activeIdRef.current = activeId;
@@ -157,6 +177,23 @@ export const PreviewRail = memo(function PreviewRail({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!isOutlineOpen || railHoveredIndex === null) return;
+    const container = outlineScrollRef.current;
+    const item = outlineNavRef.current?.children[railHoveredIndex];
+    if (!container || !(item instanceof HTMLElement)) return;
+    if (container.scrollHeight <= container.clientHeight) return;
+
+    const viewport = container.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    container.scrollTop += getOutlineScrollAdjustment(
+      viewport.top,
+      viewport.bottom,
+      itemRect.top,
+      itemRect.bottom,
+    );
+  }, [isOutlineOpen, railHoveredIndex]);
 
   useEffect(() => {
     const refreshSections = () => {
@@ -329,6 +366,7 @@ export const PreviewRail = memo(function PreviewRail({
           setIsPointerInteraction(event.pointerType === "mouse");
           setIsOutlineOpen(true);
         }}
+        onPointerLeave={() => setRailHoveredIndex(null)}
       >
         {sections.map((section, index) => {
           const distance =
@@ -358,7 +396,10 @@ export const PreviewRail = memo(function PreviewRail({
               aria-label={`Go to ${section.label}`}
               aria-current={isActive ? "location" : undefined}
               className="note-preview-rail-section group flex h-3 w-6 shrink-0 items-center justify-start rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              onPointerEnter={() => setHoveredIndex(index)}
+              onPointerEnter={(event) => {
+                setHoveredIndex(index);
+                if (event.pointerType === "mouse") setRailHoveredIndex(index);
+              }}
               onFocus={() => setHoveredIndex(index)}
               onBlur={() => setHoveredIndex(null)}
               onClick={() => goToSection(index)}
@@ -410,10 +451,13 @@ export const PreviewRail = memo(function PreviewRail({
                 ? { duration: 0 }
                 : { duration: 0.12, ease: [0.23, 1, 0.32, 1] }
             }
-            className="absolute top-1/2 left-[calc(100%+0.5rem)] max-h-[40dvh] w-72 max-w-[calc(100vw-8rem)] origin-left -translate-y-1/2 rounded-lg border-border/60 bg-background/95 p-1.5 text-popover-foreground shadow-md ring-1 ring-foreground/10 backdrop-blur-xl"
+            className="absolute top-1/2 left-[calc(100%+0.5rem)] max-h-[40dvh] w-72 max-w-[calc(100vw-8rem)] origin-left -translate-y-1/2 rounded-md border border-border/60 bg-background/65 p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur-xl backdrop-saturate-150"
           >
-            <div className="max-h-[calc(40dvh-0.75rem)] overflow-y-auto pr-1">
-              <nav aria-label="Note outline" className="py-0.5">
+            <div
+              ref={outlineScrollRef}
+              className="-mr-[5px] max-h-[calc(40dvh-0.75rem)] overflow-y-auto pr-[9px]"
+            >
+              <nav ref={outlineNavRef} aria-label="Note outline" className="py-0.5">
                 {sections.map((section, index) => {
                   const isActive = section.id === activeId;
 
