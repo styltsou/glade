@@ -39,7 +39,7 @@ const LABELS: Record<ListedCommand, string> = {
   "split-right": "Split right",
 };
 
-type Row = { label: string; shortcuts: Shortcut[]; keys?: string[] };
+type Row = { label: string; shortcuts: Shortcut[]; keys?: string[][] };
 
 const GROUPS: { heading: string; rows: (ListedCommand | Row)[] }[] = [
   { heading: "General", rows: ["toggle-command-palette", "show-shortcuts", "open-settings", "open-mode-picker"] },
@@ -51,12 +51,20 @@ const GROUPS: { heading: string; rows: (ListedCommand | Row)[] }[] = [
       "close-tab",
       "reopen-closed-tab",
       // Ctrl+1 to Ctrl+8 are tabs 1 to 8; one row stands for the lot.
-      { label: "Go to tab 1 to 8", shortcuts: [], keys: [isMac() ? "⌘" : "Ctrl", "1…8"] },
+      { label: "Go to tab 1 to 8", shortcuts: [], keys: [[isMac() ? "⌘" : "Ctrl", "1…8"]] },
       { label: "Go to the last tab", shortcuts: [{ code: "Digit9", mod: true }] },
       "split-right",
     ],
   },
   { heading: "Navigate", rows: ["toggle-sidebar", "toggle-home", "open-recent", "open-folder", "open-file"] },
+  {
+    heading: "Sidebar file tree",
+    rows: [
+      { label: "Open in the current tab", shortcuts: [], keys: [["Click"]] },
+      { label: "Open in a new tab", shortcuts: [], keys: [[isMac() ? "⌘" : "Ctrl", "Click"], ["Middle-click"]] },
+      { label: "Open to the side", shortcuts: [], keys: [[isMac() ? "⌥" : "Alt", "Click"]] },
+    ],
+  },
   {
     heading: "Editor",
     rows: [
@@ -102,20 +110,17 @@ export function ShortcutsDialog() {
                   const label = typeof row === "string" ? LABELS[row] : row.label;
                   const shortcuts = typeof row === "string" ? bindingsOf(row) : row.shortcuts;
                   const fixedKeys = typeof row === "string" ? undefined : row.keys;
+                  const keyGroups = fixedKeys ?? shortcuts.map(shortcutKeys);
                   return (
                     <li key={label} className="flex min-h-9 items-center gap-4 py-1 text-[14px]">
                       <span className="min-w-0 flex-1 truncate">{label}</span>
                       <span className="flex shrink-0 items-center gap-2">
-                        {fixedKeys ? (
-                          <KbdGroup keys={fixedKeys} />
-                        ) : (
-                          shortcuts.map((kb, i) => (
+                        {keyGroups.map((keys, i) => (
                             <span key={i} className="inline-flex items-center gap-2">
                               {i > 0 ? <span className="text-xs text-muted-foreground/70">or</span> : null}
-                              <KbdGroup keys={shortcutKeys(kb)} />
+                              <KbdGroup keys={keys} />
                             </span>
-                          ))
-                        )}
+                          ))}
                       </span>
                     </li>
                   );
