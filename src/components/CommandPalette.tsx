@@ -3,6 +3,8 @@ import { toast } from "sonner";
 import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import {
   ArrowDown as ArrowDownIcon,
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
   ArrowUp as ArrowUpIcon,
   Check as CheckIcon,
   Monitor as MonitorIcon,
@@ -37,7 +39,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { HighlightedText } from "./command-palette/HighlightedText";
 import { useStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
-import { activeTab, focusedGroup } from "@/lib/tabs";
+import { activeTab, focusedGroup, historyTarget } from "@/lib/tabs";
 import { flattenNotes } from "@/lib/notes";
 import { baseName } from "@/lib/paths";
 import {
@@ -94,6 +96,8 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
   {
     heading: "Navigate",
     items: [
+      { id: "go-back", label: "Back", icon: ArrowLeftIcon },
+      { id: "go-forward", label: "Forward", icon: ArrowRightIcon },
       { id: "toggle-home", label: "Go to Home", icon: HomeIcon },
       { id: "reopen-closed-tab", label: "Reopen closed tab", icon: HistoryIcon },
       { id: "open-recent", label: "Open recent", icon: HistoryIcon },
@@ -159,6 +163,10 @@ function isAvailable(id: CommandId): boolean {
       return inWorkspace && group.tabs.length > 0;
     case "reopen-closed-tab":
       return inWorkspace && s.closedTabs.length > 0;
+    case "go-back":
+      return inWorkspace && !!historyTarget(s.tabsState, "back");
+    case "go-forward":
+      return inWorkspace && !!historyTarget(s.tabsState, "forward");
     case "split-right":
       return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
     case "close-folder":
@@ -258,6 +266,12 @@ function runCommand(id: CommandId): boolean {
       break;
     case "reopen-closed-tab":
       s.reopenClosedTab();
+      break;
+    case "go-back":
+      s.goBack();
+      break;
+    case "go-forward":
+      s.goForward();
       break;
     case "show-shortcuts":
       openShortcuts();

@@ -75,10 +75,8 @@ export interface NoteSlice {
   exportOpen: boolean;
   setExportOpen: (open: boolean) => void;
   /** Re-read a note's frontmatter-derived fields without touching its body. */
-  /** Notes visited through links, so "Back" can return after following one. */
-  backStack: string[];
+  /** Follow a link to a note, in the active tab (Back returns from it). */
   linkNavigate: (path: string) => Promise<void>;
-  goBack: () => Promise<void>;
   missingLink: MissingLink | null;
   setMissingLink: (link: MissingLink | null) => void;
   refreshNoteMeta: (path: string) => Promise<void>;
@@ -111,7 +109,6 @@ function movedState(s: StoreState, from: string, to: string): Partial<StoreState
     closedTabs: T.renameClosed(s.closedTabs, from, to),
     expandedFolders: s.expandedFolders.map(move),
     pinnedNotePaths: s.pinnedNotePaths.map(move),
-    backStack: s.backStack.map(move),
     currentFolder: s.currentFolder === null ? null : move(s.currentFolder),
     noteEditMode: moveKeys(s.noteEditMode),
     noteScrollPositions: moveKeys(s.noteScrollPositions),
@@ -375,6 +372,8 @@ const noteActions = (
           idToPath,
           folderNotes: state.folderNotes.filter((n: { path: string }) => n.path !== path),
           closedTabs: T.removeClosed(state.closedTabs, path),
+          // Not open anywhere, but tabs may still be able to go back to it.
+          tabsState: T.removePath(state.tabsState, path),
         };
       });
       return;
@@ -605,19 +604,9 @@ const noteActions = (
     set({ mermaidFullscreenOpen: open });
   },
 
-  backStack: [],
   linkNavigate: async (path: string) => {
-    const current = get().activeNote?.path;
-    if (current) set((s: StoreState) => ({ backStack: [...s.backStack, current] }));
     get().hideHome();
     await get().selectNote(path);
-  },
-  goBack: async () => {
-    const stack = get().backStack;
-    const prev = stack[stack.length - 1];
-    if (!prev) return;
-    set({ backStack: stack.slice(0, -1) });
-    await get().selectNote(prev);
   },
   missingLink: null,
   setMissingLink: (link: MissingLink | null) => set({ missingLink: link }),

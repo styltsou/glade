@@ -226,14 +226,28 @@ function App() {
     };
   }, [showWelcome, openPath]);
 
+  // The mouse's back and forward side buttons.
+  useEffect(() => {
+    const onMouse = (e: MouseEvent) => {
+      if (e.button !== 3 && e.button !== 4) return;
+      // Never let the webview itself go back a page.
+      e.preventDefault();
+      const st = useStore.getState();
+      if (e.type !== "mouseup" || !st.target || st.homeOpen) return;
+      if (e.button === 3) st.goBack();
+      else st.goForward();
+    };
+    window.addEventListener("mousedown", onMouse);
+    window.addEventListener("mouseup", onMouse);
+    return () => {
+      window.removeEventListener("mousedown", onMouse);
+      window.removeEventListener("mouseup", onMouse);
+    };
+  }, []);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (e.altKey && e.key === "ArrowLeft" && useStore.getState().backStack.length > 0) {
-        e.preventDefault();
-        useStore.getState().goBack();
-        return;
-      }
       if (!mod) return;
 
       // Tabs and splits (only when a folder or file is open).

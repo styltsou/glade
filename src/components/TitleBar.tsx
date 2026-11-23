@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
 import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
-import { baseName } from "@/lib/paths";
+import { baseName, splitExtension } from "@/lib/paths";
+import { historyTarget, type View } from "@/lib/tabs";
 import { FRAME_GAP, useSidebarVisible } from "@/lib/surfaces";
 import { Tip } from "@/components/ui/tooltip";
 import type { SidebarPreview } from "@/hooks/useSidebarPreview";
@@ -19,6 +20,11 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   const sidebarWidth = useStore((s) => s.sidebarWidth);
   const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
   const toggleSidebarCollapsed = useStore((state) => state.toggleSidebarCollapsed);
+  const back = useStore((s) => historyTarget(s.tabsState, "back")?.view ?? null);
+  const forward = useStore((s) => historyTarget(s.tabsState, "forward")?.view ?? null);
+  const goBack = useStore((s) => s.goBack);
+  const goForward = useStore((s) => s.goForward);
+  const noteCache = useStore((s) => s.noteCache);
 
   useEffect(() => {
     const checkMaximized = async () => {
@@ -36,6 +42,13 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   }, []);
 
   const folderOpen = target?.kind === "folder" && !homeOpen;
+  // Back and Forward, for whatever is open (a folder, or a single file).
+  const navOpen = !!target && !homeOpen;
+  /** A place in history, as the tooltips name it. */
+  const nameOf = (view: View) => {
+    if (view.path !== null) return noteCache[view.path]?.title || splitExtension(view.path).stem;
+    return baseName(view.folder ?? target?.path ?? "");
+  };
   const sidebarVisible = useSidebarVisible();
   // The left section is as wide as the sidebar when it is open, and just fits
   // the toggle and the folder name when it is closed. Both widths are plain
@@ -46,10 +59,17 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   useLayoutEffect(() => {
     if (measureRef.current) setLabelWidth(Math.ceil(measureRef.current.getBoundingClientRect().width));
   }, [label]);
-  // With a folder open, the toggle alone (padding 6 + 32 + 6): the menu is at the
-  // foot of the sidebar, collapsed or not. Without one, the menu (padding 20, gap 8,
-  // chevron 14, text ≤ 118).
-  const collapsedWidth = folderOpen ? 6 + 32 + 6 : 6 + Math.min(42 + labelWidth, 160) + 6;
+  // The left section ends at its last control: the tab strip keeps the same gap
+  // before its first tab as between its last tab and the + button. So: padding 6,
+  // then the toggle (32) with a folder open, the arrows (2 × 32) with anything
+  // open, and the menu (padding 20, gap 8, chevron 14, text ≤ 118) when no folder
+  // is (with one, it is at the foot of the sidebar), 2 apart.
+  const controls = [
+    ...(folderOpen ? [32] : []),
+    ...(navOpen ? [32, 32] : []),
+    ...(folderOpen ? [] : [Math.min(42 + labelWidth, 160)]),
+  ];
+  const collapsedWidth = 6 + controls.reduce((sum, w) => sum + w, 0) + 2 * Math.max(controls.length - 1, 0);
   const leftWidth = sidebarVisible ? `var(--sidebar-live-width, ${sidebarWidth}px)` : collapsedWidth;
   const paneOffset = sidebarVisible ? 0 : FRAME_GAP - collapsedWidth;
 
@@ -72,6 +92,7 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
 
   const iconButton =
     "press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.07] hover:text-foreground active:bg-foreground/[0.12]";
+  const navButton = `${iconButton} shrink-0 disabled:pointer-events-none disabled:opacity-35`;
 
   return (
     <div
@@ -85,7 +106,9 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
       </span>
       <div
         style={{ width: leftWidth }}
-        className="sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden pl-1.5 pr-1.5"
+        // With the sidebar open, the arrows go to its right end, as far from the first
+        // tab as the + button is from the last one (which starts at the sidebar's edge).
+        className={`sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden pl-1.5 ${sidebarVisible ? "pr-1" : "pr-0"}`}
       >
       {/* Sidebar toggle */}
       {folderOpen && <Tip label={<span className="flex items-center gap-2">Toggle sidebar<span className="opacity-60">{formatShortcut(bindingFor("toggle-sidebar")!)}</span></span>}><button
@@ -103,6 +126,20 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
           <PanelLeftClose className="h-4 w-4" />
         )}
       </button></Tip>}
+      {navOpen && (
+        <div className={`flex shrink-0 items-center gap-0.5 ${sidebarVisible ? "ml-auto" : ""}`}>
+          <Tip label={<ShortcutLabel text={back ? `Back to ${nameOf(back)}` : "Back"} command="go-back" />}>
+            <button onClick={goBack} disabled={!back} aria-label="Back" className={navButton}>
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          </Tip>
+          <Tip label={<ShortcutLabel text={forward ? `Forward to ${nameOf(forward)}` : "Forward"} command="go-forward" />}>
+            <button onClick={goForward} disabled={!forward} aria-label="Forward" className={navButton}>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </Tip>
+        </div>
+      )}
       {/* With a folder open, the menu is at the foot of the sidebar; this corner is for getting around. */}
       {!folderOpen && <WorkspaceMenu className="h-8 max-w-40 flex-none px-2.5 text-[13px]" />}
 
@@ -133,5 +170,16 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
       </div>
       </div>
     </div>
+  );
+}
+
+/** A tooltip's text with its shortcut beside it, dimmed. */
+function ShortcutLabel({ text, command }: { text: string; command: "go-back" | "go-forward" }) {
+  const binding = bindingFor(command);
+  return (
+    <span className="flex items-center gap-2">
+      {text}
+      {binding && <span className="opacity-60">{formatShortcut(binding)}</span>}
+    </span>
   );
 }

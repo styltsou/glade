@@ -17,7 +17,7 @@ import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
 import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
-import { ArrowLeft, Ellipsis, Folder } from "lucide-react";
+import { Ellipsis, Folder } from "lucide-react";
 
 interface BreadcrumbsProps {
   path?: string | null;
@@ -31,8 +31,6 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
   const openPath = useStore((state) => state.openPath);
   const home = useStore((state) => state.homeDir);
   const openRename = useStore((state) => state.openRename);
-  const canGoBack = useStore((state) => state.backStack.length > 0);
-  const goBack = useStore((state) => state.goBack);
   const [repoRoot, setRepoRoot] = useState<string | null>(null);
   const dir = dirName(filePath);
 
@@ -44,11 +42,6 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
 
   return (
     <div className={cn("flex items-center gap-3 select-none overflow-hidden text-[14px]", className)}>
-      {canGoBack && (
-        <Tip label="Back (Alt+Left)"><button className="shrink-0 text-muted-foreground hover:text-foreground" onClick={goBack} aria-label="Back">
-          <ArrowLeft className="size-4" />
-        </button></Tip>
-      )}
       <Tip label={filePath}><span className="truncate text-muted-foreground">
         {shortenPath(dir, home)}/
         <button className="font-semibold text-foreground hover:underline underline-offset-4" onClick={() => openRename(filePath)}>

@@ -332,7 +332,7 @@ describe("reopening closed tabs", () => {
 		s = T.newTab(s);
 		expect(T.closedEntry(s, 0, s.groups[0].activeId)).toBeNull();
 		s = T.openFolder(T.initialTabs("a.md"), "docs");
-		expect(T.closedEntry(s, 0, s.groups[0].activeId)).toEqual({ path: null, folder: "docs" });
+		expect(T.closedEntry(s, 0, s.groups[0].activeId)).toEqual({ path: null, folder: "docs", back: [{ path: "a.md" }] });
 	});
 
 	it("brings a note back next to the active tab", () => {
@@ -364,5 +364,104 @@ describe("closed tab history", () => {
 		const list: T.ClosedTab[] = [{ path: "docs/a.md" }, { path: "b.md" }, { path: null, folder: "docs" }];
 		expect(T.renameClosed(list, "docs", "notes")).toEqual([{ path: "notes/a.md" }, { path: "b.md" }, { path: null, folder: "notes" }]);
 		expect(T.removeClosed(list, "docs")).toEqual([{ path: "b.md" }]);
+	});
+});
+
+describe("history per tab", () => {
+	const tab = (s: T.TabsState) => T.activeTab(s);
+	const view = (s: T.TabsState) => T.viewOf(tab(s));
+	const back = (s: T.TabsState) => T.goInHistory(s, "back");
+	const forward = (s: T.TabsState) => T.goInHistory(s, "forward");
+
+	it("goes back and forward through what one tab showed", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openFolder(s, "docs");
+		expect(T.historyTarget(s, "back")?.view).toEqual({ path: "b.md" });
+		s = back(s);
+		expect(view(s)).toEqual({ path: "b.md" });
+		s = back(s);
+		expect(view(s)).toEqual({ path: "a.md" });
+		expect(T.historyTarget(s, "back")).toBeNull();
+		s = forward(s);
+		s = forward(s);
+		expect(view(s)).toEqual({ path: null, folder: "docs" });
+		expect(T.historyTarget(s, "forward")).toBeNull();
+	});
+
+	it("drops the way forward on going somewhere new", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInActive(back(s), "c.md");
+		expect(tab(s).back).toEqual([{ path: "a.md" }]);
+		expect(T.historyTarget(s, "forward")).toBeNull();
+	});
+
+	it("keeps each tab's history its own, and adds nothing for switching tabs", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInNewTab(s, "c.md");
+		expect(tab(s).back).toBeUndefined();
+		s = T.activateTab(s, 0, s.groups[0].tabs[0].id);
+		expect(tab(s).back).toEqual([{ path: "a.md" }]);
+		// Opening a note that is open already only switches to its tab.
+		s = T.openInActive(s, "c.md");
+		expect(view(s)).toEqual({ path: "c.md" });
+		expect(tab(s).back).toBeUndefined();
+	});
+
+	it("passes over a place that is open in another tab now", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInActive(s, "c.md");
+		s = T.openInNewTab(s, "b.md");
+		s = T.activateTab(s, 0, s.groups[0].tabs[0].id);
+		expect(T.historyTarget(s, "back")).toEqual({ view: { path: "a.md" }, steps: 2 });
+		s = back(s);
+		expect(view(s)).toEqual({ path: "a.md" });
+		expect(paths(s)).toEqual([["a.md", "b.md"]]);
+		expect(tab(s).forward).toEqual([{ path: "c.md" }]);
+	});
+
+	it("goes with the tab to the other pane", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInNewTab(s, "c.md");
+		s = T.moveTabToOtherGroup(s, 0, s.groups[0].tabs[0].id);
+		expect(s.groups[1].tabs[0].back).toEqual([{ path: "a.md" }]);
+	});
+
+	it("remembers no blank page, and at most MAX_HISTORY places", () => {
+		let s = T.newTab(T.initialTabs());
+		s = T.openInActive(s, "a.md");
+		expect(tab(s).back).toBeUndefined();
+		for (let i = 0; i < T.MAX_HISTORY + 10; i++) s = T.openInActive(s, `n${i}.md`);
+		expect(tab(s).back).toHaveLength(T.MAX_HISTORY);
+	});
+
+	it("follows renames and forgets deleted places", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "dir/b.md");
+		s = T.openInActive(s, "a2.md");
+		s = T.openInActive(s, "a.md");
+		s = back(s);
+		s = T.renamePath(s, "dir", "folder");
+		expect(tab(s).back).toEqual([{ path: "a.md" }, { path: "folder/b.md" }]);
+		// a2 goes: what was before and after it are the same place now, and one.
+		s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInActive(s, "a.md");
+		s = T.openInActive(s, "c.md");
+		s = T.removePath(s, "a.md");
+		expect(tab(s).back).toEqual([{ path: "b.md" }]);
+		s = T.openInActive(T.initialTabs("b.md"), "a.md");
+		s = T.openInActive(s, "b.md");
+		s = T.removePath(s, "a.md");
+		expect(tab(s).back).toBeUndefined();
+	});
+
+	it("comes back with a reopened tab", () => {
+		let s = T.openInActive(T.initialTabs("a.md"), "b.md");
+		s = T.openInNewTab(s, "z.md");
+		const closed = T.closedEntry(s, 0, s.groups[0].tabs[0].id)!;
+		s = T.closeTab(s, 0, s.groups[0].tabs[0].id);
+		s = T.reopenTab(s, closed);
+		expect(view(s)).toEqual({ path: "b.md" });
+		expect(tab(s).back).toEqual([{ path: "a.md" }]);
+		expect(T.renameClosed([closed], "a.md", "x.md")[0].back).toEqual([{ path: "x.md" }]);
+		expect(T.removeClosed([closed], "a.md")[0].back).toBeUndefined();
 	});
 });

@@ -24,6 +24,8 @@ export type GlobalCommand =
   | "new-tab"
   | "close-tab"
   | "reopen-closed-tab"
+  | "go-back"
+  | "go-forward"
   | "split-right"
   | "toggle-home"
   | "open-recent"
@@ -66,6 +68,16 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "new-tab", code: "KeyT", mod: true },
   { command: "close-tab", code: "KeyW", mod: true },
   { command: "reopen-closed-tab", code: "KeyT", mod: true, shiftKey: true },
+  // As in browsers. Not Option+Arrow on macOS: that moves the cursor by word there.
+  ...(isMac()
+    ? [
+        { command: "go-back", code: "BracketLeft", mod: true } as Keybinding,
+        { command: "go-forward", code: "BracketRight", mod: true } as Keybinding,
+      ]
+    : [
+        { command: "go-back", key: "ArrowLeft", altKey: true } as Keybinding,
+        { command: "go-forward", key: "ArrowRight", altKey: true } as Keybinding,
+      ]),
   ...TAB_DIGITS.map((d): Keybinding => ({ command: `go-to-tab-${d}`, code: `Digit${d}`, mod: true })),
   { command: "split-right", key: "\\", mod: true },
   // WebKitGTK reports Ctrl+\ as a control character, so match the physical key too.
@@ -123,6 +135,14 @@ const CODE_SYMBOLS: Record<string, string> = {
   BracketRight: "]",
 };
 
+/** Named keys shown as their symbol. */
+const KEY_SYMBOLS: Record<string, string> = {
+  ArrowLeft: "←",
+  ArrowRight: "→",
+  ArrowUp: "↑",
+  ArrowDown: "↓",
+};
+
 /** Key caps for a shortcut, e.g. ["Ctrl", "Shift", "O"] or ["⌘", "⇧", "O"]. */
 export function shortcutKeys(kb: Shortcut): string[] {
   const mac = isMac();
@@ -130,7 +150,7 @@ export function shortcutKeys(kb: Shortcut): string[] {
   if (kb.mod) keys.push(mac ? "⌘" : "Ctrl");
   if (kb.altKey) keys.push(mac ? "⌥" : "Alt");
   if (kb.shiftKey) keys.push(mac ? "⇧" : "Shift");
-  const main = kb.code ? (CODE_SYMBOLS[kb.code] ?? kb.code.replace(/^Key|^Digit/, "")) : (kb.key ?? "");
+  const main = kb.code ? (CODE_SYMBOLS[kb.code] ?? kb.code.replace(/^Key|^Digit/, "")) : (KEY_SYMBOLS[kb.key ?? ""] ?? kb.key ?? "");
   keys.push(main.length === 1 ? main.toUpperCase() : main);
   return keys;
 }

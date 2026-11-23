@@ -36,6 +36,8 @@ const LABELS: Record<ListedCommand, string> = {
   "new-tab": "New tab",
   "close-tab": "Close tab",
   "reopen-closed-tab": "Reopen closed tab",
+  "go-back": "Back",
+  "go-forward": "Forward",
   "split-right": "Split right",
 };
 
@@ -56,7 +58,7 @@ const GROUPS: { heading: string; rows: (ListedCommand | Row)[] }[] = [
       "split-right",
     ],
   },
-  { heading: "Navigate", rows: ["toggle-sidebar", "toggle-home", "open-recent", "open-folder", "open-file"] },
+  { heading: "Navigate", rows: ["go-back", "go-forward", "toggle-sidebar", "toggle-home", "open-recent", "open-folder", "open-file"] },
   {
     heading: "Sidebar file tree",
     rows: [

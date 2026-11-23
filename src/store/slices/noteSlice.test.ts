@@ -176,3 +176,23 @@ describe("leaving a note", () => {
 		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
 	});
 });
+
+describe("history", () => {
+	it("goes back and forward in the active tab, through links too", async () => {
+		await useStore.getState().openNote("a.md");
+		await useStore.getState().linkNavigate("b.md");
+		useStore.getState().goBack();
+		expect(T.activeTab(useStore.getState().tabsState).path).toBe("a.md");
+		useStore.getState().goForward();
+		expect(T.activeTab(useStore.getState().tabsState).path).toBe("b.md");
+	});
+
+	it("forgets a new note removed for being left empty", async () => {
+		await useStore.getState().openNote("a.md");
+		await useStore.getState().createNote();
+		await useStore.getState().openNote("b.md");
+		await useStore.getState().leaveNote("untitled.md", "");
+		expect(T.activeTab(useStore.getState().tabsState).back).toEqual([{ path: "a.md" }]);
+	});
+});
+

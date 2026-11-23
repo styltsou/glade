@@ -20,6 +20,9 @@ export interface TabsSlice {
   openFolderToSide: (folder: string | null) => void;
   /** Turn the active tab into the blank "new tab" page. */
   setFocusedPathNull: () => void;
+  /** Back and Forward in the focused pane's active tab. */
+  goBack: () => void;
+  goForward: () => void;
 
   /** Where a tab, note or folder being dragged would land (drives the drop highlights). */
   tabDropTarget: T.TabDrop | null;
@@ -110,6 +113,15 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
 
     setFocusedPathNull: () => {
       set({ tabsState: T.openInActive(get().tabsState, null), activeNote: null });
+    },
+
+    goBack: () => {
+      const next = T.goInHistory(get().tabsState, "back");
+      if (next !== get().tabsState) apply(next);
+    },
+    goForward: () => {
+      const next = T.goInHistory(get().tabsState, "forward");
+      if (next !== get().tabsState) apply(next);
     },
 
     tabDropTarget: null,

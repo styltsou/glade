@@ -189,7 +189,6 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       tags: [],
       activeNote: null,
       tabsState: target?.kind === "folder" ? T.rootTabs() : T.initialTabs(),
-      backStack: [],
       currentFolder: null,
       pinnedNotes: [],
       folderNotes: [],

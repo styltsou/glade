@@ -10,6 +10,11 @@
  * have no tabs at all, and then shows Home. A tab shows a note, a folder
  * overview, or the "new tab" page. All operations return new state, so
  * they are easy to test and to persist.
+ *
+ * Each tab keeps its own history, like a browser tab: what it showed before
+ * (back) and, after going back, what it showed after (forward). Only showing
+ * something else in the same tab adds to it; switching tabs, or opening in a
+ * new tab or to the side, does not.
  */
 
 export interface Tab {
@@ -21,7 +26,20 @@ export interface Tab {
 	 * (`null` = the root, a string = a subfolder). `undefined` = the "new tab" page.
 	 */
 	folder?: string | null;
+	/** What this tab showed before, oldest first. */
+	back?: View[];
+	/** What it showed after, once it has gone back: the next one last. */
+	forward?: View[];
 }
+
+/** Something a tab can show and go back to: a note, or a folder overview. */
+export interface View {
+	path: string | null;
+	folder?: string | null;
+}
+
+/** How far back a tab remembers. */
+export const MAX_HISTORY = 50;
 
 export interface Group {
 	id: string;
@@ -140,12 +158,36 @@ export function openInActive(state: TabsState, path: string | null): TabsState {
 	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
 	return mapGroup(state, gi, (g) => ({
 		...g,
-		tabs: g.tabs.map((t) => (t.id === g.activeId ? makeTabKeepingId(t.id, path) : t)),
+		tabs: g.tabs.map((t) => (t.id === g.activeId ? navigate(t, { path }) : t)),
 	}));
 }
 
-function makeTabKeepingId(id: string, path: string | null, folder?: string | null): Tab {
-	return folder === undefined ? { id, path } : { id, path, folder };
+/** What a tab shows; null for a blank "new tab" page, which is never gone back to. */
+export function viewOf(t: View): View | null {
+	if (t.path !== null) return { path: t.path };
+	return t.folder === undefined ? null : { path: null, folder: t.folder };
+}
+
+function sameView(a: View | null, b: View | null): boolean {
+	return !!a && !!b && a.path === b.path && (a.path !== null || a.folder === b.folder);
+}
+
+/** A tab showing `view`, with the given history (left out when empty). */
+function withView(tab: Tab, view: View, back: View[], forward: View[]): Tab {
+	const next: Tab = view.path === null && view.folder !== undefined
+		? { id: tab.id, path: null, folder: view.folder }
+		: { id: tab.id, path: view.path };
+	if (back.length) next.back = back;
+	if (forward.length) next.forward = forward;
+	return next;
+}
+
+/** Show `view` in the tab, remembering what it showed. Going somewhere new ends the way forward. */
+function navigate(tab: Tab, view: View): Tab {
+	const from = viewOf(tab);
+	if (sameView(from, viewOf(view))) return tab;
+	const back = from ? [...(tab.back ?? []), from].slice(-MAX_HISTORY) : (tab.back ?? []);
+	return withView(tab, view, back, []);
 }
 
 /** Show a folder overview in the active tab, or focus it where it is already open. */
@@ -155,7 +197,46 @@ export function openFolder(state: TabsState, folder: string | null): TabsState {
 	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, folder)));
 	return mapGroup(state, state.focused, (g) => ({
 		...g,
-		tabs: g.tabs.map((t) => (t.id === g.activeId ? makeTabKeepingId(t.id, null, folder) : t)),
+		tabs: g.tabs.map((t) => (t.id === g.activeId ? navigate(t, { path: null, folder }) : t)),
+	}));
+}
+
+function isOpen(state: TabsState, view: View): boolean {
+	return view.path !== null ? !!findOpen(state, view.path) : !!findFolder(state, view.folder ?? null);
+}
+
+/**
+ * Where Back (or Forward) would take the focused pane's active tab, and how
+ * many steps that is: the nearest place in its history that isn't open in
+ * another tab (a note is open once in the window, and going back mustn't
+ * open it twice). Null when there's nowhere to go.
+ */
+export function historyTarget(state: TabsState, way: "back" | "forward"): { view: View; steps: number } | null {
+	const tab = activeTab(state);
+	const list = (way === "back" ? tab.back : tab.forward) ?? [];
+	for (let i = list.length - 1; i >= 0; i--) {
+		if (!isOpen(state, list[i])) return { view: list[i], steps: list.length - i };
+	}
+	return null;
+}
+
+/**
+ * Go back (or forward) in the focused pane's active tab. Places on the way
+ * that are open in another tab now are passed over and forgotten.
+ */
+export function goInHistory(state: TabsState, way: "back" | "forward"): TabsState {
+	const target = historyTarget(state, way);
+	if (!target) return state;
+	return mapGroup(state, state.focused, (g) => ({
+		...g,
+		tabs: g.tabs.map((t) => {
+			if (t.id !== g.activeId) return t;
+			const from = viewOf(t);
+			const list = (way === "back" ? t.back : t.forward) ?? [];
+			const rest = list.slice(0, list.length - target.steps);
+			const other = [...((way === "back" ? t.forward : t.back) ?? []), ...(from ? [from] : [])].slice(-MAX_HISTORY);
+			return way === "back" ? withView(t, target.view, rest, other) : withView(t, target.view, other, rest);
+		}),
 	}));
 }
 
@@ -259,14 +340,20 @@ export function closeTabsAround(state: TabsState, group: number, keepId: string,
 export interface ClosedTab {
 	path: string | null;
 	folder?: string | null;
+	/** The tab's history, so that it comes back with it (not saved across restarts). */
+	back?: View[];
+	forward?: View[];
 }
 
 /** The tab as it would be remembered, or null for blank "new tab" pages (nothing to bring back). */
 export function closedEntry(state: TabsState, group: number, tabId: string): ClosedTab | null {
 	const tab = state.groups[group]?.tabs.find((t) => t.id === tabId);
-	if (!tab) return null;
-	if (tab.path !== null) return { path: tab.path };
-	return tab.folder === undefined ? null : { path: null, folder: tab.folder };
+	const view = tab && viewOf(tab);
+	if (!tab || !view) return null;
+	const entry: ClosedTab = view;
+	if (tab.back?.length) entry.back = tab.back;
+	if (tab.forward?.length) entry.forward = tab.forward;
+	return entry;
 }
 
 /** Saved form of a closed tab: same encoding as saved tabs ("a.md", "sub/", "./"). */
@@ -296,26 +383,27 @@ export function pruneClosed(
 export function renameClosed(list: ClosedTab[], from: string, to: string): ClosedTab[] {
 	const prefix = `${from.replace(/\/$/, "")}/`;
 	const fix = (p: string) => (p === from ? to : p.startsWith(prefix) ? `${to.replace(/\/$/, "")}/${p.slice(prefix.length)}` : p);
-	return list.map((e) => (e.path !== null ? { ...e, path: fix(e.path) } : typeof e.folder === "string" ? { ...e, folder: fix(e.folder) } : e));
+	return list.map((e) => fixHistory(fixView(e, fix), fix));
 }
 
 /** A note or folder was deleted: forget closed tabs inside it. */
 export function removeClosed(list: ClosedTab[], path: string): ClosedTab[] {
 	const prefix = `${path.replace(/\/$/, "")}/`;
 	const gone = (p: string | null | undefined) => typeof p === "string" && (p === path || p.startsWith(prefix));
-	return list.filter((e) => !gone(e.path) && !gone(e.folder));
+	return list.filter((e) => !gone(e.path) && !gone(e.folder)).map((e) => dropFromHistory(e, gone));
 }
 
 export function isOpenElsewhere(state: TabsState, entry: ClosedTab): boolean {
 	return entry.path !== null ? !!findOpen(state, entry.path) : !!findFolder(state, entry.folder ?? null);
 }
 
-/** Open a closed tab again as a new tab next to the active one in the focused pane. */
+/** Open a closed tab again, with its history, as a new tab next to the active one in the focused pane. */
 export function reopenTab(state: TabsState, entry: ClosedTab): TabsState {
-	if (entry.path !== null) return openInNewTab(state, entry.path);
-	const open = findFolder(state, entry.folder ?? null);
+	const view: View = entry.path !== null ? { path: entry.path } : { path: null, folder: entry.folder ?? null };
+	const open = view.path !== null ? findOpen(state, view.path) : findFolder(state, view.folder ?? null);
 	if (open) return reveal(state, open.group, open.tabId);
-	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, entry.folder ?? null)));
+	const tab = withView(makeTab(), view, entry.back ?? [], entry.forward ?? []);
+	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, tab));
 }
 
 /** Close every tab showing `path`, in every pane (used when a note is deleted). */
@@ -399,22 +487,70 @@ function mapTabs(state: TabsState, fn: (t: Tab) => Tab): TabsState {
 	return { ...state, groups: state.groups.map((g) => ({ ...g, tabs: g.tabs.map(fn) })) };
 }
 
+function fixView<T extends View>(v: T, fix: (p: string) => string): T {
+	if (v.path !== null) return { ...v, path: fix(v.path) };
+	return typeof v.folder === "string" ? { ...v, folder: fix(v.folder) } : v;
+}
+
+/** History follows a renamed or moved note or folder. */
+function fixHistory<T extends { back?: View[]; forward?: View[] }>(t: T, fix: (p: string) => string): T {
+	if (!t.back && !t.forward) return t;
+	const next = { ...t };
+	if (t.back) next.back = t.back.map((v) => fixView(v, fix));
+	if (t.forward) next.forward = t.forward.map((v) => fixView(v, fix));
+	return next;
+}
+
+/**
+ * A deleted note or folder leaves history. Places that end up next to
+ * themselves are then one, so that Back always goes somewhere else.
+ */
+function dropFromHistory<T extends View & { back?: View[]; forward?: View[] }>(
+	t: T,
+	gone: (p: string | null | undefined) => boolean,
+): T {
+	if (!t.back && !t.forward) return t;
+	const current = viewOf(t);
+	// The forward list runs from the far end to the next one: read in walking order.
+	const walk = [...(t.back ?? []), current, ...[...(t.forward ?? [])].reverse()];
+	const kept: (View | null)[] = [];
+	for (const v of walk) {
+		if (v !== current && (gone(v!.path) || gone(v!.folder))) continue;
+		const last = kept[kept.length - 1];
+		if (last !== undefined && (v === current ? sameView(last, current) : sameView(last, v))) {
+			// The same place twice in a row: keep the one that is shown.
+			if (v === current) kept[kept.length - 1] = current;
+			continue;
+		}
+		kept.push(v);
+	}
+	const at = kept.indexOf(current);
+	const next = { ...t };
+	delete next.back;
+	delete next.forward;
+	const back = kept.slice(0, at) as View[];
+	const forward = (kept.slice(at + 1) as View[]).reverse();
+	if (back.length) next.back = back;
+	if (forward.length) next.forward = forward;
+	return next;
+}
+
 /** A note or folder was renamed or moved. */
 export function renamePath(state: TabsState, from: string, to: string): TabsState {
 	const prefix = `${from.replace(/\/$/, "")}/`;
 	const fix = (p: string) => (p === from ? to : p.startsWith(prefix) ? `${to.replace(/\/$/, "")}/${p.slice(prefix.length)}` : p);
-	return mapTabs(state, (t) => ({
-		...t,
-		path: t.path === null ? null : fix(t.path),
-		folder: typeof t.folder === "string" ? fix(t.folder) : t.folder,
-	}));
+	return mapTabs(state, (t) => fixHistory(fixView(t, fix), fix));
 }
 
-/** A note or folder was deleted: tabs showing it become blank "new tab" pages. */
+/** A note or folder was deleted: tabs showing it become blank "new tab" pages, and forget it. */
 export function removePath(state: TabsState, path: string): TabsState {
 	const prefix = `${path.replace(/\/$/, "")}/`;
 	const gone = (p: string | null | undefined) => typeof p === "string" && (p === path || p.startsWith(prefix));
-	return mapTabs(state, (t) => (gone(t.path) || gone(t.folder) ? { id: t.id, path: null } : t));
+	return mapTabs(state, (t) => {
+		const shown = gone(t.path) || gone(t.folder) ? { ...t, path: null, folder: undefined } : t;
+		if (shown !== t) delete shown.folder;
+		return dropFromHistory(shown, gone);
+	});
 }
 
 export interface SavedTabs {
