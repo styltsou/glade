@@ -46,8 +46,10 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   useLayoutEffect(() => {
     if (measureRef.current) setLabelWidth(Math.ceil(measureRef.current.getBoundingClientRect().width));
   }, [label]);
-  // padding 6 + toggle 32 + gap 2 + menu (padding 20, gap 8, chevron 14, text ≤ 118) + padding 6
-  const collapsedWidth = 6 + (folderOpen ? 34 : 0) + Math.min(42 + labelWidth, 160) + 6;
+  // With a folder open, the toggle alone (padding 6 + 32 + 6): the menu is at the
+  // foot of the sidebar, collapsed or not. Without one, the menu (padding 20, gap 8,
+  // chevron 14, text ≤ 118).
+  const collapsedWidth = folderOpen ? 6 + 32 + 6 : 6 + Math.min(42 + labelWidth, 160) + 6;
   const leftWidth = sidebarVisible ? `var(--sidebar-live-width, ${sidebarWidth}px)` : collapsedWidth;
   const paneOffset = sidebarVisible ? 0 : FRAME_GAP - collapsedWidth;
 
@@ -101,8 +103,8 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
           <PanelLeftClose className="h-4 w-4" />
         )}
       </button></Tip>}
-      {/* With the sidebar showing, the menu is at its foot; this corner is for getting around. */}
-      {!sidebarVisible && <WorkspaceMenu folder={folderOpen} className="h-8 max-w-40 flex-none px-2.5 text-[13px]" />}
+      {/* With a folder open, the menu is at the foot of the sidebar; this corner is for getting around. */}
+      {!folderOpen && <WorkspaceMenu className="h-8 max-w-40 flex-none px-2.5 text-[13px]" />}
 
       </div>
       {target && !homeOpen ? <TabStrip trailingInset={114 - FRAME_GAP} paneOffset={paneOffset} /> : <div className="h-full flex-1" />}

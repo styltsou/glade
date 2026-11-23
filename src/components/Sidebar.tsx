@@ -24,6 +24,17 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
   const [isResizing, setIsResizing] = useState(false);
+  // The peek stays while its menu is open: the open menu takes the pointer, which
+  // would read as leaving the peek.
+  const menuOpen = useRef(false);
+  const leavePeek = (event: React.PointerEvent) => {
+    if (!menuOpen.current) sidebarPreview.leave(event);
+  };
+  const onMenuOpenChange = (open: boolean) => {
+    menuOpen.current = open;
+    // Whatever was picked is done, and the pointer is usually elsewhere by now.
+    if (!open && sidebarCollapsed) sidebarPreview.dismiss();
+  };
   const stopResize = useRef<(() => void) | null>(null);
   useEffect(() => () => stopResize.current?.(), []);
 
@@ -72,7 +83,7 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
         <div
           data-sidebar-preview-zone
           onPointerEnter={sidebarPreview.enter}
-          onPointerLeave={sidebarPreview.leave}
+          onPointerLeave={leavePeek}
           aria-hidden={sidebarCollapsed && !sidebarPreview.open}
           style={{
             width: sidebarCollapsed ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
@@ -88,12 +99,15 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />
           </div>
-          {/* While collapsed it stays in the window bar, so the peek doesn't show it twice. */}
-          {!sidebarCollapsed && (
-            <div className="shrink-0 px-1.5 pb-1.5 pt-1">
-              <WorkspaceMenu folder placement="sidebar" className="w-full" />
-            </div>
-          )}
+          {/* Here while collapsed too: the peek shows it, and goes once it's used. */}
+          <div className="shrink-0 px-1.5 pb-1.5 pt-1">
+            <WorkspaceMenu
+              folder
+              placement="sidebar"
+              className="w-full"
+              onOpenChange={onMenuOpenChange}
+            />
+          </div>
         </div>
       </aside>
 

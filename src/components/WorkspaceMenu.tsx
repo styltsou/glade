@@ -25,10 +25,12 @@ export function WorkspaceMenu({
   folder = false,
   className,
   placement = "bar",
+  onOpenChange,
 }: {
   folder?: boolean;
   className?: string;
   placement?: "bar" | "sidebar";
+  onOpenChange?: (open: boolean) => void;
 }) {
   const inSidebar = placement === "sidebar";
   const target = useStore((s) => s.target);
@@ -47,7 +49,7 @@ export function WorkspaceMenu({
 
   return (
     <>
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
         aria-label={`${label} menu`}
         className={cn(
