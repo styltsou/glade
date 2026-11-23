@@ -46,7 +46,7 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
         value={href}
         onChange={(e) => setHref(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key !== "Escape") return;
+          if (e.key !== "Escape" && !(e.key === "Backspace" && href === "" && !e.nativeEvent.isComposing)) return;
           e.preventDefault();
           onDone();
           editor.commands.focus();
@@ -61,15 +61,15 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
   );
 }
 
-/** Fired by the `/link` slash command; the focused editor answers by opening the form at its caret. */
+/** Fired by the `/link` slash command with the editor that owns the caret. */
 export const OPEN_LINK_FORM_EVENT = "glade:open-link-form";
 
 export function CaretLinkPopover({ editor }: { editor: Editor }) {
   const [pos, setPos] = useState<number | null>(null);
 
   useEffect(() => {
-    const open = () => {
-      if (!editor.isFocused) return;
+    const open = (event: Event) => {
+      if ((event as CustomEvent<Editor>).detail !== editor) return;
       setPos(editor.state.selection.from);
     };
     window.addEventListener(OPEN_LINK_FORM_EVENT, open);

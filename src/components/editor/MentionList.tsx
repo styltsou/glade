@@ -110,12 +110,12 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 				}
 			>
 				<div
-					className="relative flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
+					className="relative flex flex-col overflow-hidden rounded-md border-border/60 border bg-background/65 text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur-xl backdrop-saturate-150"
 					data-suggestion-menu="true"
 				>
 					<div
 						ref={commandListRef}
-						className="max-h-56.25 overflow-y-auto p-1"
+						className="max-h-80 overflow-y-auto p-1"
 						style={{ scrollbarWidth: "none" }}
 					>
 						{props.items.length ? (
@@ -125,10 +125,10 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 									onClick={() => props.command(item)}
 									data-selected={index === selectedIndex}
 									className={cn(
-										"relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+										"relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
 										index === selectedIndex
-											? "bg-accent text-accent-foreground"
-											: "hover:bg-accent/50",
+											? "bg-foreground/[0.09] text-foreground"
+											: "hover:bg-foreground/[0.06]",
 									)}
 								>
 									<div className="flex flex-col min-w-0 flex-1">
@@ -137,7 +137,7 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 												className={cn(
 													"truncate text-[10px] leading-tight pb-0.5",
 													index === selectedIndex
-														? "text-accent-foreground/70"
+														? "text-foreground/60"
 														: "text-muted-foreground",
 												)}
 											>

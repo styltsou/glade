@@ -1,4 +1,5 @@
 import {
+	Fragment,
 	forwardRef,
 	useImperativeHandle,
 	useState,
@@ -71,6 +72,24 @@ const iconMap: Record<string, React.ReactNode> = {
 	Image: <ImageIcon className="h-4 w-4" />,
 };
 
+const sectionById: Record<string, string> = {
+	text: "Basic",
+	h1: "Basic",
+	h2: "Basic",
+	h3: "Basic",
+	h4: "Basic",
+	bullet: "Lists",
+	ordered: "Lists",
+	task: "Lists",
+	quote: "Blocks",
+	code: "Blocks",
+	table: "Blocks",
+	hr: "Blocks",
+	diagram: "Blocks",
+	link: "Insert",
+	image: "Insert",
+};
+
 export interface SlashCommandMenuHandle {
 	onKeyDown: (props: { event: KeyboardEvent }) => boolean;
 }
@@ -91,6 +110,8 @@ export const SlashCommandMenu = forwardRef<
 >((props, ref) => {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const commandListRef = useRef<HTMLDivElement>(null);
+	const selectedIndexRef = useRef(0);
+	selectedIndexRef.current = selectedIndex;
 
 	useEffect(() => {
 		setSelectedIndex(0);
@@ -109,7 +130,9 @@ export const SlashCommandMenu = forwardRef<
 				const relativeTop = itemRect.top - containerRect.top;
 				const relativeBottom = itemRect.bottom - containerRect.top;
 
-				if (relativeBottom > containerRect.height - 4) {
+				if (selectedIndexRef.current === 0) {
+					container.scrollTop = 0;
+				} else if (relativeBottom > containerRect.height - 4) {
 					container.scrollTop += relativeBottom - (containerRect.height - 4);
 				} else if (relativeTop < 4) {
 					container.scrollTop += relativeTop - 4;
@@ -165,32 +188,42 @@ export const SlashCommandMenu = forwardRef<
 			}
 		>
 			<div
-				className="relative flex flex-col overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-lg"
+				className="relative flex flex-col overflow-hidden rounded-md border-border/60 border bg-background/65 text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur-xl backdrop-saturate-150"
 				data-suggestion-menu="true"
 			>
 				<div
 					ref={commandListRef}
-					className="max-h-45 overflow-y-auto p-1"
+					className="max-h-80 overflow-y-auto p-1"
 					style={{ scrollbarWidth: "none" }}
 				>
 					{props.items.length ? (
-						props.items.map((item, index) => (
+						props.items.map((item, index) => {
+							const section = sectionById[item.id];
+							const showHeader =
+								section && section !== sectionById[props.items[index - 1]?.id];
+							return (
+							<Fragment key={item.id}>
+							{showHeader && (
+								<div className="px-2 pt-2 pb-1 text-[11px] font-medium text-muted-foreground first:pt-1">
+									{section}
+								</div>
+							)}
 							<div
-								key={item.id}
+								onMouseDown={(event) => event.preventDefault()}
 								onClick={() => props.command(item)}
 								data-selected={index === selectedIndex}
 								className={cn(
-									"relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none",
+									"relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
 									index === selectedIndex
-										? "bg-accent text-accent-foreground"
-										: "hover:bg-accent/50",
+										? "bg-foreground/[0.09] text-foreground"
+										: "hover:bg-foreground/[0.06]",
 								)}
 							>
 								<span
 									className={cn(
 										"shrink-0",
 										index === selectedIndex
-											? "text-accent-foreground/70"
+											? "text-foreground/60"
 											: "text-muted-foreground",
 									)}
 								>
@@ -198,7 +231,9 @@ export const SlashCommandMenu = forwardRef<
 								</span>
 								<span className="truncate font-medium">{item.label}</span>
 							</div>
-						))
+							</Fragment>
+							);
+						})
 					) : (
 						<div className="px-3 py-2 text-sm text-muted-foreground italic text-center">
 							No results

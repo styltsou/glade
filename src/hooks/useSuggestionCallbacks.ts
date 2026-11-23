@@ -35,7 +35,7 @@ export function useSuggestionCallbacks(editor: Editor | null) {
 				if (!clientRect) return;
 
 				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
+				const showAbove = spaceBelow < 340 && clientRect.top > spaceBelow;
 
 				commandRef.current = props.command;
 
@@ -57,7 +57,7 @@ export function useSuggestionCallbacks(editor: Editor | null) {
 				if (!clientRect) return;
 
 				const spaceBelow = window.innerHeight - clientRect.bottom;
-				const showAbove = spaceBelow < 300 && clientRect.top > spaceBelow;
+				const showAbove = spaceBelow < 340 && clientRect.top > spaceBelow;
 
 				commandRef.current = props.command;
 

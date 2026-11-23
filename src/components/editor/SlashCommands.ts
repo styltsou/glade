@@ -26,9 +26,9 @@ export const slashCommandsList: SlashCommandItem[] = [
   { id: "code", label: "Code block", icon: "Code", command: "codeBlock" },
   { id: "table", label: "Table", icon: "Table", command: "table" },
   { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule" },
+  { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock" },
   { id: "link", label: "Add link", icon: "Link2", command: "link" },
   { id: "image", label: "Image", icon: "Image", command: "image" },
-  { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock" },
 ];
 
 export function getSlashCommands(query: string): SlashCommandItem[] {
@@ -129,7 +129,7 @@ export function executeSlashCommand(editor: Editor, range: { from: number; to: n
       break;
     case "link":
       // Handled by CaretLinkPopover: an inline form at the caret, not a system dialog.
-      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT));
+      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT, { detail: editor }));
       break;
     case "image":
       void pickImage(editor, (editor.storage as any)?.paneNote?.path);

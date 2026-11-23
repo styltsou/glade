@@ -191,7 +191,7 @@ function executeSlashCommand(editor: any, range: { from: number; to: number }, c
       editor.chain().focus().setHorizontalRule().run();
       break;
     case "link":
-      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT));
+      window.dispatchEvent(new CustomEvent(OPEN_LINK_FORM_EVENT, { detail: editor }));
       break;
   }
 }
