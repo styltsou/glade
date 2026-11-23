@@ -176,9 +176,9 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                   )}
                 >
                   {expanded ? (
-                    <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                    <FolderOpen className="size-4 shrink-0" />
                   ) : (
-                    <Folder className="size-4 shrink-0 text-muted-foreground" />
+                    <Folder className="size-4 shrink-0" />
                   )}
                   <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
                 </button>
@@ -246,7 +246,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             >
               <div className="min-h-0 overflow-hidden">
               <div className="ml-[17px] pl-2 relative pb-0.5 mt-0.5 rounded-md">
-                <div className="absolute top-0 bottom-1 left-0 w-px bg-border/60" />
+                <div className="absolute top-0 bottom-1 left-0 w-px bg-sidebar-foreground/15" />
                 
                 <div className="flex flex-col gap-0.5">
                   {children.map((child) => (

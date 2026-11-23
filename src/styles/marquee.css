@@ -1,5 +1,8 @@
 .marquee-viewport {
-  mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
+  /* Keep the fade in a gutter before the text, so idle labels stay intact. */
+  margin-left: -12px;
+  padding-left: 12px;
+  mask-image: linear-gradient(to right, transparent 6px, #000 12px, #000 calc(100% - 12px), transparent);
 }
 
 @media (prefers-reduced-motion: no-preference) {

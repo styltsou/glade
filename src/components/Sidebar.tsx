@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
@@ -7,6 +8,7 @@ import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
 import { ResizeGrip } from "@/components/ResizeGrip";
 import { FRAME_GAP } from "@/lib/surfaces";
+import { startSidebarResize } from "@/lib/sidebarResize";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -20,8 +22,8 @@ export function Sidebar() {
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
   const [isResizing, setIsResizing] = useState(false);
-  /** Where in the grab area the press landed, so the width follows the pointer without jumping. */
-  const grab = useRef(0);
+  const stopResize = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopResize.current?.(), []);
 
   useEffect(() => {
     loadVault();
@@ -37,47 +39,28 @@ export function Sidebar() {
   }, [rootPath, loadVault, loadHome]);
 
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || stopResize.current) return;
     e.preventDefault();
-    grab.current = e.clientX - sidebarWidth;
     setIsResizing(true);
-  };
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = Math.max(200, Math.min(600, e.clientX - grab.current));
-      setSidebarWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
+    stopResize.current = startSidebarResize(e.currentTarget, e, sidebarWidth, (width) => {
+      // Update both fallback widths before the temporary CSS width is removed.
+      flushSync(() => setSidebarWidth(width));
+    }, () => {
+      stopResize.current = null;
       setIsResizing(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "col-resize";
-    // Width follows the pointer directly while dragging (see .sidebar-motion).
-    document.documentElement.dataset.resizing = "sidebar";
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "default";
-      delete document.documentElement.dataset.resizing;
-    };
-  }, [isResizing, setSidebarWidth]);
+    });
+  };
 
   return (
     <div className="relative h-full flex shrink-0">
       <aside
-        style={{ width: sidebarCollapsed ? 0 : sidebarWidth }}
+        style={{ width: sidebarCollapsed ? 0 : `var(--sidebar-live-width, ${sidebarWidth}px)` }}
         // No border: the page's own edge divides them. pt-px offsets the content row's 1px pull-up.
         className="flex flex-col h-full bg-sidebar select-none pt-px overflow-hidden sidebar-motion"
         aria-hidden={sidebarCollapsed}
       >
-        <div style={{ width: sidebarWidth }} className="flex flex-col h-full">
+        <div style={{ width: `var(--sidebar-live-width, ${sidebarWidth}px)` }} className="flex flex-col h-full">
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />
@@ -92,8 +75,8 @@ export function Sidebar() {
           before={-1}
           dragging={isResizing}
           aria-label="Resize sidebar"
-          onMouseDown={handleMouseDown}
-          className="top-0 z-20"
+          onPointerDown={handlePointerDown}
+          className="top-0 z-20 touch-none"
           style={{ right: 0, bottom: FRAME_GAP }}
         />
       )}

@@ -171,7 +171,7 @@ export function InsertGroup({ editor }: GroupProps) {
           </ToggleGroupItem>
         </ToggleGroup>
       </PopoverAnchor>
-      <PopoverContent align="start" className="w-auto border-0 bg-transparent p-0 shadow-none">
+      <PopoverContent align="start" className="link-popover w-auto border-0 bg-transparent p-0 shadow-none">
         {editor && <LinkUrlForm editor={editor} onDone={() => setLinkOpen(false)} />}
       </PopoverContent>
     </Popover>

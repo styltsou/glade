@@ -47,8 +47,8 @@ export function TitleBar() {
   }, [label]);
   // padding 6 + toggle 32 + gap 2 + menu (padding 20, gap 8, chevron 14, text ≤ 118) + padding 6
   const collapsedWidth = 6 + (folderOpen ? 34 : 0) + Math.min(42 + labelWidth, 160) + 6;
-  const leftWidth = sidebarVisible ? sidebarWidth : collapsedWidth;
-  const pagesLeft = sidebarVisible ? sidebarWidth : FRAME_GAP;
+  const leftWidth = sidebarVisible ? `var(--sidebar-live-width, ${sidebarWidth}px)` : collapsedWidth;
+  const paneOffset = sidebarVisible ? 0 : FRAME_GAP - collapsedWidth;
 
   const handleMinimize = () => appWindow.minimize();
   const handleMaximize = () => appWindow.toggleMaximize();
@@ -99,7 +99,7 @@ export function TitleBar() {
       <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
 
       </div>
-      {target && !homeOpen ? <TabStrip trailingInset={114 - FRAME_GAP} paneOffset={pagesLeft - leftWidth} /> : <div className="h-full flex-1" />}
+      {target && !homeOpen ? <TabStrip trailingInset={114 - FRAME_GAP} paneOffset={paneOffset} /> : <div className="h-full flex-1" />}
       <div className="absolute right-1 top-0 flex h-full items-center">
 
 
@@ -118,7 +118,7 @@ export function TitleBar() {
         <Tip label="Close" align="end"><button
           onClick={handleClose}
           aria-label="Close"
-          className="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-destructive-foreground"
+          className="press flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive hover:text-white"
         >
           <X className="h-4 w-4" />
         </button></Tip>

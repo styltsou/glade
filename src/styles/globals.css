@@ -404,3 +404,38 @@ kbd {
     transform: none;
   }
 }
+
+/* Override shared floating-surface elevation for the quiet link forms. */
+[data-slot="popover-content"].link-popover {
+  box-shadow: none !important;
+  border-color: hsl(var(--border) / 0.8) !important;
+  transition: border-color 100ms var(--ease-ui);
+}
+
+[data-slot="popover-content"].link-popover.link-card {
+  box-shadow: var(--elev-xs) !important;
+  border-color: hsl(var(--border) / 0.4) !important;
+}
+
+[data-slot="popover-content"].link-popover:not(.link-card):focus-within {
+  border-color: hsl(var(--primary) / 0.7) !important;
+}
+
+/* Opacity only: preserve caret alignment without the shared slide or zoom. */
+[data-slot="popover-content"].link-popover[data-state="open"] {
+  animation: link-popover-fade-in 80ms var(--ease-ui) both;
+}
+
+[data-slot="popover-content"].link-popover[data-state="closed"] {
+  animation: link-popover-fade-out 60ms var(--ease-ui) both;
+}
+
+@keyframes link-popover-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes link-popover-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}

@@ -28,9 +28,10 @@ export function MarqueeText({
     if (!viewport || !text || !host) return;
 
     const measure = () => {
+      const contentWidth = viewport.clientWidth - parseFloat(getComputedStyle(viewport).paddingLeft);
       const distance = disabledRef.current
         ? 0
-        : Math.max(0, text.offsetWidth - viewport.clientWidth + 4);
+        : Math.max(0, text.offsetWidth - contentWidth + 4);
       host.style.setProperty("--marquee-distance", `${distance}px`);
       host.style.setProperty("--marquee-duration", `${Math.max(0.6, distance / 50)}s`);
       host.toggleAttribute("data-marquee-overflow", distance > 0);

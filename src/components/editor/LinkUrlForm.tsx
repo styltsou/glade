@@ -38,7 +38,7 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
   };
 
   return (
-    <form className="flex items-center gap-1 rounded-lg border bg-popover p-0.5 shadow-lg" onSubmit={apply}>
+    <form className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover p-0.5 shadow-none transition-colors focus-within:border-primary/70" onSubmit={apply}>
       <input
         autoFocus
         className="h-7 w-52 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
@@ -109,7 +109,7 @@ export function CaretLinkPopover({ editor }: { editor: Editor }) {
         align="start"
         sideOffset={0}
         // Pull back by half its height to sit on the line; mirrored when flipped at the window's bottom edge.
-        className="w-auto border-0 bg-transparent p-0 shadow-none data-[side=bottom]:-translate-y-1/2 data-[side=top]:translate-y-1/2"
+        className="link-popover w-auto border-0 bg-transparent p-0 shadow-none data-[side=bottom]:-translate-y-1/2 data-[side=top]:translate-y-1/2"
       >
         <LinkUrlForm editor={editor} onDone={() => setPos(null)} />
       </PopoverContent>

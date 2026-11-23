@@ -12,7 +12,7 @@ import { Tip } from "@/components/ui/tooltip";
 type ActiveLink = { anchor: HTMLAnchorElement; href: string };
 
 const CARD =
-  "rounded-xl border-border/60 bg-background/95 shadow-md ring-1 ring-foreground/10 backdrop-blur-xl";
+  "link-popover link-card rounded-xl border-border/40 bg-background/95 shadow-xs backdrop-blur-xl";
 const FIELD =
   "h-8 rounded-md border border-border/70 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
 
