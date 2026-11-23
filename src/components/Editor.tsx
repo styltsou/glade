@@ -178,8 +178,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           if (targetPath) {
             selectNote(targetPath);
           } else {
-            // Handle deleted or missing note
-            alert("Note not found. It may have been deleted.");
+            toast.error("Note not found", { description: "It may have been deleted." });
           }
           return true;
         }

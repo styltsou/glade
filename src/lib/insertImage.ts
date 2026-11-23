@@ -1,6 +1,7 @@
 import type { Editor } from "@tiptap/react";
 import { invoke } from "@tauri-apps/api/core";
-import { ask, open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 import { useStore } from "@/store";
 import { isAbsolutePath, relativeLink } from "@/lib/links";
@@ -32,10 +33,11 @@ async function hrefsFor(notePath: string, files: string[]): Promise<{ src: strin
   let copy = false;
   if (outside.length > 0) {
     const what = outside.length === 1 ? "This image is" : `${outside.length} images are`;
-    copy = await ask(`${what} outside the open folder. Copy ${outside.length === 1 ? "it" : "them"} next to the note so the note keeps working if the original moves?`, {
+    copy = await confirmDialog({
       title: "Add image",
-      okLabel: "Copy",
-      cancelLabel: "Link to original",
+      message: `${what} outside the open folder. Copy ${outside.length === 1 ? "it" : "them"} next to the note so the note keeps working if the original moves?`,
+      confirmLabel: "Copy",
+      cancelLabel: outside.length === 1 ? "Link to original" : "Link to originals",
     });
   }
   const from = noteAbsolute(notePath);

@@ -4,10 +4,11 @@ import * as T from "@/lib/tabs";
 const invoke = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ ask: vi.fn(async () => true), open: vi.fn() }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
+vi.mock("@/components/ConfirmDialog", () => ({ confirmDialog: vi.fn(async () => true) }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { error: toastError }) }));
 
-import { ask } from "@tauri-apps/plugin-dialog";
+import { confirmDialog as ask } from "@/components/ConfirmDialog";
 import { useStore } from "@/store";
 
 const initial = useStore.getState();

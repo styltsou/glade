@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ask } from "@tauri-apps/plugin-dialog";
+import { confirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
 
 /**
@@ -22,10 +22,12 @@ export async function offerLinkUpdates(
     });
     if (links === 0) return false;
     if (confirm) {
-      const yes = await ask(
-        `Update ${links} link${links === 1 ? "" : "s"} in ${files} note${files === 1 ? "" : "s"} to the new location?`,
-        { title: "Update links", kind: "info", okLabel: "Update", cancelLabel: "Leave as is" },
-      );
+      const yes = await confirmDialog({
+        title: "Update links",
+        message: `Update ${links} link${links === 1 ? "" : "s"} in ${files} note${files === 1 ? "" : "s"} to the new location?`,
+        confirmLabel: "Update",
+        cancelLabel: "Leave as is",
+      });
       if (!yes) return false;
     }
   } catch {
