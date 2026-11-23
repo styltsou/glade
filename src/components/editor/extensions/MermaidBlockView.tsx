@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper } from '@tiptap/react'
 import { invoke } from '@tauri-apps/api/core'
@@ -9,18 +9,13 @@ import {
   Copy,
   Check,
   Trash2,
-  X,
   Download,
-  ChevronFirst,
-  ChevronLast
 } from 'lucide-react'
 import { useStore } from '@/store'
-import CodeMirror from '@uiw/react-codemirror'
-import { markdown } from '@codemirror/lang-markdown'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { MermaidCanvas } from './MermaidCanvas'
+import { AnimatePresence } from 'motion/react'
+import { MermaidFullView } from './MermaidFullView'
 import { toast } from 'sonner'
-import { Tip, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 import { renderMermaid, renderMermaidForExport, svgToPng, onMermaidThemeChange } from '@/lib/mermaid'
 
@@ -43,8 +38,6 @@ export function MermaidBlockView({
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview')
   const setMermaidFullscreenOpen = useStore((state) => state.setMermaidFullscreenOpen)
   const [isFullViewOpen, setIsFullViewOpen] = useState(false)
-  // Full view opens on the diagram; the code is one click away.
-  const [showCodePane, setShowCodePane] = useState(false)
   const [draft, setDraft] = useState(source)
   const [svg, setSvg] = useState<string | null>(null)
   const [lastValidSvg, setLastValidSvg] = useState<string | null>(null)
@@ -58,7 +51,7 @@ export function MermaidBlockView({
 
   // Find portal target on mount
   useEffect(() => {
-    setPortalTarget(document.getElementById('note-overlay-portal'))
+    setPortalTarget(document.getElementById('note-fullview-portal'))
   }, [])
 
   // Sync draft when source changes externally (if not in full editor)
@@ -91,7 +84,7 @@ export function MermaidBlockView({
 
   // Instant render when in code view (typing), deferred for initial/preview
   useEffect(() => {
-    if (viewMode === 'code' && draft !== source) {
+    if ((viewMode === 'code' || isFullViewOpen) && draft !== source) {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       debounceRef.current = setTimeout(() => {
         doRender(draft)
@@ -100,7 +93,7 @@ export function MermaidBlockView({
         if (debounceRef.current) clearTimeout(debounceRef.current)
       }
     }
-  }, [draft, viewMode, source, doRender])
+  }, [draft, viewMode, isFullViewOpen, source, doRender])
 
   // Deferred initial render - let editor paint first
   useEffect(() => {
@@ -135,16 +128,15 @@ export function MermaidBlockView({
 
   const openFullView = useCallback(() => {
     setDraft(source)
-    setShowCodePane(false)
     setIsFullViewOpen(true)
     setMermaidFullscreenOpen(true)
   }, [source, setMermaidFullscreenOpen])
 
-  const closeFullView = () => {
+  const closeFullView = useCallback(() => {
     updateAttributes({ source: draft })
     setIsFullViewOpen(false)
     setMermaidFullscreenOpen(false)
-  }
+  }, [draft, updateAttributes, setMermaidFullscreenOpen])
 
   const handleExportPng = useCallback(async () => {
     const src = draft.trim() ? draft : source
@@ -170,12 +162,6 @@ export function MermaidBlockView({
       toast.error(`Could not export the diagram: ${e instanceof Error ? e.message : String(e)}`)
     }
   }, [draft, source])
-
-  // Theme detection for CodeMirror
-  const cmTheme = useMemo(() => {
-    const isDark = document.documentElement.getAttribute('data-mode') === 'dark'
-    return isDark ? oneDark : 'light'
-  }, [])
 
   // Auto-resize textarea height
   useLayoutEffect(() => {
@@ -299,94 +285,22 @@ export function MermaidBlockView({
         )}
       </div>
 
-      {/* ─── Full Editor Overlay ─── */}
-      {isFullViewOpen && portalTarget && createPortal(
-        <div
-          className="mermaid-full-overlay"
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault()
-              e.stopPropagation()
-              closeFullView()
-            }
-          }}
-        >
-          {/* Minimal Header */}
-          <div className="mermaid-full-header">
-            <button
-              type="button"
-              className="mermaid-full-toggle-btn"
-              onClick={() => setShowCodePane(!showCodePane)}
-            >
-              {showCodePane ? <ChevronFirst className="size-4" /> : <ChevronLast className="size-4" />}
-              <span className="text-sm">{showCodePane ? 'Hide code' : 'Show code'}</span>
-            </button>
-
-            <div className="flex items-center ml-auto">
-              <Tip label="Copy source" className="z-[110]"><button
-                type="button"
-                className="mermaid-full-action-btn"
-                onClick={() => handleCopySource(draft)}
-                aria-label="Copy source"
-              >
-                {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
-              </button></Tip>
-
-              <Tip label="Export as PNG" className="z-[110]"><button
-                type="button"
-                className="mermaid-full-action-btn"
-                onClick={handleExportPng}
-                aria-label="Export as PNG"
-              >
-                <Download className="size-4" />
-              </button></Tip>
-
-              <Tip label="Close (Esc)" className="z-[110]"><button
-                type="button"
-                className="mermaid-full-close ml-1"
-                onClick={closeFullView}
-                aria-label="Close"
-              >
-                <X className="size-4" />
-              </button></Tip>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className={`mermaid-full-body ${showCodePane ? '' : 'mermaid-full-body-expanded'}`}>
-            {/* Source Pane */}
-            <div className={`mermaid-full-pane-source ${showCodePane ? '' : 'hidden'}`}>
-              <div className="mermaid-full-cm-wrapper">
-                <CodeMirror
-                  value={draft}
-                  height="100%"
-                  theme={cmTheme}
-                  extensions={[markdown()]}
-                  onChange={(value) => setDraft(value)}
-                  basicSetup={{
-                    lineNumbers: true,
-                    foldGutter: true,
-                    highlightActiveLine: true,
-                    dropCursor: true,
-                    allowMultipleSelections: true,
-                    indentOnInput: true,
-                  }}
-                  autoFocus
-                />
-              </div>
-              {error && (
-                <div className="mermaid-full-error">
-                  <strong>Render Error:</strong> {error}
-                </div>
-              )}
-            </div>
-
-            {/* Canvas Pane */}
-            <div className="mermaid-full-pane-canvas">
-              <MermaidCanvas svg={previewSvg} empty={draft.trim() ? 'Rendering...' : 'Empty Diagram'} />
-            </div>
-          </div>
-        </div>,
+      {/* ─── Full View ─── */}
+      {portalTarget && createPortal(
+        <AnimatePresence>
+          {isFullViewOpen && (
+            <MermaidFullView
+              draft={draft}
+              onDraftChange={setDraft}
+              svg={previewSvg}
+              error={error}
+              copied={copied}
+              onCopy={() => handleCopySource(draft)}
+              onExport={handleExportPng}
+              onClose={closeFullView}
+            />
+          )}
+        </AnimatePresence>,
         portalTarget
       )}
     </NodeViewWrapper>

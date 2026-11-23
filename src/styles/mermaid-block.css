@@ -113,213 +113,22 @@
   margin: 0 4px;
 }
 
-/* ── Integrated Full Overlay ── */
+/* ── Full view ── */
 
-.mermaid-full-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  background: hsl(var(--background));
-  z-index: 100;
-  pointer-events: auto;
-  animation: mermaid-overlay-fade 0.2s ease-out;
-}
-
-@keyframes mermaid-overlay-fade {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Minimal Header */
-.mermaid-full-header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 2.5rem;
-  padding: 0 0.75rem;
-}
-
-.mermaid-full-close,
-.mermaid-full-toggle-btn,
-.mermaid-full-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: hsl(var(--muted-foreground));
-  transition: color 0.15s ease;
-}
-
-.mermaid-full-close:hover,
-.mermaid-full-toggle-btn:hover,
-.mermaid-full-action-btn:hover {
-  color: hsl(var(--foreground));
-}
-
-.mermaid-full-toggle-btn {
-  width: auto;
-  padding: 0 8px;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-/* Body */
-.mermaid-full-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 35% 1fr;
-  min-height: 0;
-  gap: 0;
-}
-
-.mermaid-full-body-expanded {
-  grid-template-columns: 0 1fr;
-  gap: 0;
-}
-
-.mermaid-full-pane-source {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.mermaid-full-pane-source.hidden {
-  width: 0;
-  opacity: 0;
-}
-
-.mermaid-full-pane-canvas {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-}
-
-/* Canvas View */
-.mermaid-full-preview {
-  flex: 1;
-  background: hsl(var(--muted) / 30%);
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius-md);
-  overflow: hidden; 
-  position: relative;
+.mermaid-canvas-viewport {
   cursor: grab;
-  margin: 0 1rem 1rem 1rem;
 }
 
-.mermaid-full-preview:active {
+.mermaid-canvas-viewport:active {
   cursor: grabbing;
 }
 
-/* Floating Zoom Controls */
-.mermaid-full-zoom-controls {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 4px;
-  background: hsl(var(--popover) / 95%);
-  backdrop-filter: blur(4px);
-  border: 1px solid hsl(var(--border));
-  border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.mermaid-full-zoom-controls button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: hsl(var(--muted-foreground));
-  transition: all 0.1s ease;
-}
-
-.mermaid-full-zoom-controls button:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-}
-
-.mermaid-canvas-container {
-  padding: 4rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* SVG rules for zoomable canvas */
-.mermaid-svg-container-canvas {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mermaid-svg-container-canvas > svg {
-  max-width: none !important;
-  max-height: none !important;
-  height: auto;
-}
-
-/* Full-view canvas: the SVG is sized in real pixels per zoom level, so it is
-   redrawn sharp instead of being stretched. No filters (they rasterize). */
+/* The SVG is sized in real pixels per zoom level, so it is redrawn sharp
+   instead of being stretched. No filters (they rasterize). */
 .mermaid-canvas-content > svg {
   display: block;
   max-width: none !important;
   max-height: none !important;
-}
-
-/* CodeMirror */
-.mermaid-full-cm-wrapper {
-  flex: 1;
-  overflow: hidden;
-  font-size: 14px;
-  background: transparent;
-}
-
-.mermaid-full-cm-wrapper .cm-editor,
-.mermaid-full-cm-wrapper .cm-scroller,
-.mermaid-full-cm-wrapper .cm-gutters,
-.mermaid-full-cm-wrapper .cm-activeLine {
-  background-color: transparent !important;
-}
-
-.mermaid-full-cm-wrapper .cm-activeLine {
-  background-color: hsl(var(--accent) / 20%) !important;
-}
-
-.mermaid-full-cm-wrapper .cm-gutters {
-  border-right: 1px solid hsl(var(--border) / 50%);
-  color: hsl(var(--muted-foreground) / 50%);
-}
-
-.mermaid-full-cm-wrapper .cm-selectionBackground {
-  background-color: hsl(var(--accent) / 40%) !important;
-}
-
-.mermaid-full-error {
-  padding: 0.75rem 1rem;
-  background: hsl(var(--destructive) / 10%);
-  border-top: 1px solid hsl(var(--destructive) / 20%);
-  color: hsl(var(--destructive));
-  font-family: var(--font-mono);
-  font-size: 12px;
-  max-height: 120px;
-  overflow-y: auto;
 }
 
 /* ── Spinner ── */

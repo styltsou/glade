@@ -922,7 +922,8 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       )}
     >
       <div className="relative flex h-full min-w-0 flex-1 flex-col">
-      {!mermaidFullscreenOpen && (
+      {/* Under the diagram full view the header stays put (no layout jump), just unreachable. */}
+      <div className="contents" {...(mermaidFullscreenOpen ? { inert: "" } : {})}>
         <NoteHeader
           notePath={activeNote.path}
         noteTitle={activeNote.title}
@@ -968,7 +969,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         useRegex={useRegex}
         onToggleUseRegex={() => setUseRegex((v) => !v)}
       />
-      )}
+      </div>
 
       {conflict && (
         <ConflictBanner
@@ -978,6 +979,8 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           onClose={handleCloseDeleted}
         />
       )}
+
+      <div id={focused ? "note-fullview-portal" : undefined} className="pointer-events-none absolute inset-0 z-50 overflow-hidden" />
 
       <div className="flex flex-1 overflow-hidden relative">
         <div ref={setOverlayEl} id={focused ? "note-overlay-portal" : undefined} className="absolute inset-0 pointer-events-none z-40 overflow-hidden" />

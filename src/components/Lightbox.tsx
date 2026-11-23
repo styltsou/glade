@@ -190,7 +190,7 @@ function LightboxView({ src, alt }: { src: string; alt: string }) {
           />
         </motion.div>
       </motion.div>
-      <motion.div role="group" aria-label="Image controls" className="absolute top-3 right-3 flex items-center gap-0.5 rounded-lg border border-border/60 bg-popover/90 p-1 text-popover-foreground shadow-[var(--elev-pop)] backdrop-blur-xl backdrop-saturate-150" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 }, closed: { opacity: 0, transition: { duration: 0.08 } } }} transition={{ duration: 0.1, ease: [0.23, 1, 0.32, 1] }}>
+      <motion.div role="group" aria-label="Image controls" className="absolute top-3 right-3 flex items-center gap-0.5 rounded-lg p-1 text-popover-foreground" variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 }, closed: { opacity: 0, transition: { duration: 0.08 } } }} transition={{ duration: 0.1, ease: [0.23, 1, 0.32, 1] }}>
         <button type="button" aria-label="Zoom out" className={btn} onClick={() => zoomTo(scale / 1.5)}><Minus className="size-4" /></button>
         <button type="button" aria-label="Reset zoom" className={`${control} min-w-12 px-1.5 text-xs tabular-nums`} onClick={() => zoomTo(1)}>{Math.round(scale * 100)}%</button>
         <button type="button" aria-label="Zoom in" className={btn} onClick={() => zoomTo(scale * 1.5)}><Plus className="size-4" /></button>
