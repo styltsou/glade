@@ -31,6 +31,7 @@ export interface SlashCommandItem {
 	label: string;
 	icon: string;
 	command: string;
+	markdown?: string;
 }
 
 export const slashCommands: SlashCommandItem[] = [
@@ -213,7 +214,7 @@ export const SlashCommandMenu = forwardRef<
 								onClick={() => props.command(item)}
 								data-selected={index === selectedIndex}
 								className={cn(
-									"relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
+									"group relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
 									index === selectedIndex
 										? "bg-foreground/[0.09] text-foreground"
 										: "hover:bg-foreground/[0.06]",
@@ -230,6 +231,19 @@ export const SlashCommandMenu = forwardRef<
 									{iconMap[item.icon]}
 								</span>
 								<span className="truncate font-medium">{item.label}</span>
+								{item.markdown && (
+									<span
+										aria-hidden="true"
+										className={cn(
+											"ml-auto shrink-0 pl-4 font-mono text-xs group-hover:text-foreground/55",
+											index === selectedIndex
+												? "text-foreground/55"
+												: "text-muted-foreground/60",
+										)}
+									>
+										{item.markdown}
+									</span>
+								)}
 							</div>
 							</Fragment>
 							);

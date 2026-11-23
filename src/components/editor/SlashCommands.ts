@@ -11,24 +11,26 @@ export interface SlashCommandItem {
   label: string;
   icon: string;
   command: string;
+  /** How the block is written in markdown, shown muted beside the name. */
+  markdown?: string;
 }
 
 export const slashCommandsList: SlashCommandItem[] = [
   { id: "text", label: "Text", icon: "Type", command: "paragraph" },
-  { id: "h1", label: "Heading 1", icon: "H1", command: "heading1" },
-  { id: "h2", label: "Heading 2", icon: "H2", command: "heading2" },
-  { id: "h3", label: "Heading 3", icon: "H3", command: "heading3" },
-  { id: "h4", label: "Heading 4", icon: "H4", command: "heading4" },
-  { id: "bullet", label: "Bullet list", icon: "List", command: "bulletList" },
-  { id: "ordered", label: "Ordered list", icon: "ListOrdered", command: "orderedList" },
-  { id: "task", label: "Task list", icon: "CheckSquare", command: "taskList" },
-  { id: "quote", label: "Blockquote", icon: "Quote", command: "blockquote" },
-  { id: "code", label: "Code block", icon: "Code", command: "codeBlock" },
-  { id: "table", label: "Table", icon: "Table", command: "table" },
-  { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule" },
-  { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock" },
-  { id: "link", label: "Add link", icon: "Link2", command: "link" },
-  { id: "image", label: "Image", icon: "Image", command: "image" },
+  { id: "h1", label: "Heading 1", icon: "H1", command: "heading1", markdown: "#" },
+  { id: "h2", label: "Heading 2", icon: "H2", command: "heading2", markdown: "##" },
+  { id: "h3", label: "Heading 3", icon: "H3", command: "heading3", markdown: "###" },
+  { id: "h4", label: "Heading 4", icon: "H4", command: "heading4", markdown: "####" },
+  { id: "bullet", label: "Bullet list", icon: "List", command: "bulletList", markdown: "-" },
+  { id: "ordered", label: "Ordered list", icon: "ListOrdered", command: "orderedList", markdown: "1." },
+  { id: "task", label: "Task list", icon: "CheckSquare", command: "taskList", markdown: "- [ ]" },
+  { id: "quote", label: "Blockquote", icon: "Quote", command: "blockquote", markdown: ">" },
+  { id: "code", label: "Code block", icon: "Code", command: "codeBlock", markdown: "```" },
+  { id: "table", label: "Table", icon: "Table", command: "table", markdown: "| |" },
+  { id: "hr", label: "Separator", icon: "Minus", command: "horizontalRule", markdown: "---" },
+  { id: "diagram", label: "Diagram", icon: "GitBranch", command: "mermaidBlock", markdown: "```mermaid" },
+  { id: "link", label: "Add link", icon: "Link2", command: "link", markdown: "[]()" },
+  { id: "image", label: "Image", icon: "Image", command: "image", markdown: "![]()" },
 ];
 
 export function getSlashCommands(query: string): SlashCommandItem[] {
