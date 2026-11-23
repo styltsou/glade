@@ -133,17 +133,27 @@ function convertToBlockType(editor: Editor, blockTypeId: string) {
 	}
 }
 
+/**
+ * The block type the selection starts in: the innermost block that has one.
+ * Paragraphs sit inside list items and quotes, so checking "is a paragraph
+ * active" first would call a list item "Text"; walking up from the selection
+ * finds the list (or quote, heading, code block) it really belongs to.
+ */
 function getCurrentBlockType(editor: Editor): string {
-	if (editor.isActive("paragraph")) return "paragraph";
-	if (editor.isActive("heading", { level: 1 })) return "heading-1";
-	if (editor.isActive("heading", { level: 2 })) return "heading-2";
-	if (editor.isActive("heading", { level: 3 })) return "heading-3";
-	if (editor.isActive("heading", { level: 4 })) return "heading-4";
-	if (editor.isActive("bulletList")) return "bulletList";
-	if (editor.isActive("orderedList")) return "orderedList";
-	if (editor.isActive("taskList")) return "taskList";
-	if (editor.isActive("blockquote")) return "blockquote";
-	if (editor.isActive("codeBlock")) return "codeBlock";
+	const { $from } = editor.state.selection;
+	for (let depth = $from.depth; depth > 0; depth--) {
+		const node = $from.node(depth);
+		switch (node.type.name) {
+			case "heading":
+				return `heading-${Math.min(4, Math.max(1, node.attrs.level ?? 1))}`;
+			case "bulletList":
+			case "orderedList":
+			case "taskList":
+			case "blockquote":
+			case "codeBlock":
+				return node.type.name;
+		}
+	}
 	return "paragraph";
 }
 
