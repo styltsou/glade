@@ -44,6 +44,8 @@ export interface TabsSlice {
   closePathTab: (path: string) => void;
   splitActive: () => void;
   moveTabToOtherGroup: (group: number, id: string) => void;
+  /** Pin a tab (kept on its note, first in its pane), or unpin it. */
+  setTabPinned: (group: number, id: string, pinned: boolean) => void;
   focusGroup: (index: number) => void;
   setTabRatio: (ratio: number) => void;
   reorderTabs: (group: number, from: number, to: number) => void;
@@ -176,6 +178,7 @@ export const createTabsSlice: StateCreator<StoreState, [], [], TabsSlice> = (set
     closePathTab: (path) => apply(T.closePathTab(get().tabsState, path)),
     splitActive: () => apply(T.splitActive(get().tabsState)),
     moveTabToOtherGroup: (group, id) => apply(T.moveTabToOtherGroup(get().tabsState, group, id)),
+    setTabPinned: (group, id, pinned) => set({ tabsState: T.setPinned(get().tabsState, group, id, pinned) }),
     focusGroup: (index) => {
       const next = T.focusGroup(get().tabsState, index);
       if (next !== get().tabsState) apply(next);

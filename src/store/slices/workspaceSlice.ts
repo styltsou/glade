@@ -85,6 +85,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         active_tab: number;
         focused_pane: number;
         tab_layout_version?: number;
+        pinned_tabs?: number[];
         active_tabs?: number[];
         split_ratio?: number;
         closed_tabs?: string[];
@@ -99,7 +100,13 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       });
       const idToPath = get().idToPath;
       const restored = T.fromSaved(
-        { groups: ui.tabs ?? [], activeIndex: ui.active_tabs ?? [], focused: ui.focused_pane ?? 0, ratio: ui.split_ratio || 0.5 },
+        {
+          groups: ui.tabs ?? [],
+          activeIndex: ui.active_tabs ?? [],
+          pinned: ui.pinned_tabs ?? [],
+          focused: ui.focused_pane ?? 0,
+          ratio: ui.split_ratio || 0.5,
+        },
         (p) => !!idToPath[p],
         (folder) => !!findEntryByPath(get().entries, folder)?.is_dir,
       );
@@ -138,6 +145,7 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
           .filter((p): p is string => !!p && !p.startsWith("/")),
         tab_layout_version: 3,
         active_tabs: saved.activeIndex,
+        pinned_tabs: saved.pinned,
         split_ratio: saved.ratio,
         active_tab: saved.activeIndex[saved.focused] ?? 0,
         focused_pane: saved.focused,

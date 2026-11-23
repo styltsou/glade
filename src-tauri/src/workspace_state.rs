@@ -47,6 +47,9 @@ pub struct WorkspaceState {
     /// Recently closed tabs, newest last ("a.md", "sub/" for a folder, "./" for the root).
     #[serde(default)]
     pub closed_tabs: Vec<String>,
+    /// How many tabs at the start of each pane are pinned.
+    #[serde(default)]
+    pub pinned_tabs: Vec<usize>,
 }
 
 /// The parts of a folder's state the UI owns and saves as a whole. Pins are
@@ -76,6 +79,9 @@ pub struct UiState {
     /// Recently closed tabs, newest last ("a.md", "sub/" for a folder, "./" for the root).
     #[serde(default)]
     pub closed_tabs: Vec<String>,
+    /// How many tabs at the start of each pane are pinned.
+    #[serde(default)]
+    pub pinned_tabs: Vec<usize>,
 }
 
 impl WorkspaceState {
@@ -92,6 +98,7 @@ impl WorkspaceState {
             active_tabs: self.active_tabs.clone(),
             split_ratio: self.split_ratio,
             closed_tabs: self.closed_tabs.clone(),
+            pinned_tabs: self.pinned_tabs.clone(),
         }
     }
 
@@ -107,6 +114,7 @@ impl WorkspaceState {
         self.active_tabs = ui.active_tabs;
         self.split_ratio = ui.split_ratio;
         self.closed_tabs = ui.closed_tabs;
+        self.pinned_tabs = ui.pinned_tabs;
     }
 }
 
@@ -285,6 +293,7 @@ mod tests {
             active_tabs: vec![0, 0],
             split_ratio: 0.5,
             closed_tabs: vec!["old.md".into(), "docs/".into()],
+            pinned_tabs: vec![1, 0],
         });
         save_in(base.path(), root.path(), &st).unwrap();
 
@@ -300,6 +309,7 @@ mod tests {
         assert_eq!(back.ui().active_tabs, vec![0, 0]);
         assert_eq!(back.ui().closed_tabs, vec!["old.md", "docs/"]);
         assert_eq!(back.ui().split_ratio, 0.5);
+        assert_eq!(back.ui().pinned_tabs, vec![1, 0]);
         // Older state files without these fields still load.
         let old = r#"{"root":"/x","pinned":["p.md"]}"#;
         let parsed: WorkspaceState = serde_json::from_str(old).unwrap();

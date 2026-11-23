@@ -465,3 +465,86 @@ describe("history per tab", () => {
 		expect(T.removeClosed([closed], "a.md")[0].back).toBeUndefined();
 	});
 });
+
+describe("pinned tabs", () => {
+	const pin = (s: T.TabsState, path: string, pinned = true) =>
+		T.setPinned(s, 0, s.groups[0].tabs.find((t) => t.path === path)!.id, pinned);
+	const three = () => T.openInNewTab(T.openInNewTab(T.initialTabs("a.md"), "b.md"), "c.md");
+
+	it("go first, in the order pinned, and back among the rest when unpinned", () => {
+		let s = pin(three(), "c.md");
+		expect(paths(s)).toEqual([["c.md", "a.md", "b.md"]]);
+		s = pin(s, "b.md");
+		expect(paths(s)).toEqual([["c.md", "b.md", "a.md"]]);
+		expect(T.pinnedCount(s.groups[0])).toBe(2);
+		s = pin(s, "c.md", false);
+		expect(paths(s)).toEqual([["b.md", "c.md", "a.md"]]);
+		expect(active(s)).toBe("c.md");
+	});
+
+	it("keep their note: what is opened from one goes to a new tab after the pinned ones", () => {
+		let s = pin(three(), "a.md");
+		s = T.activateTab(s, 0, s.groups[0].tabs[0].id);
+		s = T.openInActive(s, "d.md");
+		expect(paths(s)).toEqual([["a.md", "d.md", "b.md", "c.md"]]);
+		expect(active(s)).toBe("d.md");
+		s = T.activateTab(s, 0, s.groups[0].tabs[0].id);
+		s = T.openFolder(s, "docs");
+		expect(s.groups[0].tabs[0].path).toBe("a.md");
+		expect(T.activeTab(s).folder).toBe("docs");
+		s = T.activateTab(s, 0, s.groups[0].tabs[0].id);
+		expect(T.historyTarget(s, "back")).toBeNull();
+	});
+
+	it("stay when the others are closed", () => {
+		const s = pin(three(), "a.md");
+		const b = s.groups[0].tabs.find((t) => t.path === "b.md")!.id;
+		expect(paths(T.closeTabsAround(s, 0, b, "others").state)).toEqual([["a.md", "b.md"]]);
+		const a = s.groups[0].tabs[0].id;
+		expect(paths(T.closeTabsAround(s, 0, a, "right").state)).toEqual([["a.md"]]);
+		// Closing it directly still works.
+		expect(paths(T.closeTab(s, 0, a))).toEqual([["b.md", "c.md"]]);
+	});
+
+	it("can't be dragged among the others, nor the others among them", () => {
+		let s = pin(pin(three(), "a.md"), "b.md");
+		s = T.reorder(s, 0, 2, 0);
+		expect(paths(s)).toEqual([["a.md", "b.md", "c.md"]]);
+		s = T.reorder(s, 0, 0, 2);
+		expect(paths(s)).toEqual([["b.md", "a.md", "c.md"]]);
+		s = T.dropView(s, { path: "d.md" }, { kind: "strip", group: 0, index: 0, x: 0 });
+		expect(paths(s)).toEqual([["b.md", "a.md", "d.md", "c.md"]]);
+	});
+
+	it("are saved, come back pinned when reopened, and unpin when their note is deleted", () => {
+		const s = pin(three(), "b.md");
+		const saved = T.toSaved(s);
+		expect(saved.pinned).toEqual([1]);
+		const back = T.fromSaved(saved, () => true)!;
+		expect(back.groups[0].tabs.map((t) => !!t.pinned)).toEqual([true, false, false]);
+
+		const id = s.groups[0].tabs[0].id;
+		const closed = T.closedEntry(s, 0, id)!;
+		expect(closed.pinned).toBe(true);
+		const reopened = T.reopenTab(T.closeTab(s, 0, id), closed);
+		expect(reopened.groups[0].tabs[0]).toMatchObject({ path: "b.md", pinned: true });
+
+		const removed = T.removePath(pin(s, "c.md"), "b.md");
+		expect(removed.groups[0].tabs.map((t) => [t.path, !!t.pinned])).toEqual([["c.md", true], [null, false], ["a.md", false]]);
+	});
+});
+
+describe("pinning a blank page", () => {
+	it("pins it as the root folder overview it shows, unless that is open elsewhere", () => {
+		let s = T.newTab(T.initialTabs("a.md"));
+		expect(T.canPin(s, T.activeTab(s))).toBe(true);
+		s = T.setPinned(s, 0, s.groups[0].activeId, true);
+		expect(T.activeTab(s)).toMatchObject({ path: null, folder: null, pinned: true });
+		expect(paths(s)).toEqual([[null, "a.md"]]);
+
+		let t = T.openFolder(T.initialTabs("a.md"), null);
+		t = T.newTab(t);
+		expect(T.canPin(t, T.activeTab(t))).toBe(false);
+		expect(T.setPinned(t, 0, t.groups[0].activeId, true)).toBe(t);
+	});
+});

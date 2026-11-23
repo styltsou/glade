@@ -15,6 +15,10 @@
  * (back) and, after going back, what it showed after (forward). Only showing
  * something else in the same tab adds to it; switching tabs, or opening in a
  * new tab or to the side, does not.
+ *
+ * A pinned tab stays on its note: it sits first in its pane, anything opened
+ * while it is active goes to a new tab beside it instead, and "close others"
+ * passes it by.
  */
 
 export interface Tab {
@@ -30,6 +34,8 @@ export interface Tab {
 	back?: View[];
 	/** What it showed after, once it has gone back: the next one last. */
 	forward?: View[];
+	/** Pinned: kept on its note, first in its pane. */
+	pinned?: boolean;
 }
 
 /** Something a tab can show and go back to: a note, or a folder overview. */
@@ -155,7 +161,10 @@ export function openInActive(state: TabsState, path: string | null): TabsState {
 		if (open) return reveal(state, open.group, open.tabId);
 	}
 	const gi = state.focused;
-	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
+	// A pinned tab keeps its note: this opens beside it instead.
+	if (focusedGroup(state).tabs.length === 0 || activeTab(state).pinned) {
+		return mapGroup(state, gi, (g) => insertTabAfterActive(g, makeTab(path)));
+	}
 	return mapGroup(state, gi, (g) => ({
 		...g,
 		tabs: g.tabs.map((t) => (t.id === g.activeId ? navigate(t, { path }) : t)),
@@ -194,7 +203,9 @@ function navigate(tab: Tab, view: View): Tab {
 export function openFolder(state: TabsState, folder: string | null): TabsState {
 	const open = findFolder(state, folder);
 	if (open) return reveal(state, open.group, open.tabId);
-	if (focusedGroup(state).tabs.length === 0) return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, folder)));
+	if (focusedGroup(state).tabs.length === 0 || activeTab(state).pinned) {
+		return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, makeTab(null, folder)));
+	}
 	return mapGroup(state, state.focused, (g) => ({
 		...g,
 		tabs: g.tabs.map((t) => (t.id === g.activeId ? navigate(t, { path: null, folder }) : t)),
@@ -213,6 +224,8 @@ function isOpen(state: TabsState, view: View): boolean {
  */
 export function historyTarget(state: TabsState, way: "back" | "forward"): { view: View; steps: number } | null {
 	const tab = activeTab(state);
+	// A pinned tab stays where it is.
+	if (tab.pinned) return null;
 	const list = (way === "back" ? tab.back : tab.forward) ?? [];
 	for (let i = list.length - 1; i >= 0; i--) {
 		if (!isOpen(state, list[i])) return { view: list[i], steps: list.length - i };
@@ -240,11 +253,54 @@ export function goInHistory(state: TabsState, way: "back" | "forward"): TabsStat
 	}));
 }
 
+/**
+ * Whether a tab can be pinned: one showing a note or a folder overview, or a
+ * blank page, which shows the root overview, unless that is open in another tab
+ * (a folder overview is open once in the window).
+ */
+export function canPin(state: TabsState, tab: Tab): boolean {
+	if (tab.pinned) return false;
+	return viewOf(tab) !== null || !findFolder(state, null);
+}
+
+/** How many tabs are pinned (they are always the first ones). */
+export function pinnedCount(group: Group): number {
+	const at = group.tabs.findIndex((t) => !t.pinned);
+	return at === -1 ? group.tabs.length : at;
+}
+
+/** Where a tab may go in a pane: pinned ones among the pinned, the rest after them. */
+function clampIndex(group: Group, tab: Tab, index: number): number {
+	const pins = pinnedCount(group);
+	return tab.pinned ? Math.min(Math.max(index, 0), pins) : Math.min(Math.max(index, pins), group.tabs.length);
+}
+
+/** Insert next to the active tab, or, for a tab that isn't pinned, after the pinned ones. */
 function insertTabAfterActive(group: Group, tab: Tab): Group {
 	const at = group.tabs.findIndex((t) => t.id === group.activeId);
 	const tabs = [...group.tabs];
-	tabs.splice(at + 1, 0, tab);
+	tabs.splice(clampIndex(group, tab, at + 1), 0, tab);
 	return { ...group, tabs, activeId: tab.id };
+}
+
+/**
+ * Pin or unpin a tab. A pinned tab goes after the other pinned ones; one that
+ * is unpinned goes first among the rest. It stays active if it was.
+ */
+export function setPinned(state: TabsState, group: number, tabId: string, pinned: boolean): TabsState {
+	const g = state.groups[group];
+	const tab = g?.tabs.find((t) => t.id === tabId);
+	if (!g || !tab || !!tab.pinned === pinned) return state;
+	if (pinned && !canPin(state, tab)) return state;
+	const rest = g.tabs.filter((t) => t.id !== tabId);
+	const changed: Tab = { ...tab };
+	if (pinned) changed.pinned = true;
+	else delete changed.pinned;
+	// A blank page shows the folder's overview: pinned, it is that overview.
+	if (pinned && viewOf(tab) === null) changed.folder = null;
+	const without = { ...g, tabs: rest };
+	rest.splice(pinnedCount(without), 0, changed);
+	return mapGroup(state, group, () => ({ ...g, tabs: rest }));
 }
 
 /** Open `path` in a tab of its own in the focused pane, or focus it where it is open. */
@@ -327,7 +383,8 @@ export function closeTabsAround(state: TabsState, group: number, keepId: string,
 	const g = state.groups[group];
 	const at = g?.tabs.findIndex((t) => t.id === keepId) ?? -1;
 	if (!g || at === -1) return { state, closedIds: [] };
-	const closing = g.tabs.filter((_, i) => (which === "others" ? i !== at : i > at));
+	// Pinned tabs stay.
+	const closing = g.tabs.filter((t, i) => !t.pinned && (which === "others" ? i !== at : i > at));
 	if (closing.length === 0) return { state, closedIds: [] };
 	const gone = new Set(closing.map((t) => t.id));
 	const tabs = g.tabs.filter((t) => !gone.has(t.id));
@@ -343,6 +400,8 @@ export interface ClosedTab {
 	/** The tab's history, so that it comes back with it (not saved across restarts). */
 	back?: View[];
 	forward?: View[];
+	/** It was pinned, and comes back pinned. */
+	pinned?: boolean;
 }
 
 /** The tab as it would be remembered, or null for blank "new tab" pages (nothing to bring back). */
@@ -353,6 +412,7 @@ export function closedEntry(state: TabsState, group: number, tabId: string): Clo
 	const entry: ClosedTab = view;
 	if (tab.back?.length) entry.back = tab.back;
 	if (tab.forward?.length) entry.forward = tab.forward;
+	if (tab.pinned) entry.pinned = true;
 	return entry;
 }
 
@@ -403,6 +463,7 @@ export function reopenTab(state: TabsState, entry: ClosedTab): TabsState {
 	const open = view.path !== null ? findOpen(state, view.path) : findFolder(state, view.folder ?? null);
 	if (open) return reveal(state, open.group, open.tabId);
 	const tab = withView(makeTab(), view, entry.back ?? [], entry.forward ?? []);
+	if (entry.pinned) tab.pinned = true;
 	return mapGroup(state, state.focused, (g) => insertTabAfterActive(g, tab));
 }
 
@@ -479,6 +540,8 @@ export function reorder(state: TabsState, group: number, from: number, to: numbe
 	if (!g || from === to || from < 0 || to < 0 || from >= g.tabs.length || to >= g.tabs.length) return state;
 	const tabs = [...g.tabs];
 	const [moved] = tabs.splice(from, 1);
+	// Pinned tabs stay before the others.
+	to = clampIndex({ ...g, tabs }, moved, to);
 	tabs.splice(to, 0, moved);
 	return mapGroup(state, group, () => ({ ...g, tabs }));
 }
@@ -546,16 +609,27 @@ export function renamePath(state: TabsState, from: string, to: string): TabsStat
 export function removePath(state: TabsState, path: string): TabsState {
 	const prefix = `${path.replace(/\/$/, "")}/`;
 	const gone = (p: string | null | undefined) => typeof p === "string" && (p === path || p.startsWith(prefix));
-	return mapTabs(state, (t) => {
+	const next = mapTabs(state, (t) => {
 		const shown = gone(t.path) || gone(t.folder) ? { ...t, path: null, folder: undefined } : t;
-		if (shown !== t) delete shown.folder;
+		if (shown !== t) {
+			// A blank page: nothing left to keep it on.
+			delete shown.folder;
+			delete shown.pinned;
+		}
 		return dropFromHistory(shown, gone);
 	});
+	// A tab that was pinned and isn't any more moves behind the pinned ones.
+	return {
+		...next,
+		groups: next.groups.map((g) => ({ ...g, tabs: [...g.tabs.filter((t) => t.pinned), ...g.tabs.filter((t) => !t.pinned)] })),
+	};
 }
 
 export interface SavedTabs {
 	groups: (string | null)[][];
 	activeIndex: number[];
+	/** How many tabs at the start of each pane are pinned. */
+	pinned?: number[];
 	focused: number;
 	ratio: number;
 }
@@ -573,6 +647,7 @@ export function toSaved(state: TabsState): SavedTabs {
 	return {
 		groups: state.groups.map((g) => g.tabs.map(savedTab)),
 		activeIndex: state.groups.map((g) => Math.max(0, g.tabs.findIndex((t) => t.id === g.activeId))),
+		pinned: state.groups.map(pinnedCount),
 		focused: state.focused,
 		ratio: state.ratio,
 	};
@@ -599,7 +674,12 @@ export function fromSaved(
 		.slice(0, MAX_GROUPS)
 		.map((paths, gi) => {
 			const tabs = (Array.isArray(paths) ? paths : [])
-				.map((p) => restoreTab(p, exists, folderExists))
+				.map((p, i) => {
+					const tab = restoreTab(p, exists, folderExists);
+					// Pinned tabs are the first ones; one whose note has gone comes back blank and unpinned.
+					if (i < (saved.pinned?.[gi] ?? 0) && (tab.path !== null || tab.folder !== undefined)) tab.pinned = true;
+					return tab;
+				})
 				// Drop blank pages: they carry nothing worth restoring.
 				.filter((t, _i, all) => t.path !== null || t.folder !== undefined || all.length === 1)
 				// Older sessions could hold a note or folder twice; keep its first tab.
@@ -663,7 +743,7 @@ export function dropTab(state: TabsState, fromGroup: number, tabId: string, targ
 		if (!tg) return state;
 		const at = target.kind === "strip" ? target.index : tg.tabs.findIndex((t) => t.id === tg.activeId) + 1;
 		const tabs = [...tg.tabs];
-		tabs.splice(Math.min(Math.max(at, 0), tabs.length), 0, tab);
+		tabs.splice(clampIndex(tg, tab, at), 0, tab);
 		groups = groups.map((g, i) => (i === target.group ? { ...g, tabs, activeId: tab.id } : g));
 		targetId = tg.id;
 	}
@@ -693,6 +773,6 @@ export function dropView(state: TabsState, view: { path: string | null; folder?:
 	if (!g) return state;
 	const at = target.kind === "strip" ? target.index : g.tabs.findIndex((t) => t.id === g.activeId) + 1;
 	const tabs = [...g.tabs];
-	tabs.splice(Math.min(Math.max(at, 0), tabs.length), 0, tab);
+	tabs.splice(clampIndex(g, tab, at), 0, tab);
 	return mapGroup({ ...state, focused: gi }, gi, () => ({ ...g, tabs, activeId: tab.id }));
 }

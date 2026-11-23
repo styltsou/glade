@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
-import { FileText, Folder, Plus, X } from "lucide-react";
+import { FileText, Folder, Pin, PinOff, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
 import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
-import { type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
+import { canPin, type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
 import { dragGhost, hitTest, sameDrop } from "@/lib/paneDnd";
 import { cn } from "@/lib/utils";
 import { FRAME_GAP, paneBox, tabsStartFlush, useSidebarVisible } from "@/lib/surfaces";
@@ -68,6 +68,8 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
   const newTab = useStore((s) => s.newTab);
   const splitActive = useStore((s) => s.splitActive);
   const moveToOther = useStore((s) => s.moveTabToOtherGroup);
+  const setTabPinned = useStore((s) => s.setTabPinned);
+  const tabsState = useStore((s) => s.tabsState);
   const otherGroup = useStore((s) => s.tabsState.groups[index === 0 ? 1 : 0]);
   /** The other pane already shows this note, so there is nothing to move. */
   const otherHas = (path: string) => !!otherGroup?.tabs.some((t) => t.path === path);
@@ -270,9 +272,19 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
                 // end of the name, so the fade starts further in.
                 "[mask-image:linear-gradient(to_left,transparent,black_20px)]",
                 active ? "@max-[100px]/tab:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]" : "@max-[100px]/tab:group-hover:[mask-image:linear-gradient(to_left,transparent_18px,black_34px)]")}>{label}</span></button></Tip>
-              <button type="button" data-tab-close aria-label={`Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => close(index, tab.id)} className={cn("absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/70 transition-[color,background-color,opacity] duration-100 hover:bg-foreground/[0.12] hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
+              <button type="button" data-tab-close aria-label={tab.pinned ? `Unpin ${label}` : `Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => (tab.pinned ? setTabPinned(index, tab.id, false) : close(index, tab.id))} className={cn("group/close","absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/70 transition-[color,background-color,opacity] duration-100 hover:bg-foreground/[0.12] hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
                 // Narrow inactive tabs show their close button only on hover, like a browser's.
-                active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}><X className="size-3.5" /></button>
+                active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}>
+                {/* A pinned tab shows its pin in the close button's place; pressing it unpins. */}
+                {tab.pinned ? (
+                  <>
+                    <Pin className="size-3.5 group-hover/close:hidden" />
+                    <PinOff className="hidden size-3.5 group-hover/close:block" />
+                  </>
+                ) : (
+                  <X className="size-3.5" />
+                )}
+              </button>
             </div>
           </ContextMenuTrigger><ContextMenuContent
             className="min-w-48"
@@ -282,13 +294,23 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
             onPointerUp={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
-            <ContextMenuItem onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>
-            {group.tabs.length > 1 && <ContextMenuItem onSelect={() => closeOthers(index, tab.id, "others")}>Close other tabs</ContextMenuItem>}
-            {group.tabs[group.tabs.length - 1]?.id !== tab.id && <ContextMenuItem onSelect={() => closeOthers(index, tab.id, "right")}>Close tabs to the right</ContextMenuItem>}
-            <ContextMenuSeparator />
-            {split
-              ? (tab.path === null || !otherHas(tab.path)) && <ContextMenuItem onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
-              : <ContextMenuItem onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>}
+            {menuSections([
+              // Arranging the tab.
+              [
+                tab.pinned
+                  ? <ContextMenuItem key="pin" onSelect={() => setTabPinned(index, tab.id, false)}>Unpin tab</ContextMenuItem>
+                  : canPin(tabsState, tab) && <ContextMenuItem key="pin" onSelect={() => setTabPinned(index, tab.id, true)}>Pin tab</ContextMenuItem>,
+                split
+                  ? (tab.path === null || !otherHas(tab.path)) && <ContextMenuItem key="move" onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
+                  : <ContextMenuItem key="split" onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>,
+              ],
+              // Closing, last. Pinned tabs stay, so the others show only when they would close something.
+              [
+                <ContextMenuItem key="close" onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>,
+                group.tabs.some((t) => t.id !== tab.id && !t.pinned) && <ContextMenuItem key="others" onSelect={() => closeOthers(index, tab.id, "others")}>Close other tabs</ContextMenuItem>,
+                group.tabs.slice(group.tabs.findIndex((t) => t.id === tab.id) + 1).some((t) => !t.pinned) && <ContextMenuItem key="right" onSelect={() => closeOthers(index, tab.id, "right")}>Close tabs to the right</ContextMenuItem>,
+              ],
+            ])}
           </ContextMenuContent></ContextMenu>
         </TabSlot>;
       })}
@@ -328,4 +350,13 @@ export function TabStrip({ trailingInset = 0, paneOffset = 0 }: { trailingInset?
       ))}
     </div>
   );
+}
+
+/**
+ * A menu in groups: only the items that apply now, with a separator between
+ * groups that both have some, so no context ends up with a stray line.
+ */
+function menuSections(sections: (React.ReactElement | false | null | undefined)[][]): React.ReactNode {
+  const shown = sections.map((items) => items.filter((item): item is React.ReactElement => !!item)).filter((items) => items.length > 0);
+  return shown.flatMap((items, i) => (i === 0 ? items : [<ContextMenuSeparator key={`separator-${i}`} />, ...items]));
 }
