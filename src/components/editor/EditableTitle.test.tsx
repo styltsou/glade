@@ -4,6 +4,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { useStore } from "@/store";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EditableTitle } from "./EditableTitle";
+import { PASTE_NOTE_EVENT, type PasteNoteDetail } from "@/lib/pastedNote";
 
 const initial = useStore.getState();
 const commitTitle = vi.fn(async () => true);
@@ -83,13 +84,14 @@ describe("EditableTitle", () => {
 		expect(commitTitle).not.toHaveBeenCalled();
 	});
 
-	it("cancels on Escape", async () => {
+	it("keeps what was typed on Escape", async () => {
 		await show("plan.md", "Plan");
 		await click();
 		await type("Something else");
 		await press("Escape");
 		expect(input()).toBeNull();
-		expect(commitTitle).not.toHaveBeenCalled();
+		expect(commitTitle).toHaveBeenCalledExactlyOnceWith("plan.md", "Something else");
+		expect(onDone).toHaveBeenCalled();
 	});
 
 	it("writes nothing for an untouched title on a named file", async () => {
@@ -122,5 +124,75 @@ describe("EditableTitle", () => {
 		await act(async () => root.unmount());
 		expect(commitTitle).toHaveBeenCalledExactlyOnceWith("a.md", "A, edited");
 		root = createRoot(host);
+	});
+
+	describe("pasting a whole note", () => {
+		async function paste(text: string) {
+			const event = new Event("paste", { bubbles: true, cancelable: true }) as Event & { clipboardData: unknown };
+			event.clipboardData = { getData: (type: string) => (type === "text/plain" ? text : "") };
+			await act(async () => void input()!.dispatchEvent(event));
+			return event;
+		}
+		const received: PasteNoteDetail[] = [];
+		let answer: (detail: PasteNoteDetail) => void = () => {};
+		const listen = (e: Event) => {
+			const detail = (e as CustomEvent<PasteNoteDetail>).detail;
+			received.push(detail);
+			answer(detail);
+		};
+		beforeEach(() => {
+			received.length = 0;
+			window.addEventListener(PASTE_NOTE_EVENT, listen);
+		});
+		afterEach(() => window.removeEventListener(PASTE_NOTE_EVENT, listen));
+
+		it("hands an empty note the whole of it, and writes no title of its own", async () => {
+			answer = (detail) => {
+				detail.handled = "whole";
+				detail.done = new Promise(() => {}); // still saving
+			};
+			await show("untitled.md", "untitled");
+			await click();
+			const event = await paste("# Trip plan\n\nDay one: beach");
+			expect(event.defaultPrevented).toBe(true);
+			expect(received[0]).toMatchObject({ path: "untitled.md", note: { title: "Trip plan", body: "Day one: beach" } });
+			expect(input()).toBeNull();
+			expect(host.querySelector("h1")!.textContent).toBe("Trip plan");
+			expect(commitTitle).not.toHaveBeenCalled();
+		});
+
+		it("keeps the title here and sends the rest to a body that has text", async () => {
+			answer = (detail) => {
+				detail.handled = "body";
+			};
+			await show("untitled.md", "untitled");
+			await click();
+			await paste("# Trip plan\n\nDay one: beach");
+			expect(commitTitle).toHaveBeenCalledExactlyOnceWith("untitled.md", "Trip plan");
+			expect(onDone).toHaveBeenCalled();
+		});
+
+		it("keeps the title field open when nothing pasted reads as a title", async () => {
+			answer = (detail) => {
+				detail.handled = "whole";
+			};
+			await show("untitled.md", "untitled");
+			await click();
+			const event = await paste("- socks\n- hat");
+			expect(event.defaultPrevented).toBe(true);
+			expect(received[0].note).toMatchObject({ title: "", body: "- socks\n- hat" });
+			expect(input()).not.toBeNull();
+			expect(commitTitle).not.toHaveBeenCalled();
+		});
+
+		it("pastes a single line, or with no editor to take the body, as usual", async () => {
+			answer = () => {};
+			await show("untitled.md", "untitled");
+			await click();
+			expect((await paste("Trip plan")).defaultPrevented).toBe(false);
+			expect(received).toHaveLength(0);
+			expect((await paste("# Trip plan\n\nBeach")).defaultPrevented).toBe(false);
+			expect(commitTitle).not.toHaveBeenCalled();
+		});
 	});
 });

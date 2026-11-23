@@ -3,6 +3,7 @@ import { useStore } from "@/store";
 import { formatTooltipDate } from "@/lib/dates";
 import { isUntitled, splitExtension } from "@/lib/paths";
 import { cn } from "@/lib/utils";
+import { PASTE_NOTE_EVENT, splitPastedNote, type PasteNoteDetail } from "@/lib/pastedNote";
 import { Tip } from "@/components/ui/tooltip";
 
 interface EditableTitleProps {
@@ -103,8 +104,37 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
     // Or the Enter would land in the body as a new line.
     e.preventDefault();
     e.stopPropagation();
-    if (e.key === "Enter") commit();
-    else update(null);
+    // Escape keeps what was typed too: the title is part of the note, like its
+    // body, and leaving it by any way keeps it.
+    commit();
+    onDone?.();
+  };
+
+  /**
+   * More than a line pasted is a note: its title stays here and the rest goes to
+   * the body. Into a note with nothing in it yet, it becomes that whole note.
+   */
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const current = editRef.current;
+    const note = current && splitPastedNote(e.clipboardData.getData("text/plain"));
+    if (!current || !note) return;
+    const detail: PasteNoteDetail = { path: current.path, note, handled: null, done: Promise.resolve() };
+    window.dispatchEvent(new CustomEvent(PASTE_NOTE_EVENT, { detail }));
+    // No editor to take the body (raw Markdown is showing): an ordinary paste.
+    if (!detail.handled) return;
+    e.preventDefault();
+    // Nothing in it read as a title: it all went to the body, and the title is still to be typed.
+    if (!note.title) return;
+    if (detail.handled === "whole") {
+      // The editor writes it, title and all.
+      update(null);
+      const written = { ...current, value: note.title };
+      setSaving(written);
+      void detail.done.finally(() => setSaving((s) => (s === written ? null : s)));
+      return;
+    }
+    update({ ...current, value: note.title });
+    commit();
     onDone?.();
   };
 
@@ -125,6 +155,7 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
             value={edit.value}
             onChange={(e) => update({ ...edit, value: e.target.value })}
             onBlur={commit}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             className={cn(titleText, "absolute inset-x-3 top-2 h-8 w-[calc(100%-1.5rem)] min-w-0 border-0 bg-transparent p-0 text-foreground outline-none placeholder:text-muted-foreground/50")}
           />

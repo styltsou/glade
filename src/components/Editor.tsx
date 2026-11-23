@@ -20,6 +20,8 @@ import { isDocumentEdit } from "@/lib/editorUpdates";
 import { extensions } from "./editor/extensions";
 import { useSaveNote } from "@/hooks/useSaveNote";
 import { splitNoteTitle, restoreNoteTitle, type NoteTitle } from "@/lib/noteTitle";
+import { hasNoteTitle, headingText, PASTE_NOTE_EVENT, type PasteNoteDetail } from "@/lib/pastedNote";
+import { isUntitled } from "@/lib/paths";
 import { useMarkdownFidelity } from "@/hooks/useMarkdownFidelity";
 import { createBlockDragHandleExtension } from "@/components/editor/blocks/blockDragHandle";
 import { BlockHandles } from "@/components/editor/blocks/BlockHandles";
@@ -98,11 +100,12 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const latestContentRef = useRef<string>("");
   const pendingSaveRef = useRef<Promise<void> | null>(null);
   const savedTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pasteNoteRef = useRef<(event: ClipboardEvent) => boolean>(() => false);
   const isLoadingRef = useRef(false);
   const cursorPositionRef = useRef<number | null>(null);
   const currentPathRef = useRef<string | null>(null);
   const lastFocusedPositionRef = useRef<number | null>(null);
-  const { snapshot: snapshotFidelity, getMarkdown } = useMarkdownFidelity();
+  const { snapshot: snapshotFidelity, getMarkdown, hasTitle } = useMarkdownFidelity();
 
   // A change made by another program while we hold unsaved edits.
   const [conflict, setConflict] = useState<null | { kind: "modified" | "removed" }>(null);
@@ -166,6 +169,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const editorProps = useMemo<UseEditorOptions["editorProps"]>(
     () => ({
       attributes: { class: "tiptap-editor" },
+      handlePaste: (_view, event) => pasteNoteRef.current(event),
       handleClickOn: (_view, _pos, node, _nodePos) => {
         if (node.type.name === "mention" && node.attrs.id) {
           const { idToPath } = useStore.getState();
@@ -326,13 +330,17 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         })();
       }
 
+      const left = pathChanged ? currentPathRef.current : null;
+      const leftContent = latestContentRef.current;
+      let leftSaved: Promise<void> | null = null;
+
       // Save any unsaved changes before switching
       if (latestContentRef.current !== lastSavedContentRef.current) {
         const contentToSave = latestContentRef.current;
         lastSavedContentRef.current = contentToSave;
         const pathToSave = pathChanged ? currentPathRef.current : activeNote.path;
         if (pathToSave) {
-          (async () => {
+          leftSaved = (async () => {
             try {
               await saveNote(pathToSave, contentToSave);
             } catch {
@@ -347,6 +355,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           })();
         }
       }
+      if (left && !conflictRef.current) void useStore.getState().leaveNote(left, leftContent, leftSaved);
 
       const currentMarkdown = getMarkdown(editor);
 
@@ -431,12 +440,14 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   useEffect(() => {
     return () => {
       const path = currentPathRef.current;
-      if (path && !conflictRef.current && latestContentRef.current !== lastSavedContentRef.current) {
-        useStore
-          .getState()
-          .saveNote(path, latestContentRef.current)
-          .catch((e) => toast.error(`Couldn't save "${path}"`, { description: String(e) }));
+      if (!path || conflictRef.current) return;
+      const content = latestContentRef.current;
+      let saved: Promise<void> | null = null;
+      if (content !== lastSavedContentRef.current) {
+        saved = useStore.getState().saveNote(path, content);
+        saved.catch((e) => toast.error(`Couldn't save "${path}"`, { description: String(e) }));
       }
+      void useStore.getState().leaveNote(path, content, saved);
     };
   }, []);
 
@@ -474,6 +485,148 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       toggleRawModeFromStore(activeNote.path);
     }
   }, [editor, isRawModeMap, rawContent, activeNote, saveNow, toggleRawModeFromStore]);
+
+  /**
+   * A whole note pasted into an empty one, from the body or the title field: shown
+   * as if it had been opened, so its H1 is the title and the rest the body. It is
+   * saved at once, and a file still called untitled is named after it.
+   */
+  /**
+   * Save what the editor now shows as `source`, showing its title in the title
+   * field at once rather than after the write, and name a file still called
+   * untitled after it.
+   */
+  const settleSource = useCallback(
+    async (path: string, source: string) => {
+      const heading = splitNoteTitle(source).heading;
+      useStore.setState((state) => {
+        const note = state.noteCache[path];
+        if (!note) return {};
+        const next = { ...note, body: source, title: heading ? headingText(heading) : note.title };
+        return {
+          noteCache: { ...state.noteCache, [path]: next },
+          activeNote: state.activeNote?.path === path ? next : state.activeNote,
+        };
+      });
+      latestContentRef.current = source;
+      setSaveStatusWithRef("unsaved");
+      await saveNow();
+      if (heading && isUntitled(path) && currentPathRef.current === path) {
+        await useStore.getState().commitTitle(path, null);
+      }
+    },
+    [setSaveStatusWithRef, saveNow],
+  );
+
+  const adoptNote = useCallback(
+    async (source: string, focus = true) => {
+      if (!editor || !activeNote) return;
+      const title = splitNoteTitle(source);
+      isLoadingRef.current = true;
+      // Emitted for the outline; the edit itself is saved below.
+      const chain = editor.chain().setContent(title.body, { emitUpdate: true });
+      (focus ? chain.focus("end") : chain).run();
+      snapshotFidelity(editor, source);
+      rawTitleRef.current = title;
+      setRawContent(title.body);
+      isLoadingRef.current = false;
+      await settleSource(activeNote.path, source);
+    },
+    [editor, activeNote, snapshotFidelity, settleSource],
+  );
+
+  /**
+   * An H1 typed at the top of the body of a note without a title is its title,
+   * as it is when the note is opened again. So once it is finished (the cursor
+   * moves on, or the editor loses focus), it goes up into the title field, the
+   * way a title typed there would, and a file still called untitled is named.
+   */
+  const promoteTitle = () => {
+    if (!editor || !activeNote || isLoadingRef.current || isRawMode || conflictRef.current) return;
+    if (hasTitle() || editor.view.composing) return;
+    const first = editor.state.doc.firstChild;
+    if (!first || first.type.name !== "heading" || first.attrs.level !== 1 || !first.textContent.trim()) return;
+    // Still being typed: the cursor is in it, and the editor has the keyboard,
+    // or only lost it to another window.
+    const inside = editor.state.selection.from < first.nodeSize;
+    if (inside && (editor.view.hasFocus() || !document.hasFocus())) return;
+
+    // Without the empty line that Enter at the end of the heading has just made,
+    // which is where the cursor is, not a blank line kept at the end of the file.
+    const source = getMarkdown(editor).replace(/\s+$/, "\n");
+    const title = splitNoteTitle(source);
+    if (!title.heading || title.index !== 0) return;
+    // The body as it would be loaded from the file, so it saves the same way;
+    // the cursor stays where it was in the text below the heading.
+    const cursor = Math.max(1, editor.state.selection.from - first.nodeSize);
+    const focused = editor.view.hasFocus();
+    isLoadingRef.current = true;
+    editor
+      .chain()
+      .command(({ tr }) => {
+        tr.setMeta("addToHistory", false);
+        return true;
+      })
+      .setContent(title.body, { emitUpdate: true })
+      .run();
+    snapshotFidelity(editor, source);
+    const size = editor.state.doc.content.size;
+    editor.commands.setTextSelection(Math.min(cursor, Math.max(1, size - 1)));
+    if (focused) editor.commands.focus();
+    rawTitleRef.current = title;
+    isLoadingRef.current = false;
+    void settleSource(activeNote.path, source);
+  };
+  const promoteTitleRef = useRef(promoteTitle);
+  promoteTitleRef.current = promoteTitle;
+  useEffect(() => {
+    if (!editor) return;
+    // After the change that moved the cursor has been applied.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const later = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => promoteTitleRef.current(), 0);
+    };
+    editor.on("selectionUpdate", later);
+    editor.on("blur", later);
+    return () => {
+      clearTimeout(timer);
+      editor.off("selectionUpdate", later);
+      editor.off("blur", later);
+    };
+  }, [editor]);
+  const adoptNoteRef = useRef(adoptNote);
+  adoptNoteRef.current = adoptNote;
+
+  /** Nothing in the note yet, not even a title. */
+  const isEmptyNote = () => !latestContentRef.current.trim();
+
+  pasteNoteRef.current = (event: ClipboardEvent) => {
+    if (isRawMode || !isEmptyNote()) return false;
+    const text = event.clipboardData?.getData("text/plain") ?? "";
+    if (!hasNoteTitle(text)) return false;
+    event.preventDefault();
+    void adoptNoteRef.current(text.replace(/^(?:[ \t]*\r?\n)+/, ""));
+    return true;
+  };
+
+  // A note pasted into the title field: its body comes here.
+  useEffect(() => {
+    const onPaste = (e: Event) => {
+      const detail = (e as CustomEvent<PasteNoteDetail>).detail;
+      if (detail.handled || !editor || isRawMode || detail.path !== activeNote?.path) return;
+      if (isEmptyNote()) {
+        detail.handled = "whole";
+        // With no title in it, the title field keeps the keyboard.
+        detail.done = adoptNoteRef.current(detail.note.source, detail.note.title !== "");
+      } else {
+        detail.handled = "body";
+        if (detail.note.body) editor.chain().insertContentAt(0, detail.note.body).run();
+      }
+    };
+    window.addEventListener(PASTE_NOTE_EVENT, onPaste);
+    return () => window.removeEventListener(PASTE_NOTE_EVENT, onPaste);
+  }, [editor, isRawMode, activeNote?.path]);
 
   // Raw markdown is toggled from the command palette or its shortcut.
   const toggleRawRef = useRef(handleToggleRawMode);

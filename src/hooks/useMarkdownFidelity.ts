@@ -59,5 +59,8 @@ export function useMarkdownFidelity() {
     );
   }, []);
 
-  return { snapshot, getMarkdown };
+  /** Whether the note has a title: an H1 that the title field shows, hidden from the body. */
+  const hasTitle = useCallback(() => titleRef.current !== null, []);
+
+  return { snapshot, getMarkdown, hasTitle };
 }
