@@ -124,8 +124,8 @@ function EmptyPane() {
   ] as const;
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center text-muted-foreground">
-      <p className="text-sm">Open a note or folder from the sidebar</p>
-      <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 text-xs">
+      <p className="text-base">Open a note or folder from the sidebar</p>
+      <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1.5 text-sm">
         {hints.map((h) => {
           const binding = bindingFor(h.command);
           return (
@@ -136,7 +136,7 @@ function EmptyPane() {
           );
         })}
       </dl>
-      <button type="button" onClick={() => openRoot(null)} className="text-xs text-primary hover:underline">
+      <button type="button" onClick={() => openRoot(null)} className="text-sm text-primary hover:underline">
         Show folder overview
       </button>
     </div>

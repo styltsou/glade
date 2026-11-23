@@ -85,7 +85,7 @@ export function TitleBar() {
         className="sidebar-motion flex h-full shrink-0 items-center gap-0.5 overflow-hidden pl-1.5 pr-1.5"
       >
       {/* Sidebar toggle */}
-      {folderOpen && <Tip label={`Toggle sidebar (${formatShortcut(bindingFor("toggle-sidebar")!)})`}><button
+      {folderOpen && <Tip label={<span className="flex items-center gap-2">Toggle sidebar<span className="opacity-60">{formatShortcut(bindingFor("toggle-sidebar")!)}</span></span>}><button
         onClick={toggleSidebarCollapsed}
         aria-label="Toggle sidebar"
         className={iconButton}

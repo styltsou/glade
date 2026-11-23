@@ -101,7 +101,7 @@ export function SidebarCollapseToggle() {
         </button>
       </TooltipTrigger>
       <TooltipContent side="right">
-        <p>Expand sidebar ({formatShortcut(bindingFor("toggle-sidebar")!)})</p>
+        <p className="flex items-center gap-2">Expand sidebar<span className="opacity-60">{formatShortcut(bindingFor("toggle-sidebar")!)}</span></p>
       </TooltipContent>
     </Tooltip>
   );
