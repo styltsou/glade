@@ -101,7 +101,8 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
           <PanelLeftClose className="h-4 w-4" />
         )}
       </button></Tip>}
-      <WorkspaceMenu folder={folderOpen} className={sidebarVisible ? "h-8 min-w-0 flex-1 px-2.5 text-[13px]" : "h-8 max-w-40 flex-none px-2.5 text-[13px]"} />
+      {/* With the sidebar showing, the menu is at its foot; this corner is for getting around. */}
+      {!sidebarVisible && <WorkspaceMenu folder={folderOpen} className="h-8 max-w-40 flex-none px-2.5 text-[13px]" />}
 
       </div>
       {target && !homeOpen ? <TabStrip trailingInset={114 - FRAME_GAP} paneOffset={paneOffset} /> : <div className="h-full flex-1" />}

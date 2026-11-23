@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { FileTree } from "@/components/sidebar/FileTree";
 import { ResizeGrip } from "@/components/ResizeGrip";
+import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { FRAME_GAP } from "@/lib/surfaces";
 import { startSidebarResize } from "@/lib/sidebarResize";
 import type { SidebarPreview } from "@/hooks/useSidebarPreview";
@@ -87,6 +88,12 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />
           </div>
+          {/* While collapsed it stays in the window bar, so the peek doesn't show it twice. */}
+          {!sidebarCollapsed && (
+            <div className="shrink-0 px-1.5 pb-1.5 pt-1">
+              <WorkspaceMenu folder placement="sidebar" className="w-full" />
+            </div>
+          )}
         </div>
       </aside>
 

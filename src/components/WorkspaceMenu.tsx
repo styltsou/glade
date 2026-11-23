@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, FileText, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Sun, X } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Sun, X } from "lucide-react";
 import { openModePicker, openThemePicker } from "@/components/CommandPalette";
 import { AboutDialog } from "@/components/AboutDialog";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
@@ -16,8 +16,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-/** Workspace actions, shared by the sidebar and its window-bar fallback. */
-export function WorkspaceMenu({ folder = false, className }: { folder?: boolean; className?: string }) {
+/**
+ * Workspace actions: at the foot of the sidebar, opening upward, and in the
+ * window bar when there is no sidebar to show it (it is collapsed, or no folder
+ * is open).
+ */
+export function WorkspaceMenu({
+  folder = false,
+  className,
+  placement = "bar",
+}: {
+  folder?: boolean;
+  className?: string;
+  placement?: "bar" | "sidebar";
+}) {
+  const inSidebar = placement === "sidebar";
   const target = useStore((s) => s.target);
   const home = useStore((s) => s.home);
   const showHome = useStore((s) => s.showHome);
@@ -42,10 +55,20 @@ export function WorkspaceMenu({ folder = false, className }: { folder?: boolean;
           className,
         )}
       >
+        {inSidebar && <Folder className="size-4 shrink-0 text-muted-foreground" />}
         <span className="truncate">{label}</span>
-        <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-100 ease-[var(--ease-ui)] [[data-state=open]_&]:rotate-180" />
+        {inSidebar ? (
+          <ChevronsUpDown className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
+        ) : (
+          <ChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-100 ease-[var(--ease-ui)] [[data-state=open]_&]:rotate-180" />
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="start" className="min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))]" data-no-drag>
+      <DropdownMenuContent
+        side={inSidebar ? "top" : "bottom"}
+        align="start"
+        className="min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))]"
+        data-no-drag
+      >
         <DropdownMenuItem onSelect={showHome}>
           <Home className="size-4" /> Home
           <DropdownMenuShortcut>{formatShortcut(bindingFor("toggle-home")!)}</DropdownMenuShortcut>
