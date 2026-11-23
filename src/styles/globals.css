@@ -188,6 +188,25 @@ html[data-fullscreen="true"] .app-frame {
   --tw-ease: var(--ease-ui);
 }
 
+/* Menus are glass, like the editor's mention, slash and block menus: the page
+   shows through, blurred, and a highlighted row is a light wash of the text
+   colour rather than a solid fill. (Unlayered, so these win over the
+   components' utilities; a destructive row keeps its own colour.) */
+[data-slot="dropdown-menu-content"],
+[data-slot="dropdown-menu-sub-content"],
+[data-slot="context-menu-content"],
+[data-slot="context-menu-sub-content"],
+[data-slot="select-content"] {
+  background-color: hsl(var(--background) / 0.65);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+}
+:is([data-slot$="menu-item"], [data-slot$="menu-checkbox-item"], [data-slot$="menu-radio-item"], [data-slot="select-item"])[data-highlighted]:not([data-variant="destructive"]),
+[data-slot$="menu-sub-trigger"]:is([data-highlighted], [data-state="open"]) {
+  background-color: hsl(var(--foreground) / 0.09);
+  color: hsl(var(--foreground));
+}
+
 /* How floating surfaces enter. They stay anchored to their trigger, but the
    scale is barely there and a short move away from the trigger carries the
    motion, so a menu drops out of its button instead of growing diagonally

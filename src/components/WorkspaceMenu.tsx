@@ -16,6 +16,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+/** The sidebar menu's motion: a short rise from its bottom edge. */
+const RISE = {
+  transformOrigin: "bottom center",
+  "--tw-enter-translate-y": "6px",
+  "--tw-exit-translate-y": "6px",
+} as React.CSSProperties;
+
 /**
  * Workspace actions: at the foot of the sidebar, opening upward, and in the
  * window bar when there is no sidebar to show it (it is collapsed, or no folder
@@ -70,6 +77,10 @@ export function WorkspaceMenu({
         align="start"
         className="min-w-[max(14rem,var(--radix-dropdown-menu-trigger-width))]"
         data-no-drag
+        // From the foot of the sidebar it rises straight up out of its row, rather
+        // than growing from a corner. (Inline: the shared popup motion is set by
+        // attribute selectors that utility classes can't override.)
+        style={inSidebar ? RISE : undefined}
       >
         <DropdownMenuItem onSelect={showHome}>
           <Home className="size-4" /> Home
