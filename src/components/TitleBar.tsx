@@ -8,10 +8,11 @@ import { TabStrip } from "@/components/TabStrip";
 import { baseName } from "@/lib/paths";
 import { FRAME_GAP, useSidebarVisible } from "@/lib/surfaces";
 import { Tip } from "@/components/ui/tooltip";
+import type { SidebarPreview } from "@/hooks/useSidebarPreview";
 
 const appWindow = getCurrentWindow();
 
-export function TitleBar() {
+export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) {
   const [isMaximized, setIsMaximized] = useState(false);
   const target = useStore((state) => state.target);
   const homeOpen = useStore((state) => state.homeOpen);
@@ -86,8 +87,12 @@ export function TitleBar() {
       >
       {/* Sidebar toggle */}
       {folderOpen && <Tip label={<span className="flex items-center gap-2">Toggle sidebar<span className="opacity-60">{formatShortcut(bindingFor("toggle-sidebar")!)}</span></span>}><button
-        onClick={toggleSidebarCollapsed}
+        onClick={() => { sidebarPreview.dismiss(); toggleSidebarCollapsed(); }}
+        data-sidebar-preview-zone
+        onPointerEnter={sidebarPreview.enter}
+        onPointerLeave={sidebarPreview.leave}
         aria-label="Toggle sidebar"
+        aria-expanded={!sidebarCollapsed}
         className={iconButton}
       >
         {sidebarCollapsed ? (

@@ -9,10 +9,11 @@ import { FileTree } from "@/components/sidebar/FileTree";
 import { ResizeGrip } from "@/components/ResizeGrip";
 import { FRAME_GAP } from "@/lib/surfaces";
 import { startSidebarResize } from "@/lib/sidebarResize";
+import type { SidebarPreview } from "@/hooks/useSidebarPreview";
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
-export function Sidebar() {
+export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) {
   const loadVault = useStore((state) => state.loadVault);
   const loadTags = useStore((state) => state.loadTags);
   const rootPath = useStore((state) => state.target?.path);
@@ -53,14 +54,35 @@ export function Sidebar() {
   };
 
   return (
-    <div className="relative h-full flex shrink-0">
+    <div className="relative z-10 h-full flex shrink-0">
       <aside
         style={{ width: sidebarCollapsed ? 0 : `var(--sidebar-live-width, ${sidebarWidth}px)` }}
-        // No border: the page's own edge divides them. pt-px offsets the content row's 1px pull-up.
-        className="flex flex-col h-full bg-sidebar select-none pt-px overflow-hidden sidebar-motion"
-        aria-hidden={sidebarCollapsed}
+        className="relative h-full shrink-0 sidebar-motion"
       >
-        <div style={{ width: `var(--sidebar-live-width, ${sidebarWidth}px)` }} className="flex flex-col h-full">
+        {sidebarCollapsed && sidebarPreview.open && (
+          <div
+            data-sidebar-preview-zone
+            aria-hidden="true"
+            onPointerEnter={sidebarPreview.enter}
+            onPointerLeave={sidebarPreview.leave}
+            className="absolute left-1.5 top-0 z-30 h-1.5 w-[280px]"
+          />
+        )}
+        <div
+          data-sidebar-preview-zone
+          onPointerEnter={sidebarPreview.enter}
+          onPointerLeave={sidebarPreview.leave}
+          aria-hidden={sidebarCollapsed && !sidebarPreview.open}
+          style={{
+            width: sidebarCollapsed ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
+            visibility: sidebarCollapsed && !sidebarPreview.open ? "hidden" : "visible",
+            opacity: sidebarCollapsed && !sidebarPreview.open ? 0 : 1,
+            transform: sidebarCollapsed && !sidebarPreview.open ? "translateX(-8px)" : "translateX(0)",
+            transitionDelay: sidebarCollapsed && !sidebarPreview.open ? "0ms, 0ms, 0ms, 150ms" : "0ms",
+            pointerEvents: sidebarCollapsed && !sidebarPreview.open ? "none" : undefined,
+          }}
+          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none transition-[width,opacity,transform,visibility] duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "left-1.5 top-1.5 bottom-1.5 rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
+        >
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />

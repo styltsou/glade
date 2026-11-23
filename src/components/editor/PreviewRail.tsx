@@ -385,7 +385,7 @@ export const PreviewRail = memo(function PreviewRail({
                     : section.level === 2
                       ? "w-4"
                       : "w-3.5",
-                  isHighlighted ? "bg-primary" : "bg-muted-foreground/70",
+                  isHighlighted ? "bg-primary" : "bg-muted-foreground/50",
                 )}
               />
             </button>

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
+import { useSidebarPreview } from "@/hooks/useSidebarPreview";
 import { TitleBar } from "@/components/TitleBar";
 import { WindowResizeHandles } from "@/components/WindowResizeHandles";
 import { focusedGroup } from "@/lib/tabs";
@@ -112,6 +113,8 @@ function App() {
   const isReady = workspaceReady;
   const showWelcome = !target || homeOpen;
   const sidebarVisible = useSidebarVisible();
+  const sidebarCollapsed = useStore((state) => state.sidebarCollapsed);
+  const sidebarPreview = useSidebarPreview(sidebarCollapsed && !showWelcome && target?.kind === "folder");
   const firstGroup = useStore((state) => state.tabsState.groups[0]);
 
   useEffect(() => {
@@ -271,14 +274,14 @@ function App() {
   return (
     <TooltipProvider disableHoverableContent>
       <main className="app-frame flex flex-col h-screen w-full bg-background text-foreground overflow-hidden">
-        <TitleBar />
+        <TitleBar sidebarPreview={sidebarPreview} />
         {/* The frame. Pulled up 1px so the pages' top edge runs under the tabs. */}
         <div className="-mt-px flex min-h-0 w-full flex-1 overflow-hidden bg-sidebar">
-          {!showWelcome && target?.kind === "folder" && <Sidebar />}
+          {!showWelcome && target?.kind === "folder" && <Sidebar sidebarPreview={sidebarPreview} />}
           <div
             key={showWelcome ? "home" : "doc"}
             style={{ marginLeft: sidebarVisible ? 0 : FRAME_GAP, marginRight: FRAME_GAP, marginBottom: FRAME_GAP }}
-            className="sidebar-motion flex min-w-0 flex-1 flex-col overflow-hidden"
+            className="sidebar-motion relative z-0 flex min-w-0 flex-1 flex-col overflow-hidden"
           >
               {showWelcome || rootMissing || restoring ? (
                 <div
