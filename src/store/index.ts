@@ -36,6 +36,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         theme: state.theme,
         mode: state.mode,
+        onboarded: state.onboarded,
         tocOpen: state.tocOpen,
         isRawMode: state.isRawMode,
         tocWidth: state.tocWidth,

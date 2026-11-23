@@ -4,6 +4,7 @@ import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import {
   ArrowDown as ArrowDownIcon,
   ArrowLeft as ArrowLeftIcon,
+  Sparkles as SparklesIcon,
   ArrowRight as ArrowRightIcon,
   ArrowUp as ArrowUpIcon,
   Check as CheckIcon,
@@ -71,7 +72,8 @@ type CommandId =
   | "close-folder"
   | "toggle-appearance"
   | "change-theme"
-  | "change-mode";
+  | "change-mode"
+  | "show-welcome";
 
 type Icon = typeof FileTextIcon;
 
@@ -121,7 +123,10 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
   },
   {
     heading: "Help",
-    items: [{ id: "show-shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon }],
+    items: [
+      { id: "show-shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon },
+      { id: "show-welcome", label: "Welcome…", icon: SparklesIcon },
+    ],
   },
   {
     heading: "Danger",
@@ -172,6 +177,9 @@ function isAvailable(id: CommandId): boolean {
       return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
     case "close-folder":
       return !!s.target;
+    case "show-welcome":
+      // Only to look at the first-run screen while developing; release builds don't list it.
+      return import.meta.env.DEV;
     default: {
       // Ctrl+1..9 only apply when that tab exists (9 is the last one).
       const jump = tabJumpTarget(id as GlobalCommand);
@@ -276,6 +284,10 @@ function runCommand(id: CommandId): boolean {
       break;
     case "show-shortcuts":
       openShortcuts();
+      break;
+    case "show-welcome":
+      s.setOnboarded(false);
+      s.showHome();
       break;
     case "split-right":
       s.splitActive();

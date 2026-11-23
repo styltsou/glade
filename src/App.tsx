@@ -14,6 +14,7 @@ import { RenameDialog } from "@/components/RenameDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { WelcomeHome } from "@/components/WelcomeHome";
+import { Onboarding } from "@/components/Onboarding";
 import { PaneArea } from "@/components/PaneArea";
 import { FRAME_GAP, pageCorner, useSidebarVisible } from "@/lib/surfaces";
 import { FolderSwitcher } from "@/components/FolderSwitcher";
@@ -108,6 +109,7 @@ function App() {
   const workspaceReady = useStore((state) => state.workspaceReady);
   const target = useStore((state) => state.target);
   const homeOpen = useStore((state) => state.homeOpen);
+  const onboarded = useStore((state) => state.onboarded);
   const rootMissing = useStore((state) => state.rootMissing);
   const restoring = useStore((state) => state.target?.kind === "folder" && state.uiLoadedFor !== state.target.path);
   const selectNote = useStore((state) => state.selectNote);
@@ -305,7 +307,7 @@ function App() {
                   className="surface-page flex min-h-0 flex-1 flex-col overflow-hidden"
                 >
                   {/* While saved tabs load the page stays blank rather than flashing the overview. */}
-                  {showWelcome ? <WelcomeHome /> : rootMissing ? <RootMissing /> : null}
+                  {showWelcome ? (onboarded ? <WelcomeHome /> : <Onboarding />) : rootMissing ? <RootMissing /> : null}
                 </div>
               ) : (
                 <PaneArea />

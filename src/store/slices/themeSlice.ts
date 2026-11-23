@@ -4,6 +4,9 @@ import { effectiveMode, knownTheme, type ThemeId, type ThemeMode } from "@/theme
 export interface ThemeSlice {
   theme: ThemeId;
   mode: ThemeMode;
+  /** Has been through the first-run welcome. Copies that already have saved settings count as done. */
+  onboarded: boolean;
+  setOnboarded: (done: boolean) => void;
   resolvedMode: "light" | "dark";
   setTheme: (theme: ThemeId) => void;
   setMode: (mode: ThemeMode) => void;
@@ -37,10 +40,23 @@ export function applyToDOM(theme: ThemeId, resolvedMode: "light" | "dark") {
 
 import type { StoreState } from "../index";
 
+function hasSavedSettings(): boolean {
+  try {
+    return localStorage.getItem("glade-store") !== null;
+  } catch {
+    return false;
+  }
+}
+
 export const createThemeSlice: StateCreator<StoreState, [], [], ThemeSlice> = (set) => ({
   theme: "glade",
   mode: "dark",
+  onboarded: hasSavedSettings(),
   resolvedMode: "dark",
+
+  setOnboarded: (onboarded) => {
+    set({ onboarded });
+  },
 
   setTheme: (theme) => {
     set({ theme });

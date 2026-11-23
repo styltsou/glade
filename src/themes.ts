@@ -6,7 +6,6 @@ export type ThemeId =
   | "claude"
   | "supabase"
   | "vesper"
-  | "monokai"
   | "nord"
   | "github"
   | "tokyo-night"
@@ -32,7 +31,6 @@ export const themes: ThemeMeta[] = [
   { id: "claude", label: "Claude" },
   { id: "supabase", label: "Supabase" },
   { id: "vesper", label: "Vesper" },
-  { id: "monokai", label: "Monokai" },
   { id: "nord", label: "Nord" },
   { id: "github", label: "GitHub" },
   { id: "tokyo-night", label: "Tokyo Night" },
