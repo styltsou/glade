@@ -2,12 +2,22 @@ import {
 	useEffect,
 	useRef,
 	useCallback,
+	useMemo,
 	useState,
 	useLayoutEffect,
 } from "react";
 import { EditorContent, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { PluginKey } from "@tiptap/pm/state";
+import {
+	BUBBLE_EDGE,
+	BUBBLE_MENU_KEY,
+	BUBBLE_OFFSET,
+	blockMenuSide,
+	bubbleGlide,
+	selectedTextBox,
+	shouldShowBubble,
+	trackPointerSelection,
+} from "./bubbleMenu";
 import {
 	Bold,
 	Italic,
@@ -137,8 +147,6 @@ function getCurrentBlockType(editor: Editor): string {
 	return "paragraph";
 }
 
-const BUBBLE_MENU_KEY = new PluginKey("noteBubbleMenu");
-
 function BubbleButton({
 	children,
 	onClick,
@@ -181,6 +189,7 @@ export function NoteEditor({
 	isEditMode = false,
 }: NoteEditorProps) {
 	const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
+	const [blockPopoverSide, setBlockPopoverSide] = useState<"top" | "bottom">("bottom");
 	const [linkFormOpen, setLinkFormOpen] = useState(false);
 	const [blockSelectedIndex, setBlockSelectedIndex] = useState(0);
 	const [currentBlockType, setCurrentBlockType] = useState("paragraph");
@@ -400,6 +409,40 @@ export function NoteEditor({
 		};
 	}, [editor]);
 
+	// Kept clear of the edges: the bubble's offset is applied after the decision to
+	// flip, so without padding a bubble just short of the top edge ends up past it
+	// instead of moving below the text. It glides when it moves. (Made once: a new
+	// object each render would re-send the options on every render.)
+	const bubbleRef = useRef<HTMLDivElement>(null);
+	// It is also placed again as the pane scrolls, which keeps it with the part of a
+	// long selection that is showing. (The bubble is mounted once the pane is known:
+	// its wrapper ignores the first change to its options after it starts.)
+	const [scroller, setScroller] = useState<HTMLElement | null>(null);
+	useEffect(() => setScroller(scrollRef.current), [scrollRef]);
+	const bubbleOptions = useMemo(
+		() => ({
+			offset: BUBBLE_OFFSET,
+			flip: { padding: BUBBLE_EDGE },
+			shift: { padding: 8 },
+			...(scroller ? { scrollTarget: scroller } : {}),
+			...bubbleGlide(() => bubbleRef.current),
+		}),
+		[scroller],
+	);
+	const keepInView = useMemo(
+		() => ({
+			area: () => scrollRef.current?.getBoundingClientRect() ?? null,
+			barHeight: () => bubbleRef.current?.offsetHeight || 38,
+		}),
+		[scrollRef],
+	);
+
+	// The bubble waits for the mouse button to come up before it shows.
+	useEffect(() => (editor ? trackPointerSelection(editor) : undefined), [editor]);
+
+	// Where the bubble goes: over the selected words. Read again on every position update.
+	const getSelectedTextBox = useCallback(() => (editor ? selectedTextBox(editor, keepInView) : null), [editor, keepInView]);
+
 	// Update editor editable state when isEditMode changes
 	useEffect(() => {
 		if (editor) {
@@ -414,8 +457,16 @@ export function NoteEditor({
 			className="flex-1 overflow-auto px-16 @[46rem]/pane:px-24 py-8 note-scroll"
 		>
 			<div className="max-w-215 mx-auto">
-				{editor && (
-					<BubbleMenu editor={editor} pluginKey={BUBBLE_MENU_KEY}>
+				{editor && scroller && (
+					<BubbleMenu
+						editor={editor}
+						pluginKey={BUBBLE_MENU_KEY}
+						ref={bubbleRef}
+						shouldShow={shouldShowBubble}
+						updateDelay={0}
+						options={bubbleOptions}
+						getReferencedVirtualElement={getSelectedTextBox}
+					>
 						{linkFormOpen ? (
 							<LinkUrlForm editor={editor} onDone={() => setLinkFormOpen(false)} />
 						) : (
@@ -431,6 +482,12 @@ export function NoteEditor({
 											(bt) => bt.id === getCurrentBlockType(editor),
 										);
 										setBlockSelectedIndex(index >= 0 ? index : 0);
+										setBlockPopoverSide(
+											blockMenuSide(
+												blockTriggerRef.current?.getBoundingClientRect() ?? null,
+												selectedTextBox(editor)?.getBoundingClientRect().top ?? null,
+											),
+										);
 									}
 
 									if (!open && blockPopoverOpen) {
@@ -469,14 +526,16 @@ export function NoteEditor({
 									</button>
 								</PopoverTrigger>
 								<PopoverContent
-									className="w-48 p-0 border shadow-lg rounded-md bg-popover text-popover-foreground data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100"
+									className="w-48 p-0 rounded-md border border-border/60 bg-background/65 text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur-xl backdrop-saturate-150 data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100"
+									side={blockPopoverSide}
 									align="start"
 									sideOffset={4}
+									collisionPadding={8}
 									onKeyDown={handleBlockKeyDown}
 								>
 									<div
 										ref={blockScrollRef}
-										className="max-h-45 overflow-y-auto p-1"
+										className="max-h-[min(20rem,calc(var(--radix-popover-content-available-height)_-_2px))] overflow-y-auto p-1"
 										style={{ scrollbarWidth: "none" }}
 										data-suggestion-menu="true"
 									>
@@ -489,17 +548,17 @@ export function NoteEditor({
 													setBlockPopoverOpen(false);
 												}}
 												className={cn(
-													"w-full flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-left cursor-pointer outline-hidden select-none",
+													"w-full flex items-center gap-2 rounded-sm px-2 py-1 text-sm text-left cursor-pointer outline-hidden select-none",
 													index === blockSelectedIndex
-														? "bg-accent text-accent-foreground"
-														: "hover:bg-accent/50",
+														? "bg-foreground/[0.09] text-foreground"
+														: "hover:bg-foreground/[0.06]",
 												)}
 											>
 												<bt.icon
 													className={cn(
 														"h-4 w-4 shrink-0",
 														index === blockSelectedIndex
-															? "text-accent-foreground/70"
+															? "text-foreground/60"
 															: "text-muted-foreground",
 													)}
 												/>
