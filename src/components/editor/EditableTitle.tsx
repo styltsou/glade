@@ -21,6 +21,9 @@ interface Edit {
   value: string;
 }
 
+const titleSurface = "relative -ml-3 max-w-full rounded-lg border px-3 py-2";
+const titleText = "font-sans text-[32px] font-bold leading-none tracking-tight";
+
 /**
  * The note's first H1, as a field. Editing it never renames the file, except
  * the first time an untitled note gets a title.
@@ -110,8 +113,8 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
   return (
     <div className="mb-2 flex items-center overflow-visible">
       {edit ? (
-        <div className="relative inline-grid max-w-full items-center -ml-3 px-3 py-2 min-h-[52px] rounded-lg border border-primary/20 bg-background/50 shadow-sm">
-          <span className="invisible overflow-hidden whitespace-pre text-[32px] font-bold font-sans tracking-tight leading-none px-1 h-full min-w-[50px]">
+        <div className={cn(titleSurface, "inline-block border-primary/70 bg-muted/60")}>
+          <span aria-hidden="true" className={cn(titleText, "invisible block overflow-hidden whitespace-pre")}>
             {edit.value || "Untitled"}
           </span>
           <input
@@ -123,18 +126,18 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
             onChange={(e) => update({ ...edit, value: e.target.value })}
             onBlur={commit}
             onKeyDown={handleKeyDown}
-            className="absolute inset-x-3 inset-y-2 bg-transparent text-[32px] font-bold font-sans text-foreground tracking-tight underline decoration-primary decoration-2 underline-offset-8 outline-none px-1 h-8 leading-none placeholder:text-muted-foreground/50"
+            className={cn(titleText, "absolute inset-x-3 top-2 h-8 w-[calc(100%-1.5rem)] min-w-0 border-0 bg-transparent p-0 text-foreground outline-none placeholder:text-muted-foreground/50")}
           />
         </div>
       ) : (
         <Tip label={created ? `Created ${formatTooltipDate(created)}` : undefined} align="start">
           <div
-            className="group relative flex items-center w-fit border border-transparent rounded-lg -ml-3 px-3 py-2 cursor-pointer active:scale-[0.99] hover:bg-muted/30 hover:border-border"
+            className={cn(titleSurface, "flex w-fit items-center border-transparent cursor-pointer transition-colors hover:border-border/50 hover:bg-muted/40")}
             onClick={() => update({ path, initial: shown, value: shown })}
           >
             <h1
               className={cn(
-                "text-[32px] font-bold font-sans tracking-tight leading-none select-none",
+                titleText, "select-none",
                 display ? "text-foreground" : "text-muted-foreground/50",
               )}
             >
