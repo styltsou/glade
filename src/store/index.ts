@@ -41,6 +41,7 @@ export const useStore = create<StoreState>()(
         tocWidth: state.tocWidth,
         sidebarCollapsed: state.sidebarCollapsed,
         pinnedNotesCollapsed: state.pinnedNotesCollapsed,
+        tagsCollapsed: state.tagsCollapsed,
         sidebarWidth: state.sidebarWidth,
         pinnedHeight: state.pinnedHeight,
         pinnedNotePaths: state.pinnedNotePaths,

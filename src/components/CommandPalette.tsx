@@ -41,6 +41,7 @@ import { useStore } from "@/store";
 import { useShallow } from "zustand/react/shallow";
 import { activeTab, focusedGroup, historyTarget } from "@/lib/tabs";
 import { flattenNotes } from "@/lib/notes";
+import { isTagQuery, matchesTagQuery, parseTagQuery, tagToken } from "@/lib/tagQuery";
 import { baseName } from "@/lib/paths";
 import {
   KEYBINDINGS,
@@ -460,16 +461,36 @@ export function CommandPalette() {
   // Full-text search for longer queries.
   useEffect(() => {
     if (!open || mode !== "search") return;
-    const q = query.trim();
+    const q = parseTagQuery(query).rest;
     const timer = setTimeout(() => (q.length >= 3 ? searchNotes(q) : clearSearch()), 120);
     return () => clearTimeout(timer);
   }, [open, mode, query, searchNotes, clearSearch]);
 
+  const tagQuery = useMemo(() => parseTagQuery(query), [query]);
+  const allTags = useStore((s) => s.tags);
+
+  // While a tag is being typed after `tag:`, offer the matching tags, most used first.
+  const tagSuggestions = useMemo(() => {
+    if (mode !== "search" || tagQuery.partial === null) return [];
+    const p = tagQuery.partial.toLowerCase();
+    const used = new Set(tagQuery.tags.map((t) => t.toLowerCase()));
+    return allTags
+      .filter((t) => !used.has(t.name.toLowerCase()) && t.name.toLowerCase().includes(p))
+      .sort((a, b) => Number(b.name.toLowerCase().startsWith(p)) - Number(a.name.toLowerCase().startsWith(p)) || b.count - a.count || a.name.localeCompare(b.name))
+      .slice(0, 8);
+  }, [mode, tagQuery, allTags]);
+
+  function pickTag(name: string) {
+    const start = query.toLowerCase().lastIndexOf("tag:");
+    setQuery(query.slice(0, Math.max(start, 0)) + tagToken(name));
+  }
+
   const allNotes = useMemo(() => (entries ? flattenNotes(entries) : []), [entries]);
 
   const noteRows: NoteRow[] = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) {
+    const tagged = isTagQuery(tagQuery);
+    const q = tagQuery.rest.toLowerCase();
+    if (!q && !tagged) {
       // Recent files from this folder first, then the rest.
       const prefix = rootPath ? `${rootPath.replace(/\/$/, "")}/` : null;
       const recentPaths = (recentFiles ?? [])
@@ -481,11 +502,13 @@ export function CommandPalette() {
       return [...recent, ...allNotes.filter((n) => !seen.has(n.path))].slice(0, 50);
     }
     const local = allNotes.filter(
-      (n) => n.title.toLowerCase().includes(q) || n.path.toLowerCase().includes(q) || (n.tags ?? []).some((t) => t.toLowerCase().includes(q)),
+      (n) =>
+        matchesTagQuery(n.tags, tagQuery) &&
+        (!q || n.title.toLowerCase().includes(q) || n.path.toLowerCase().includes(q) || (n.tags ?? []).some((t) => t.toLowerCase().includes(q))),
     );
     const seen = new Set(local.map((n) => n.path));
-    return [...local, ...searchResults.filter((n) => !seen.has(n.path))].slice(0, 50);
-  }, [query, allNotes, recentFiles, rootPath, searchResults]);
+    return [...local, ...searchResults.filter((n) => !seen.has(n.path) && matchesTagQuery(n.tags, tagQuery))].slice(0, 50);
+  }, [tagQuery, allNotes, recentFiles, rootPath, searchResults]);
 
   const availableGroups = COMMAND_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => isAvailable(i.id)) })).filter(
     (g) => g.items.length > 0,
@@ -593,7 +616,7 @@ export function CommandPalette() {
                 setConfirmDelete(null);
                 if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
               }}
-              placeholder={mode === "search" ? "Search notes…" : mode === "themes" ? "Pick a theme…" : mode === "modes" ? "Light, dark or system…" : "Search actions…"}
+              placeholder={mode === "search" ? "Search notes, or tag: to filter…" : mode === "themes" ? "Pick a theme…" : mode === "modes" ? "Light, dark or system…" : "Search actions…"}
               className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
               onKeyDown={(event) => {
                 if (mode !== "search" || event.key !== "Enter") return;
@@ -611,11 +634,28 @@ export function CommandPalette() {
 
           <CommandPrimitive.List className="max-h-[min(30rem,58vh)] scroll-py-2 overflow-y-auto overscroll-contain p-2 [&::-webkit-scrollbar]:hidden">
             {mode === "search" ? (
-              noteRows.length === 0 ? (
+              noteRows.length === 0 && tagSuggestions.length === 0 ? (
                 <p className="px-3 py-10 text-center text-[14px] text-muted-foreground">
                   {query.trim() ? "No notes match." : "No notes in this folder yet."}
                 </p>
               ) : (
+                <>
+                {tagSuggestions.length > 0 ? (
+                  <CommandPrimitive.Group heading="Tags" className={groupClass}>
+                    {tagSuggestions.map((tag) => (
+                      <CommandPrimitive.Item
+                        key={tag.name}
+                        value={`tag:${tag.name}`}
+                        onSelect={() => pickTag(tag.name)}
+                        className={cn(itemClass, "gap-4 py-2")}
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{tag.name}</span>
+                        <span className="ml-auto shrink-0 text-[13px] text-muted-foreground/75">{tag.count}</span>
+                      </CommandPrimitive.Item>
+                    ))}
+                  </CommandPrimitive.Group>
+                ) : null}
+                {noteRows.length > 0 ? (
                 <CommandPrimitive.Group heading={query.trim() ? "Results" : noteRows[0]?.recent ? "Recent" : "Notes"} className={groupClass}>
                   {noteRows.map((note) => {
                     const folder = note.path.includes("/") ? note.path.split("/").slice(0, -1).join("/") : "";
@@ -629,11 +669,11 @@ export function CommandPalette() {
                       >
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] font-medium">
-                            <HighlightedText text={note.title} query={query} />
+                            <HighlightedText text={note.title} query={tagQuery.rest} />
                           </span>
-                          {query.trim() && note.preview ? (
+                          {tagQuery.rest && note.preview ? (
                             <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-                              <HighlightedText text={note.preview} query={query} />
+                              <HighlightedText text={note.preview} query={tagQuery.rest} />
                             </span>
                           ) : null}
                         </span>
@@ -644,6 +684,8 @@ export function CommandPalette() {
                     );
                   })}
                 </CommandPrimitive.Group>
+                ) : null}
+                </>
               )
             ) : mode === "modes" ? (
               <ModeList currentMode={useStore.getState().mode} onSelect={commitTheme} />

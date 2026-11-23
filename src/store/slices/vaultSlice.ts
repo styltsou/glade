@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { StateCreator } from "zustand";
+import { toast } from "sonner";
 import type { NoteData, TagCount, VaultEntry } from "@/types";
 
 export interface VaultSlice {
@@ -21,6 +22,8 @@ export interface VaultSlice {
   clearTags: () => void;
   toggleTagFilter: (tag: string) => void;
   clearTagFilters: () => void;
+  /** Rename a tag everywhere; naming an existing tag merges the two. */
+  renameTag: (from: string, to: string) => Promise<boolean>;
   searchNotes: (query: string, titleOnly?: boolean) => Promise<void>;
   clearSearch: () => void;
   goHome: () => void;
@@ -123,6 +126,27 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (
 
   clearTagFilters: () => {
     set({ activeTagFilters: [] });
+  },
+
+  renameTag: async (from: string, to: string) => {
+    const name = to.trim().replace(/^#/, "").trim();
+    try {
+      const changed = await invoke<string[]>("rename_tag", { from, to: name });
+      set((s) => ({
+        activeTagFilters: [...new Set(s.activeTagFilters.map((t) => (t === from ? name : t)))],
+      }));
+      await get().loadVault();
+      await get().loadTags();
+      // Notes already open show their tags from memory.
+      const { noteCache, activeNote } = get();
+      for (const path of changed) {
+        if (noteCache[path] || activeNote?.path === path) void get().refreshNoteMeta(path);
+      }
+      return true;
+    } catch (e) {
+      toast.error(`Couldn't rename "${from}"`, { description: String(e).replace(/^(Error|Invalid path): /, "") });
+      return false;
+    }
   },
 
   searchNotes: async (query: string, titleOnly: boolean = false) => {

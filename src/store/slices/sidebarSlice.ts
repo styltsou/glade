@@ -3,6 +3,7 @@ import { StateCreator } from "zustand";
 export interface SidebarSlice {
   sidebarCollapsed: boolean;
   pinnedNotesCollapsed: boolean;
+  tagsCollapsed: boolean;
   sidebarWidth: number;
   pinnedHeight: number;
   isSidebarLoaded: boolean;
@@ -12,6 +13,7 @@ export interface SidebarSlice {
   loadSidebarState: () => Promise<void>;
   toggleSidebarCollapsed: () => void;
   togglePinnedNotesCollapsed: () => void;
+  toggleTagsCollapsed: () => void;
   toggleFolderExpanded: (path: string) => void;
   setPinnedNotePaths: (paths: string[]) => void;
   addPinnedNote: (path: string) => void;
@@ -24,6 +26,7 @@ import type { StoreState } from "../index";
 export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> = (set, get) => ({
   sidebarCollapsed: false,
   pinnedNotesCollapsed: false,
+  tagsCollapsed: true,
   sidebarWidth: 260,
   pinnedHeight: 150,
   isSidebarLoaded: true,
@@ -40,6 +43,10 @@ export const createSidebarSlice: StateCreator<StoreState, [], [], SidebarSlice> 
 
   togglePinnedNotesCollapsed: () => {
     set({ pinnedNotesCollapsed: !get().pinnedNotesCollapsed });
+  },
+
+  toggleTagsCollapsed: () => {
+    set({ tagsCollapsed: !get().tagsCollapsed });
   },
 
   toggleFolderExpanded: (path: string) => {

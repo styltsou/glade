@@ -36,8 +36,8 @@ export function filterByTags(
     })
     .filter((entry) => {
       if (entry.is_dir) return entry.children.length > 0;
-      // OR logic: show note if it has ANY of the selected tags
-      return entry.tags.some((tag) => tagFilters.includes(tag));
+      // A note must carry every selected tag.
+      return tagFilters.every((tag) => entry.tags.includes(tag));
     });
 }
 

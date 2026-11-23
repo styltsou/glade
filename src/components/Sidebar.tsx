@@ -5,6 +5,7 @@ import { PanelLeft } from "lucide-react";
 import { useStore } from "@/store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
+import { TagsSection } from "@/components/sidebar/TagsSection";
 import { FileTree } from "@/components/sidebar/FileTree";
 import { ResizeGrip } from "@/components/ResizeGrip";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
@@ -99,6 +100,7 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           <div className="flex-1 overflow-hidden flex flex-col">
             <FileTree />
           </div>
+          <TagsSection />
           {/* Here while collapsed too: the peek shows it, and goes once it's used. */}
           <div className="shrink-0 px-1.5 pb-1.5 pt-1">
             <WorkspaceMenu
