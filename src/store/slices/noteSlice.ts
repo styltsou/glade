@@ -6,6 +6,7 @@ import { changeFiles, isWithin, relocatePath, scheduleWrite } from "@/lib/fileCh
 import * as T from "@/lib/tabs";
 import { isAbsolutePath } from "@/lib/links";
 import { isUntitled } from "@/lib/paths";
+import { splitNoteTitle } from "@/lib/noteTitle";
 import type { VaultEntry, NoteData, PropertyValue } from "@/types";
 
 export interface MissingLink {
@@ -37,6 +38,13 @@ export interface NoteSlice {
    * file is then named after it, that once. Resolves to whether it was saved.
    */
   commitTitle: (path: string, title: string | null) => Promise<boolean>;
+  /**
+   * An editor stopped showing a note (its tab closed or went to another note),
+   * once `saved` has written what it held. A note made in this session and left
+   * empty is removed, rather than left behind as an empty file. An untitled one
+   * that got a title in its body is named after it.
+   */
+  leaveNote: (path: string, content: string, saved?: Promise<unknown> | null) => Promise<void>;
   /** Rename only the file. Resolves to what went wrong, or null. */
   renameFile: (path: string, name: string) => Promise<string | null>;
   renameFolder: (path: string, newName: string) => Promise<string | null>;
@@ -81,6 +89,9 @@ export interface NoteSlice {
 }
 
 import type { StoreState } from "../index";
+
+/** Notes created in this session: only these are removed when left empty. */
+const freshNotes = new Set<string>();
 
 /** The most recently requested note; stale reads must not replace it. */
 let latestSelect = "";
@@ -280,7 +291,8 @@ const noteActions = (
       };
       
       const newEntries = addEntryToTree(get().entries, folder, newEntry);
-      
+      freshNotes.add(note.path);
+
       set((state: StoreState) => ({
         entries: newEntries,
         idToPath: { ...state.idToPath, [note.id]: note.path },
@@ -333,6 +345,42 @@ const noteActions = (
     if (to !== path) void afterMove(path, to, false);
     else if (title !== null) void get().refreshTree();
     return true;
+  },
+
+  leaveNote: async (path: string, content: string, saved?: Promise<unknown> | null) => {
+    if (!isUntitled(path)) return;
+    try {
+      await saved;
+    } catch {
+      return; // Not written: nothing to judge it by.
+    }
+    // Still shown somewhere else.
+    if (T.findOpen(get().tabsState, path)) return;
+
+    if (!content.trim()) {
+      if (!freshNotes.has(path)) return;
+      try {
+        if (!(await invoke<boolean>("discard_empty_note", { path }))) return;
+      } catch {
+        return;
+      }
+      freshNotes.delete(path);
+      set((state: StoreState) => {
+        const noteCache = { ...state.noteCache };
+        delete noteCache[path];
+        const idToPath = Object.fromEntries(Object.entries(state.idToPath).filter(([, p]) => p !== path));
+        return {
+          entries: removeEntryFromTree(state.entries, path),
+          noteCache,
+          idToPath,
+          folderNotes: state.folderNotes.filter((n: { path: string }) => n.path !== path),
+          closedTabs: T.removeClosed(state.closedTabs, path),
+        };
+      });
+      return;
+    }
+
+    if (splitNoteTitle(content).heading) await get().commitTitle(path, null);
   },
 
   renameFile: async (path: string, name: string) => {

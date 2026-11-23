@@ -25,6 +25,7 @@ beforeEach(() => {
 			case "rename_folder": return "new";
 			case "rename_note_file": return "Renamed.md";
 			case "name_untitled_note": return "meeting-notes.md";
+			case "discard_empty_note": return true;
 			case "preview_link_updates": return { links: 0, files: 0 };
 			default: return [];
 		}
@@ -120,5 +121,58 @@ describe("note files", () => {
 		await useStore.getState().moveEntry("a.md", "f/a.md");
 		expect(toastError).toHaveBeenCalledWith('Couldn\'t move "a.md"', { description: '"a.md" already exists there' });
 		expect(T.activeTab(useStore.getState().tabsState).path).toBe("a.md");
+	});
+});
+
+describe("leaving a note", () => {
+	const closeIt = (path: string) => useStore.getState().closePathTab(path);
+
+	it("removes a new note that was closed with nothing in it", async () => {
+		await useStore.getState().createNote();
+		closeIt("untitled.md");
+		await useStore.getState().leaveNote("untitled.md", "\n");
+		expect(invoke).toHaveBeenCalledWith("discard_empty_note", { path: "untitled.md" });
+		expect(useStore.getState().noteCache["untitled.md"]).toBeUndefined();
+	});
+
+	it("waits for the last save before deciding", async () => {
+		await useStore.getState().createNote();
+		closeIt("untitled.md");
+		let finish!: () => void;
+		const saved = new Promise<void>((resolve) => (finish = resolve));
+		const left = useStore.getState().leaveNote("untitled.md", "", saved);
+		await Promise.resolve();
+		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
+		finish();
+		await left;
+		expect(invoke).toHaveBeenCalledWith("discard_empty_note", { path: "untitled.md" });
+	});
+
+	it("keeps an empty note that is still open, or wasn't made here", async () => {
+		await useStore.getState().createNote();
+		await useStore.getState().leaveNote("untitled.md", "");
+		await useStore.getState().leaveNote("untitled-3.md", "");
+		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
+	});
+
+	it("never removes a note with a name of its own", async () => {
+		await useStore.getState().leaveNote("plans.md", "");
+		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
+	});
+
+	it("names an untitled note after the title it got in its body", async () => {
+		await useStore.getState().createNote();
+		closeIt("untitled.md");
+		await useStore.getState().leaveNote("untitled.md", "# Meeting Notes\n\nAgenda");
+		expect(invoke).toHaveBeenCalledWith("name_untitled_note", { path: "untitled.md" });
+		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
+	});
+
+	it("leaves an untitled note with text but no title as it is", async () => {
+		await useStore.getState().createNote();
+		closeIt("untitled.md");
+		await useStore.getState().leaveNote("untitled.md", "Just a thought");
+		expect(invoke).not.toHaveBeenCalledWith("name_untitled_note", expect.anything());
+		expect(invoke).not.toHaveBeenCalledWith("discard_empty_note", expect.anything());
 	});
 });

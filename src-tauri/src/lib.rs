@@ -23,7 +23,7 @@ use commands::{
     create_folder, create_note, delete_entry, duplicate_note,
     export_markdown, export_pdf, get_pinned_notes, get_recent_notes, write_file,
     get_sidebar_state, initialize_app, list_tags, list_vault, pin_note, read_note,
-    read_note_raw, record_note_opened, rename_folder, set_note_title, name_untitled_note, rename_note_file, title_file_name, save_sidebar_state, set_property, remove_property, set_frontmatter_text,
+    read_note_raw, record_note_opened, rename_folder, set_note_title, name_untitled_note, discard_empty_note, rename_note_file, title_file_name, save_sidebar_state, set_property, remove_property, set_frontmatter_text,
     search_notes, unpin_note, update_tags, write_note,
     move_entry, get_notes_in_folder, };
 
@@ -101,6 +101,7 @@ pub fn run() {
             rename_folder,
             set_note_title,
             name_untitled_note,
+            discard_empty_note,
             rename_note_file,
             title_file_name,
             duplicate_note,

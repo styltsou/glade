@@ -225,6 +225,34 @@ pub async fn create_note(window: tauri::Window, folder: Option<String>) -> Resul
     Ok(note_data(relative_of(&vault_path, &full_path), &full_path, ""))
 }
 
+/// Remove a note that was left with nothing in it. Only removes a file that
+/// is still empty (whitespace at most) at the moment of asking, so text that
+/// reached it meanwhile is never lost. Returns whether it was removed.
+pub fn discard_empty_at(root: &Path, path: &str) -> Result<bool, AppError> {
+    let full_path = crate::workspace::resolve_markdown(root, path)?;
+    let content = match fs::read_to_string(&full_path) {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(e) => return Err(e.into()),
+    };
+    if !content.trim().is_empty() {
+        return Ok(false);
+    }
+    fs::remove_file(&full_path)?;
+    Ok(true)
+}
+
+#[tauri::command]
+pub async fn discard_empty_note(window: tauri::Window, path: String) -> Result<bool, AppError> {
+    let root = crate::workspace::root_for(&window)?;
+    let removed = discard_empty_at(&root, &path)?;
+    if removed {
+        workspace_state::forget_path(&root, &path)?;
+        vault::invalidate_vault_cache();
+    }
+    Ok(removed)
+}
+
 /// Set a note's title, which is its first H1. Never renames the file.
 pub fn set_title_at(root: &Path, path: &str, title: &str) -> Result<(), AppError> {
     let full_path = crate::workspace::resolve_markdown(root, path)?;
@@ -459,6 +487,19 @@ pub async fn record_note_opened(path: String) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn discard_empty_removes_only_empty_files() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("untitled.md"), " \n\n").unwrap();
+        fs::write(dir.path().join("untitled-1.md"), "# Kept").unwrap();
+        assert!(discard_empty_at(dir.path(), "untitled.md").unwrap());
+        assert!(!dir.path().join("untitled.md").exists());
+        assert!(!discard_empty_at(dir.path(), "untitled-1.md").unwrap());
+        assert!(dir.path().join("untitled-1.md").exists());
+        // Already gone: nothing to do.
+        assert!(!discard_empty_at(dir.path(), "untitled.md").unwrap());
+    }
 
     #[test]
     fn write_body_keeps_frontmatter_and_skips_noop() {
