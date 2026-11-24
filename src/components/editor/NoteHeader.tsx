@@ -6,7 +6,8 @@ import { Clock, Copy, Check, BookOpen, PencilOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FindBar, type FindBarProps } from "./FindBar";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { FindBar, FIND_EASE, type FindBarProps } from "./FindBar";
 import { useStore } from "@/store";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
@@ -35,6 +36,7 @@ export function NoteHeader({
   find = null,
 }: NoteHeaderProps) {
   const setNoteEditMode = useStore((s) => s.setNoteEditMode);
+  const reduceMotion = useReducedMotion();
   const segments = notePath.split("/");
   const parentPath = segments.slice(0, -1).join("/") || null;
   
@@ -74,18 +76,40 @@ export function NoteHeader({
 
   return (
     <div className="flex items-center justify-between h-10 shrink-0 select-none relative">
-      {/* Floating FindBar — positioned absolutely in top-right of the editor */}
-      {find && (
-        <div className="absolute top-full right-4 z-50 mt-1">
-          <FindBar {...find} />
-        </div>
-      )}
-
       <div className="flex items-center pl-3 h-full min-w-0">
         <Breadcrumbs path={parentPath} file={notePath} />
       </div>
 
-      <div className={cn("flex items-center gap-1 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px pr-1")}>
+      {/* The find card hangs from the top of the toolbar and covers its buttons, which stay put underneath so nothing shifts. */}
+      <AnimatePresence>
+        {find && (
+          <motion.div
+            key="find"
+            className="absolute right-0 top-0 z-50"
+            // Slides all the way down out of the pane's top edge, a drawer from above; the pane
+            // clips its overflow, so it is hidden until it moves in. -100% is its own height,
+            // so this holds with the replace row open too.
+            initial={reduceMotion ? { opacity: 0 } : { y: "-100%" }}
+            animate={
+              reduceMotion
+                ? { opacity: 1, transition: { duration: 0.06 } }
+                : { y: 0, transition: { duration: 0.12, ease: FIND_EASE } }
+            }
+            exit={
+              reduceMotion
+                ? { opacity: 0, transition: { duration: 0.05 } }
+                : { y: "-100%", transition: { duration: 0.08, ease: FIND_EASE } }
+            }
+          >
+            <FindBar {...find} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div
+        className={cn("flex items-center gap-1 h-full shrink-0 text-[13px] sm:text-[14px] text-muted-foreground self-center -mt-px pr-1 transition-opacity duration-100", find && "pointer-events-none opacity-0")}
+        {...(find ? { inert: "" } : {})}
+      >
         {unsavedLingers && (
           <span aria-live="polite" className="mr-1 text-xs text-foreground/80 animate-in fade-in-0 duration-150">
             Unsaved
