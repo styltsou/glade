@@ -12,7 +12,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tip } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, SIDEBAR_CHEVRON, SIDEBAR_COLLAPSE } from "@/lib/utils";
 
 /** The folder's tags, most used first. Picking some narrows the file tree to notes that have all of them. */
 export function TagsSection() {
@@ -49,7 +49,8 @@ export function TagsSection() {
           ) : null}
           <ChevronDown
             className={cn(
-              "ml-auto size-3.5 shrink-0 text-muted-foreground transition-transform duration-100 ease-[var(--ease-ui)]",
+              "ml-auto size-3.5 shrink-0 text-muted-foreground",
+              SIDEBAR_CHEVRON,
               collapsed && "-rotate-90",
             )}
           />
@@ -69,7 +70,7 @@ export function TagsSection() {
 
       <div
         className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-100 ease-in-out",
+          SIDEBAR_COLLAPSE,
           collapsed ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100",
         )}
       >

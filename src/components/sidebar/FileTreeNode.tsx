@@ -21,7 +21,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { sortEntries } from "./file-tree-helpers";
-import { cn } from "@/lib/utils";
+import { cn, SIDEBAR_COLLAPSE } from "@/lib/utils";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Tip } from "@/components/ui/tooltip";
 import { NoteTipLabel } from "./NoteTipLabel";
@@ -232,12 +232,12 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           </ContextMenuContent>
         </ContextMenu>
 
-        {/* Expanding a folder is frequent, so it is quick: 110ms, ease-out,
+        {/* Expanding a folder is frequent, so it is quick (see SIDEBAR_COLLAPSE),
             on grid rows and opacity (no per-frame measuring). */}
         {childrenMounted && children.length > 0 && (
             <div
               className={cn(
-                "grid transition-[grid-template-rows,opacity] duration-[110ms] ease-[var(--ease-ui)]",
+                SIDEBAR_COLLAPSE,
                 childrenOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
               )}
               onTransitionEnd={(e) => {

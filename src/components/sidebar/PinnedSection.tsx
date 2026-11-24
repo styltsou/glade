@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/context-menu";
 import { NoteTipLabel } from "./NoteTipLabel";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { cn, SIDEBAR_COLLAPSE } from "@/lib/utils";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import type { NoteCard } from "@/types";
 
@@ -96,7 +96,7 @@ export function PinnedSection() {
 
       <div
         className={cn(
-          "grid transition-[grid-template-rows,opacity] duration-100 ease-in-out",
+          SIDEBAR_COLLAPSE,
           !pinnedNotesCollapsed ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         )}
       >
