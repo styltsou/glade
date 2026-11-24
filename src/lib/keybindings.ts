@@ -88,6 +88,19 @@ export const KEYBINDINGS: Keybinding[] = [
   { command: "open-file", code: "KeyO", mod: true, altKey: true },
 ];
 
+/**
+ * Shortcuts of the find bar in a note. They act on the focused pane's editor,
+ * so they are not global commands in the registry above.
+ */
+export const FIND_SHORTCUTS = {
+  find: { code: "KeyF", mod: true },
+  replace: { code: "KeyH", mod: true },
+  next: { key: "F3" },
+  previous: { key: "F3", shiftKey: true },
+  caseSensitive: { code: "KeyC", altKey: true },
+  wholeWord: { code: "KeyW", altKey: true },
+} satisfies Record<string, Shortcut>;
+
 export function isMac(): boolean {
   return typeof navigator !== "undefined" && /mac/i.test(navigator.platform);
 }

@@ -12,7 +12,9 @@ import {
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
 import { TableOfContents, TOC_GUTTER } from "@/components/editor/TableOfContents";
-import { findMatches, findMatchesRaw, SearchHighlight } from "@/components/editor/SearchHighlight";
+import { SearchHighlight } from "@/components/editor/SearchHighlight";
+import type { RawEditorHandle } from "@/components/editor/RawEditor";
+import { useNoteFind } from "@/hooks/useNoteFind";
 import { toast } from "sonner";
 import { useStore } from "@/store";
 import { registerEditor } from "@/lib/fileChanges";
@@ -80,18 +82,8 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const rawTitleRef = useRef<NoteTitle>(splitNoteTitle(""));
   const [tocHeadings, setTocHeadings] = useState<{ level: number; text: string; pos: number }[]>([]);
   const mermaidFullscreenOpen = useStore((state) => state.mermaidFullscreenOpen);
-  const [findVisible, setFindVisible] = useState(false);
-  const [findQuery, setFindQuery] = useState("");
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const [totalMatches, setTotalMatches] = useState(0);
-  const [replaceVisible, setReplaceVisible] = useState(false);
-  const [replaceQuery, setReplaceQuery] = useState("");
-  const [caseSensitive, setCaseSensitive] = useState(false);
-  const [matchWholeWord, setMatchWholeWord] = useState(false);
-  const [useRegex, setUseRegex] = useState(false);
-  const findInputRef = useRef<HTMLInputElement>(null);
-  const replaceInputRef = useRef<HTMLInputElement>(null);
-  const wasEditorFocusedRef = useRef(false);
+  const paneRef = useRef<HTMLDivElement>(null);
+  const rawEditorRef = useRef<RawEditorHandle>(null);
 
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -158,11 +150,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     () => [
       ...extensions,
       blockControls.extension,
-      SearchHighlight.configure({
-        query: "",
-        activeIndex: 0,
-        caseSensitive: true,
-      }),
+      SearchHighlight,
     ],
     [blockControls],
   );
@@ -224,74 +212,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       }
     },
   });
-
-  const handleFindClose = useCallback(() => {
-    setFindVisible(false);
-    setFindQuery("");
-    setTotalMatches(0);
-    setCurrentMatchIndex(0);
-    setReplaceVisible(false);
-    setReplaceQuery("");
-    
-    // Only focus the editor if it was originally focused, or we actively searched and found matches
-    if (editor && (wasEditorFocusedRef.current || (findQuery && totalMatches > 0))) {
-      editor.commands.focus();
-    }
-  }, [editor, findQuery, totalMatches]);
-
-  // Keyboard shortcuts for Ctrl+F / Cmd+F and Ctrl+H / Cmd+H
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!focused) return;
-      const isModPressed = e.metaKey || e.ctrlKey;
-      if (isModPressed && e.key === "f") {
-        e.preventDefault();
-        wasEditorFocusedRef.current = editor?.isFocused ?? false;
-        const { from, to } = editor?.state.selection ?? { from: 0, to: 0 };
-        const selectedText = editor && from !== to ? editor.state.doc.textBetween(from, to) : "";
-        setFindVisible(true);
-        setReplaceVisible(false);
-        setFindQuery(selectedText || "");
-        setCurrentMatchIndex(0);
-        if (selectedText && editor) {
-          const matches = findMatches(editor.state.doc, selectedText, { caseSensitive, matchWholeWord, useRegex });
-          setTotalMatches(matches.length);
-        }
-        setTimeout(() => findInputRef.current?.focus(), 50);
-      }
-
-      if (isModPressed && e.key === "h") {
-        e.preventDefault();
-        wasEditorFocusedRef.current = editor?.isFocused ?? false;
-        setFindVisible(true);
-        setReplaceVisible(true);
-        setTimeout(() => findInputRef.current?.focus(), 50);
-      }
-      
-      // Close find bar on Escape
-      if (e.key === "Escape" && findVisible) {
-        e.preventDefault();
-        handleFindClose();
-      }
-
-      // Alt+C / Alt+W / Alt+R — search option toggles
-      if (e.altKey && !e.ctrlKey && !e.metaKey) {
-        if (e.key === "c" || e.key === "C") {
-          e.preventDefault();
-          setCaseSensitive((v) => !v);
-        } else if (e.key === "w" || e.key === "W") {
-          e.preventDefault();
-          setMatchWholeWord((v) => !v);
-        } else if (e.key === "r" || e.key === "R") {
-          e.preventDefault();
-          setUseRegex((v) => !v);
-        }
-      }
-
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [editor, findVisible, handleFindClose, activeNote, isEditMode, setNoteEditMode, focused]);
 
   const handleScroll = useCallback(() => {
     if (!scrollRef.current || !activeNote?.path) return;
@@ -700,151 +620,18 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
     }
   }, [activeNote, toggleToc]);
 
-  const searchOpts = { caseSensitive, matchWholeWord, useRegex };
-
-  const handleFindQueryChange = useCallback((query: string) => {
-    setFindQuery(query);
-    setCurrentMatchIndex(0);
-    if (query) {
-      if (isRawMode) {
-        const matches = findMatchesRaw(rawContent, query, searchOpts);
-        setTotalMatches(matches.length);
-      } else if (editor) {
-        const matches = findMatches(editor.state.doc, query, searchOpts);
-        setTotalMatches(matches.length);
-      }
-    } else {
-      setTotalMatches(0);
-    }
-  }, [editor, isRawMode, rawContent, caseSensitive, matchWholeWord, useRegex]);
-
-  const handleNavigateNext = useCallback(() => {
-    if (totalMatches === 0) return;
-    const nextIndex = (currentMatchIndex + 1) % totalMatches;
-    setCurrentMatchIndex(nextIndex);
-  }, [currentMatchIndex, totalMatches]);
-
-  const handleNavigatePrev = useCallback(() => {
-    if (totalMatches === 0) return;
-    const prevIndex = (currentMatchIndex - 1 + totalMatches) % totalMatches;
-    setCurrentMatchIndex(prevIndex);
-  }, [currentMatchIndex, totalMatches]);
-
-
-  const handleFindKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" || e.key === "Tab" || e.key === "ArrowDown") {
-      e.preventDefault();
-      if (e.shiftKey) {
-        handleNavigatePrev();
-      } else {
-        handleNavigateNext();
-      }
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      handleNavigatePrev();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      handleFindClose();
-    }
-  }, [handleNavigateNext, handleNavigatePrev, handleFindClose]);
-
-  const handleToggleReplace = useCallback(() => {
-    setReplaceVisible((v) => !v);
-    // Focus back to find input so keyboard flow stays natural
-    setTimeout(() => findInputRef.current?.focus(), 0);
-  }, []);
-
-  const handleReplace = useCallback(() => {
-    if (totalMatches === 0 || !replaceQuery && replaceQuery !== "") return;
-
-    if (isRawMode) {
-      const content = rawContent;
-      const matches = findMatchesRaw(content, findQuery, searchOpts);
-      const match = matches[currentMatchIndex];
-      if (!match) return;
-      const newContent = content.slice(0, match.from) + replaceQuery + content.slice(match.to);
-      onRawChange(newContent);
-      setTimeout(() => {
-        const newMatches = findMatchesRaw(newContent, findQuery, searchOpts);
-        setTotalMatches(newMatches.length);
-        setCurrentMatchIndex(Math.min(currentMatchIndex, Math.max(0, newMatches.length - 1)));
-      }, 0);
-    } else if (editor) {
-      const matches = findMatches(editor.state.doc, findQuery, searchOpts);
-      const match = matches[currentMatchIndex];
-      if (!match) return;
-      editor.chain()
-        .focus()
-        .deleteRange({ from: match.from, to: match.to })
-        .insertContentAt(match.from, replaceQuery)
-        .run();
-      setTimeout(() => {
-        const newMatches = findMatches(editor.state.doc, findQuery, searchOpts);
-        setTotalMatches(newMatches.length);
-        setCurrentMatchIndex(Math.min(currentMatchIndex, Math.max(0, newMatches.length - 1)));
-      }, 0);
-    }
-  }, [editor, isRawMode, rawContent, findQuery, replaceQuery, currentMatchIndex, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
-
-  const handleReplaceAll = useCallback(() => {
-    if (totalMatches === 0) return;
-
-    if (isRawMode) {
-      const content = rawContent;
-      const matches = findMatchesRaw(content, findQuery, searchOpts);
-      let newContent = content;
-      for (let i = matches.length - 1; i >= 0; i--) {
-        const m = matches[i];
-        newContent = newContent.slice(0, m.from) + replaceQuery + newContent.slice(m.to);
-      }
-      onRawChange(newContent);
-      setTotalMatches(0);
-      setCurrentMatchIndex(0);
-    } else if (editor) {
-      const matches = findMatches(editor.state.doc, findQuery, searchOpts);
-      if (matches.length === 0) return;
-      const { tr } = editor.state;
-      for (let i = matches.length - 1; i >= 0; i--) {
-        const m = matches[i];
-        tr.insertText(replaceQuery, m.from, m.to);
-      }
-      editor.view.dispatch(tr);
-      setTotalMatches(0);
-      setCurrentMatchIndex(0);
-    }
-  }, [editor, isRawMode, rawContent, findQuery, replaceQuery, totalMatches, onRawChange, caseSensitive, matchWholeWord, useRegex]);
-
-  // Update search highlight decorations when query or match index changes
-  useEffect(() => {
-    if (!editor) return;
-    
-    const extension = editor.extensionManager.extensions.find(
-      (ext) => ext.name === "searchHighlight"
-    );
-    if (extension) {
-      // Dispatch a transaction with new options to force ProseMirror plugin state to update
-      editor.view.dispatch(
-        editor.state.tr.setMeta("searchHighlight", {
-          query: findQuery,
-          activeIndex: currentMatchIndex,
-          caseSensitive,
-          matchWholeWord,
-          useRegex,
-        })
-      );
-
-      // Defer scroll operation slightly so ProseMirror can render the new decorations first.
-      // This is purely visual and does not modify text selection, avoiding mention triggers.
-      if (!isRawMode && findQuery) {
-        requestAnimationFrame(() => {
-          const activeMatch = editor.view.dom.querySelector(".search-highlight-active");
-          if (activeMatch) {
-            activeMatch.scrollIntoView({ block: "center", behavior: "smooth" });
-          }
-        });
-      }
-    }
-  }, [editor, findQuery, currentMatchIndex, isRawMode, caseSensitive, matchWholeWord, useRegex]);
+  const find = useNoteFind({
+    editor,
+    path: activeNote?.path ?? path,
+    isRawMode,
+    rawContent,
+    rawEditorRef,
+    // The raw view is always editable; the rich one follows reading mode.
+    canEdit: isRawMode || isEditMode,
+    focused,
+    rootRef: paneRef,
+    scrollRef,
+  });
 
   // Another program changed (or removed) the open file.
   useEffect(() => {
@@ -912,6 +699,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   return (
     <PaneProvider value={{ path }}>
     <div
+      ref={paneRef}
       data-pane-focused={focused}
       onMouseDownCapture={onFocus}
       onFocusCapture={onFocus}
@@ -932,42 +720,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
         hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
-        findVisible={findVisible}
-        findQuery={findQuery}
-        onFindQueryChange={handleFindQueryChange}
-        currentMatch={currentMatchIndex + 1}
-        totalMatches={totalMatches}
-        onNavigateNext={handleNavigateNext}
-        onNavigatePrev={handleNavigatePrev}
-        onFindClose={handleFindClose}
-        findInputRef={findInputRef}
-        onFindKeyDown={handleFindKeyDown}
-        isReplaceVisible={replaceVisible}
-        onToggleReplace={handleToggleReplace}
-        replaceQuery={replaceQuery}
-        onReplaceQueryChange={setReplaceQuery}
-        onReplace={handleReplace}
-        onReplaceAll={handleReplaceAll}
-        replaceInputRef={replaceInputRef}
-        onReplaceKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (e.altKey) {
-              handleReplaceAll();
-            } else {
-              handleReplace();
-            }
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            handleFindClose();
-          }
-        }}
-        caseSensitive={caseSensitive}
-        onToggleCaseSensitive={() => setCaseSensitive((v) => !v)}
-        matchWholeWord={matchWholeWord}
-        onToggleMatchWholeWord={() => setMatchWholeWord((v) => !v)}
-        useRegex={useRegex}
-        onToggleUseRegex={() => setUseRegex((v) => !v)}
+        find={find.visible ? find.barProps : null}
       />
       </div>
 
@@ -996,9 +749,11 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
           onRawChange={onRawChange}
           scrollRef={scrollRef}
           onScroll={handleScroll}
-          findQuery={findQuery}
-          currentMatchIndex={currentMatchIndex}
-          searchOpts={{ caseSensitive, matchWholeWord, useRegex }}
+          findQuery={find.highlight.query}
+          currentMatchIndex={find.highlight.activeIndex}
+          caseSensitive={find.highlight.caseSensitive}
+          wholeWord={find.highlight.wholeWord}
+          rawEditorRef={rawEditorRef}
           isEditMode={isEditMode}
           onExitEditMode={handleExitEditMode}
         />

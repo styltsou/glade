@@ -1,19 +1,29 @@
-import { useMemo, useEffect, useRef } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useEffect, useRef } from "react";
 import CodeMirror, { ReactCodeMirrorRef } from "@uiw/react-codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorView, Decoration, DecorationSet } from "@codemirror/view";
 import { StateField, StateEffect, RangeSetBuilder } from "@codemirror/state";
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
-import { findMatchesRaw, SearchOptions } from "./SearchHighlight";
+import { findInText, type FindOptions, type FindRange } from "@/lib/find";
 
 interface RawEditorProps {
   content: string;
   onChange: (value: string) => void;
   findQuery?: string;
   currentMatchIndex?: number;
-  searchOpts?: SearchOptions;
+  caseSensitive?: boolean;
+  wholeWord?: boolean;
   readOnly?: boolean;
+}
+
+/** What the find bar can ask of the editor. */
+export interface RawEditorHandle {
+  /** Replace each range with `text` in one undoable edit. */
+  replaceRanges: (ranges: FindRange[], text: string) => void;
+  focus: () => void;
+  /** The selected text, or an empty string. */
+  selectedText: () => string;
 }
 
 const rawHighlightStyle = HighlightStyle.define([
@@ -38,12 +48,12 @@ const rawHighlightStyle = HighlightStyle.define([
   { tag: t.punctuation, color: "hsl(var(--foreground))" },
 ]);
 
-export const setRawSearchState = StateEffect.define<{ query: string, activeIndex: number, opts: SearchOptions }>();
+export const setRawSearchState = StateEffect.define<{ query: string, activeIndex: number, opts: FindOptions }>();
 
 interface SearchState {
   query: string;
   activeIndex: number;
-  opts: SearchOptions;
+  opts: FindOptions;
   decos: DecorationSet;
 }
 
@@ -68,7 +78,7 @@ const rawSearchHighlightField = StateField.define<SearchState>({
       if (!query) return { query, activeIndex, opts, decos: Decoration.none };
 
       const text = tr.state.doc.toString();
-      const matches = findMatchesRaw(text, query, opts);
+      const matches = findInText(text, query, opts);
       const builder = new RangeSetBuilder<Decoration>();
       matches.forEach((m, i) => {
         builder.add(m.from, m.to, Decoration.mark({
@@ -120,8 +130,32 @@ const baseTheme = EditorView.theme({
   },
 });
 
-export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex = 0, searchOpts = {}, readOnly = false }: RawEditorProps) {
+export const RawEditor = forwardRef<RawEditorHandle, RawEditorProps>(function RawEditor(
+  { content, onChange, findQuery = "", currentMatchIndex = 0, caseSensitive = false, wholeWord = false, readOnly = false },
+  ref,
+) {
   const cmRef = useRef<ReactCodeMirrorRef>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      replaceRanges(ranges, text) {
+        const view = cmRef.current?.view;
+        if (!view || ranges.length === 0) return;
+        view.dispatch({ changes: ranges.map((r) => ({ from: r.from, to: r.to, insert: text })) });
+      },
+      focus() {
+        cmRef.current?.view?.focus();
+      },
+      selectedText() {
+        const view = cmRef.current?.view;
+        if (!view) return "";
+        const { from, to } = view.state.selection.main;
+        return view.state.sliceDoc(from, to);
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (cmRef.current?.view) {
@@ -143,25 +177,26 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
     EditorView.editable.of(!readOnly),
   ], [readOnly]);
 
+  // The highlight follows the query and the current match; the document is searched again by the field when it changes.
   useEffect(() => {
-    if (cmRef.current?.view) {
-      const view = cmRef.current.view;
-      view.dispatch({
-        effects: setRawSearchState.of({ query: findQuery, activeIndex: currentMatchIndex, opts: searchOpts })
-      });
+    const view = cmRef.current?.view;
+    if (!view) return;
+    const opts = { caseSensitive, wholeWord };
+    view.dispatch({ effects: setRawSearchState.of({ query: findQuery, activeIndex: currentMatchIndex, opts }) });
+  }, [findQuery, currentMatchIndex, caseSensitive, wholeWord]);
 
-      if (findQuery) {
-        const matches = findMatchesRaw(view.state.doc.toString(), findQuery, searchOpts);
-        if (matches[currentMatchIndex]) {
-          const { from, to } = matches[currentMatchIndex];
-          view.dispatch({
-            selection: { anchor: from, head: to },
-            effects: EditorView.scrollIntoView(from, { y: "center" })
-          });
-        }
-      }
-    }
-  }, [findQuery, currentMatchIndex, searchOpts]);
+  // Scrolling to the current match is separate, so typing in the document does not pull it back.
+  useEffect(() => {
+    const view = cmRef.current?.view;
+    if (!view || !findQuery) return;
+    const match = findInText(view.state.doc.toString(), findQuery, { caseSensitive, wholeWord })[currentMatchIndex];
+    if (!match) return;
+    view.dispatch({
+      selection: { anchor: match.from, head: match.to },
+      effects: EditorView.scrollIntoView(match.from, { y: "center" }),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [findQuery, currentMatchIndex, caseSensitive, wholeWord]);
 
   return (
     <div className="codemirror-container relative">
@@ -181,6 +216,8 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
           indentOnInput: true,
           defaultKeymap: true,
           historyKeymap: true,
+          // The find bar is the app's own; CodeMirror's panel would open beside it.
+          searchKeymap: false,
           drawSelection: true,
           dropCursor: true,
           //syntaxHighlighting: false,
@@ -189,4 +226,4 @@ export function RawEditor({ content, onChange, findQuery = "", currentMatchIndex
       />
     </div>
   );
-}
+});

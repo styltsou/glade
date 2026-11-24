@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { KbdGroup } from "@/components/ui/kbd";
-import { KEYBINDINGS, formatShortcut, isMac, shortcutKeys, type GlobalCommand, type Shortcut, type TabDigit } from "@/lib/keybindings";
+import { FIND_SHORTCUTS, KEYBINDINGS, formatShortcut, isMac, shortcutKeys, type GlobalCommand, type Shortcut, type TabDigit } from "@/lib/keybindings";
 
 // Open state lives outside React so the palette and the shortcut can open it.
 let isOpen = false;
@@ -71,7 +71,8 @@ const GROUPS: { heading: string; rows: (ListedCommand | Row)[] }[] = [
     heading: "Editor",
     rows: [
       { label: "Save now", shortcuts: [{ code: "KeyS", mod: true }] },
-      { label: "Find in note", shortcuts: [{ code: "KeyF", mod: true }] },
+      { label: "Find in note", shortcuts: [FIND_SHORTCUTS.find] },
+      { label: "Find and replace", shortcuts: [FIND_SHORTCUTS.replace] },
     ],
   },
 ];

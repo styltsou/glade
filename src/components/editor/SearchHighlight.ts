@@ -1,175 +1,88 @@
-import { Extension } from "@tiptap/core";
+import { Extension, type Editor } from "@tiptap/core";
+import type { Node as PMNode } from "@tiptap/pm/model";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
+import { createMatcher, type FindOptions, type FindRange } from "@/lib/find";
 
-export interface SearchHighlightOptions {
+export interface SearchParams extends FindOptions {
+  /** What to highlight; empty highlights nothing. */
   query: string;
+  /** Which match is the current one. */
   activeIndex: number;
-  caseSensitive: boolean;
-  matchWholeWord: boolean;
-  useRegex: boolean;
 }
 
-export interface SearchOptions {
-  caseSensitive?: boolean;
-  matchWholeWord?: boolean;
-  useRegex?: boolean;
-}
+const searchKey = new PluginKey<SearchParams & { decos: DecorationSet }>("searchHighlight");
+
+/** Stands for an inline node with no text (a mention, a hard break), one position wide like the node. */
+const LEAF = "￼";
 
 /**
- * Shared regex builder for all search modes.
- * Returns null if the query is invalid/empty.
+ * Every match in the document. Each block of text is searched as a whole, so a
+ * match runs on across bold, italic and links ("a **bold** word"), and never
+ * across two blocks.
  */
-export function buildRegex(
-  query: string,
-  { caseSensitive = false, matchWholeWord = false, useRegex = false }: SearchOptions = {}
-): RegExp | null {
-  if (!query || query.trim() === "") return null;
-
-  try {
-    const flags = caseSensitive ? "g" : "gi";
-    let pattern: string;
-
-    if (useRegex) {
-      // Use the raw query as a regex pattern — may throw if invalid
-      pattern = query;
-    } else {
-      // Escape special regex characters for literal matching
-      pattern = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
-
-    if (matchWholeWord && !useRegex) {
-      pattern = `\\b${pattern}\\b`;
-    }
-
-    return new RegExp(pattern, flags);
-  } catch {
-    // Invalid regex — return null so callers can handle gracefully
-    return null;
-  }
+export function findInDoc(doc: PMNode, query: string, options: FindOptions = {}): FindRange[] {
+  const match = createMatcher(query, options);
+  if (!match) return [];
+  const found: FindRange[] = [];
+  doc.descendants((node, pos) => {
+    if (!node.isTextblock) return true;
+    // A position inside the block is the block's start + 1 (past its opening token) + the offset.
+    const text = node.textBetween(0, node.content.size, undefined, LEAF);
+    for (const m of match(text)) found.push({ from: pos + 1 + m.from, to: pos + 1 + m.to });
+    return false;
+  });
+  return found;
 }
 
-export const SearchHighlight = Extension.create<SearchHighlightOptions>({
-  name: "searchHighlight",
+function decorate(doc: PMNode, { query, caseSensitive, wholeWord, activeIndex }: SearchParams): DecorationSet {
+  const matches = findInDoc(doc, query, { caseSensitive, wholeWord });
+  if (matches.length === 0) return DecorationSet.empty;
+  return DecorationSet.create(
+    doc,
+    matches.map((m, i) =>
+      Decoration.inline(m.from, m.to, { class: i === activeIndex ? "search-highlight-active" : "search-highlight" }),
+    ),
+  );
+}
 
-  addOptions() {
-    return {
-      query: "",
-      activeIndex: 0,
-      caseSensitive: false,
-      matchWholeWord: false,
-      useRegex: false,
-    };
-  },
+/** Highlights what the find bar is looking for. Driven with `setSearch`. */
+export const SearchHighlight = Extension.create({
+  name: "searchHighlight",
 
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey("searchHighlight"),
+        key: searchKey,
         state: {
-          init: () => ({
-            decos: DecorationSet.empty,
-            query: "",
-            activeIndex: 0,
-            caseSensitive: false,
-            matchWholeWord: false,
-            useRegex: false,
-          }),
-          apply: (tr, oldState) => {
-            const meta = tr.getMeta("searchHighlight");
-            const query = meta ? meta.query : oldState.query;
-            const activeIndex = meta ? meta.activeIndex : oldState.activeIndex;
-            const caseSensitive = meta ? meta.caseSensitive : oldState.caseSensitive;
-            const matchWholeWord = meta ? meta.matchWholeWord : oldState.matchWholeWord;
-            const useRegex = meta ? meta.useRegex : oldState.useRegex;
-
-            if (!tr.docChanged && !meta) {
-              return { ...oldState, decos: oldState.decos.map(tr.mapping, tr.doc) };
-            }
-
-            const regex = buildRegex(query, { caseSensitive, matchWholeWord, useRegex });
-            if (!regex) {
-              return { query, activeIndex, caseSensitive, matchWholeWord, useRegex, decos: DecorationSet.empty };
-            }
-
-            const decorations: Decoration[] = [];
-            let matchIndex = 0;
-
-            tr.doc.descendants((node, pos) => {
-              if (node.isText && node.text) {
-                regex.lastIndex = 0;
-                let match;
-                while ((match = regex.exec(node.text)) !== null) {
-                  if (match[0].length === 0) break;
-                  const from = pos + match.index;
-                  const to = from + match[0].length;
-                  const isActive = matchIndex === activeIndex;
-                  decorations.push(
-                    Decoration.inline(from, to, {
-                      class: isActive ? "search-highlight-active" : "search-highlight",
-                    })
-                  );
-                  matchIndex++;
-                }
-              }
-            });
-
-            return {
-              query,
-              activeIndex,
-              caseSensitive,
-              matchWholeWord,
-              useRegex,
-              decos: DecorationSet.create(tr.doc, decorations),
-            };
+          init: () => ({ query: "", activeIndex: 0, decos: DecorationSet.empty }),
+          apply(tr, value) {
+            const next = tr.getMeta(searchKey) as SearchParams | undefined;
+            if (!next && !tr.docChanged) return value;
+            const params = next ?? value;
+            // Edits re-run the search: a replaced or typed-over match must not stay lit.
+            return { ...params, decos: params.query ? decorate(tr.doc, params) : DecorationSet.empty };
           },
         },
         props: {
-          decorations(state) {
-            return this.getState(state)?.decos ?? DecorationSet.empty;
-          },
+          decorations: (state) => searchKey.getState(state)?.decos,
         },
       }),
     ];
   },
 });
 
-export function findMatches(
-  doc: any,
-  query: string,
-  options: SearchOptions = {}
-): { from: number; to: number }[] {
-  const matches: { from: number; to: number }[] = [];
-  const regex = buildRegex(query, options);
-  if (!regex) return matches;
-
-  doc.descendants((node: any, pos: number) => {
-    if (node.isText && node.text) {
-      regex.lastIndex = 0;
-      let match;
-      while ((match = regex.exec(node.text)) !== null) {
-        if (match[0].length === 0) break;
-        matches.push({ from: pos + match.index, to: pos + match.index + match[0].length });
-      }
-    }
-  });
-
-  return matches;
-}
-
-export function findMatchesRaw(
-  text: string,
-  query: string,
-  options: SearchOptions = {}
-): { from: number; to: number }[] {
-  const matches: { from: number; to: number }[] = [];
-  const regex = buildRegex(query, options);
-  if (!regex) return matches;
-
-  let match;
-  while ((match = regex.exec(text)) !== null) {
-    if (match[0].length === 0) break;
-    matches.push({ from: match.index, to: match.index + match[0].length });
+/** Point the highlight at a query. It does not touch the selection or the content. */
+export function setSearch(editor: Editor, params: SearchParams): void {
+  const current = searchKey.getState(editor.state);
+  if (
+    current &&
+    current.query === params.query &&
+    current.activeIndex === params.activeIndex &&
+    !!current.caseSensitive === !!params.caseSensitive &&
+    !!current.wholeWord === !!params.wholeWord
+  ) {
+    return;
   }
-  return matches;
+  editor.view.dispatch(editor.state.tr.setMeta(searchKey, params).setMeta("addToHistory", false));
 }

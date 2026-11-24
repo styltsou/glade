@@ -6,7 +6,7 @@ import { Clock, Copy, Check, BookOpen, PencilOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FindBar } from "./FindBar";
+import { FindBar, type FindBarProps } from "./FindBar";
 import { useStore } from "@/store";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
@@ -19,32 +19,8 @@ interface NoteHeaderProps {
   hasHeadings?: boolean;
   isTocOpen?: boolean;
   onToggleToc?: () => void;
-  findVisible?: boolean;
-  findQuery?: string;
-  onFindQueryChange?: (query: string) => void;
-  currentMatch?: number;
-  totalMatches?: number;
-  onNavigateNext?: () => void;
-  onNavigatePrev?: () => void;
-  onFindClose?: () => void;
-  findInputRef?: React.RefObject<HTMLInputElement>;
-  onFindKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  // Replace
-  isReplaceVisible?: boolean;
-  onToggleReplace?: () => void;
-  replaceQuery?: string;
-  onReplaceQueryChange?: (query: string) => void;
-  onReplace?: () => void;
-  onReplaceAll?: () => void;
-  replaceInputRef?: React.RefObject<HTMLInputElement>;
-  onReplaceKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
-  // Search options
-  caseSensitive?: boolean;
-  onToggleCaseSensitive?: () => void;
-  matchWholeWord?: boolean;
-  onToggleMatchWholeWord?: () => void;
-  useRegex?: boolean;
-  onToggleUseRegex?: () => void;
+  /** The find bar, shown while there is one. */
+  find?: FindBarProps | null;
 }
 
 export function NoteHeader({ 
@@ -56,30 +32,7 @@ export function NoteHeader({
   hasHeadings = false,
   isTocOpen = false,
   onToggleToc,
-  findVisible = false,
-  findQuery = "",
-  onFindQueryChange,
-  currentMatch = 0,
-  totalMatches = 0,
-  onNavigateNext,
-  onNavigatePrev,
-  onFindClose,
-  findInputRef,
-  onFindKeyDown,
-  isReplaceVisible = false,
-  onToggleReplace,
-  replaceQuery = "",
-  onReplaceQueryChange,
-  onReplace,
-  onReplaceAll,
-  replaceInputRef,
-  onReplaceKeyDown,
-  caseSensitive = false,
-  onToggleCaseSensitive,
-  matchWholeWord = false,
-  onToggleMatchWholeWord,
-  useRegex = false,
-  onToggleUseRegex,
+  find = null,
 }: NoteHeaderProps) {
   const setNoteEditMode = useStore((s) => s.setNoteEditMode);
   const segments = notePath.split("/");
@@ -122,34 +75,9 @@ export function NoteHeader({
   return (
     <div className="flex items-center justify-between h-10 shrink-0 select-none relative">
       {/* Floating FindBar — positioned absolutely in top-right of the editor */}
-      {findVisible && (
+      {find && (
         <div className="absolute top-full right-4 z-50 mt-1">
-          <FindBar
-            isVisible={findVisible}
-            query={findQuery}
-            onQueryChange={onFindQueryChange || (() => {})}
-            currentMatch={currentMatch}
-            totalMatches={totalMatches}
-            onNavigateNext={onNavigateNext || (() => {})}
-            onNavigatePrev={onNavigatePrev || (() => {})}
-            onClose={onFindClose || (() => {})}
-            inputRef={findInputRef || { current: null }}
-            onKeyDown={onFindKeyDown || (() => {})}
-            isReplaceVisible={isReplaceVisible}
-            onToggleReplace={onToggleReplace}
-            replaceQuery={replaceQuery}
-            onReplaceQueryChange={onReplaceQueryChange}
-            onReplace={onReplace}
-            onReplaceAll={onReplaceAll}
-            replaceInputRef={replaceInputRef}
-            onReplaceKeyDown={onReplaceKeyDown}
-            caseSensitive={caseSensitive}
-            onToggleCaseSensitive={onToggleCaseSensitive}
-            matchWholeWord={matchWholeWord}
-            onToggleMatchWholeWord={onToggleMatchWholeWord}
-            useRegex={useRegex}
-            onToggleUseRegex={onToggleUseRegex}
-          />
+          <FindBar {...find} />
         </div>
       )}
 

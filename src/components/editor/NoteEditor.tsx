@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/popover";
 import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
-import { RawEditor } from "./RawEditor";
+import { RawEditor, type RawEditorHandle } from "./RawEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
 import { Backlinks } from "./Backlinks";
 import { LinkInteractionPopover } from "./LinkPopover";
@@ -74,13 +74,12 @@ interface NoteEditorProps {
 	onRawChange: (value: string) => void;
 	scrollRef: React.RefObject<HTMLDivElement | null>;
 	onScroll: () => void;
+	/** What the find bar is looking for, highlighted in the raw view. */
 	findQuery?: string;
 	currentMatchIndex?: number;
-	searchOpts?: {
-		caseSensitive?: boolean;
-		matchWholeWord?: boolean;
-		useRegex?: boolean;
-	};
+	caseSensitive?: boolean;
+	wholeWord?: boolean;
+	rawEditorRef?: React.Ref<RawEditorHandle>;
 	isEditMode?: boolean;
 	onExitEditMode?: () => void;
 }
@@ -195,7 +194,9 @@ export function NoteEditor({
 	onScroll,
 	findQuery,
 	currentMatchIndex,
-	searchOpts,
+	caseSensitive,
+	wholeWord,
+	rawEditorRef,
 	isEditMode = false,
 }: NoteEditorProps) {
 	const [blockPopoverOpen, setBlockPopoverOpen] = useState(false);
@@ -652,11 +653,13 @@ export function NoteEditor({
 
 				{isRawMode ? (
 					<RawEditor
+						ref={rawEditorRef}
 						content={rawContent}
 						onChange={onRawChange}
 						findQuery={findQuery}
 						currentMatchIndex={currentMatchIndex}
-						searchOpts={searchOpts}
+						caseSensitive={caseSensitive}
+						wholeWord={wholeWord}
 						readOnly={false}
 					/>
 				) : (
