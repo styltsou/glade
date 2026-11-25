@@ -128,7 +128,7 @@ function LightboxView({ src, alt }: { src: string; alt: string }) {
     >
       <motion.div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-background/75 backdrop-blur-[2px]"
+        className="pointer-events-none absolute inset-0 bg-background/92 backdrop-blur-[2px]"
         variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 }, closed: { opacity: 0 } }}
         transition={{ duration: 0.06, ease: [0.23, 1, 0.32, 1] }}
       />
@@ -180,12 +180,15 @@ function LightboxView({ src, alt }: { src: string; alt: string }) {
           }}
           transition={{ ease: [0.23, 1, 0.32, 1] }}
         >
+          {/* The toolbar's bottom edge sits 52px down (top-3 + p-1 + h-8 + p-1); 4rem of
+              clearance above and below keeps the fitted image clear of it at any size
+              while staying centred. */}
           <img
             ref={image}
             src={src}
             alt={alt}
             draggable={false}
-            className="block max-h-[92vh] max-w-[94vw] object-contain"
+            className="block max-h-[calc(100vh-8rem)] max-w-[calc(100vw-3rem)] object-contain"
             onLoad={() => positionImage(pos.current, currentScale.current)}
           />
         </motion.div>
