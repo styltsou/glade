@@ -44,6 +44,8 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 		const selectedIndexRef = useRef(0);
 		selectedIndexRef.current = selectedIndex;
 		const directionRef = useRef<SuggestionNavigationDirection | null>(null);
+		// Arrow keys scroll the list under a parked mouse; its hover tint would smear across rows.
+		const [keyboardNav, setKeyboardNav] = useState(false);
 
 		useEffect(() => {
 			directionRef.current = null;
@@ -84,6 +86,7 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 					: (current + 1) % count;
 			if (next !== current) directionRef.current = direction;
 			selectedIndexRef.current = next;
+			setKeyboardNav(true);
 			setSelectedIndex(next);
 		};
 
@@ -131,6 +134,9 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 				>
 					<div
 						ref={commandListRef}
+						onMouseMove={(event) => {
+							if (keyboardNav && (event.movementX || event.movementY)) setKeyboardNav(false);
+						}}
 						className="max-h-80 overflow-y-auto p-1"
 						style={{ scrollbarWidth: "none" }}
 					>
@@ -144,7 +150,7 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 										"relative flex cursor-pointer items-start gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
 										index === selectedIndex
 											? "bg-foreground/[0.09] text-foreground"
-											: "hover:bg-foreground/[0.06]",
+											: !keyboardNav && "hover:bg-foreground/[0.06]",
 									)}
 								>
 									<div className="flex flex-col min-w-0 flex-1">

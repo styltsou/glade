@@ -119,6 +119,8 @@ export const SlashCommandMenu = forwardRef<
 	selectedIndexRef.current = selectedIndex;
 
 	const directionRef = useRef<SuggestionNavigationDirection | null>(null);
+	// Arrow keys scroll the list under a parked mouse; its hover tint would smear across rows.
+	const [keyboardNav, setKeyboardNav] = useState(false);
 
 	useEffect(() => {
 		directionRef.current = null;
@@ -157,6 +159,7 @@ export const SlashCommandMenu = forwardRef<
 			direction === "up" ? (current + count - 1) % count : (current + 1) % count;
 		if (next !== current) directionRef.current = direction;
 		selectedIndexRef.current = next;
+		setKeyboardNav(true);
 		setSelectedIndex(next);
 	};
 
@@ -204,6 +207,9 @@ export const SlashCommandMenu = forwardRef<
 			>
 				<div
 					ref={commandListRef}
+					onMouseMove={(event) => {
+						if (keyboardNav && (event.movementX || event.movementY)) setKeyboardNav(false);
+					}}
 					className="max-h-80 overflow-y-auto p-1"
 					style={{ scrollbarWidth: "none" }}
 				>
@@ -227,7 +233,7 @@ export const SlashCommandMenu = forwardRef<
 									"group relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
 									index === selectedIndex
 										? "bg-foreground/[0.09] text-foreground"
-										: "hover:bg-foreground/[0.06]",
+										: !keyboardNav && "hover:bg-foreground/[0.06]",
 								)}
 							>
 								<span
@@ -245,7 +251,8 @@ export const SlashCommandMenu = forwardRef<
 									<span
 										aria-hidden="true"
 										className={cn(
-											"ml-auto shrink-0 pl-4 font-mono text-xs group-hover:text-foreground/55",
+											"ml-auto shrink-0 pl-4 font-mono text-xs",
+											!keyboardNav && "group-hover:text-foreground/55",
 											index === selectedIndex
 												? "text-foreground/55"
 												: "text-muted-foreground/60",
