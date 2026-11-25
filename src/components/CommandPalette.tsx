@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { Command as CommandPrimitive, defaultFilter } from "cmdk";
 import {
@@ -343,6 +344,25 @@ const MODE_OPTIONS: { id: ThemeMode; label: string; icon: Icon }[] = [
   { id: "system", label: "System", icon: MonitorIcon },
 ];
 
+/** A picker row: its cmdk value, and the label it shows and is searched by. */
+type PickerEntry = { value: string; label: string };
+
+const THEME_ENTRIES: PickerEntry[] = themes.map((t) => ({ value: `theme:${t.id}`, label: t.label }));
+const MODE_ENTRIES: PickerEntry[] = MODE_OPTIONS.map((m) => ({ value: `mode:${m.id}`, label: m.label }));
+
+/** Entries whose shown label matches the query, best first. Never the hidden `theme:` value, which every row shares. */
+function rankEntries(entries: PickerEntry[], search: string): PickerEntry[] {
+  const q = search.trim();
+  if (!q) return entries;
+  return entries
+    .map((entry) => ({ entry, score: defaultFilter(entry.label, q) }))
+    .filter((scored) => scored.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((scored) => scored.entry);
+}
+
+const pickerEntries = (mode: PaletteMode) => (mode === "themes" ? THEME_ENTRIES : MODE_ENTRIES);
+
 /** Another dialog (rename, delete, ...) owns the keyboard while it is open. */
 function otherModalOpen(): boolean {
   return !!document.querySelector(
@@ -361,6 +381,17 @@ export function CommandPalette() {
   // Delete asks again inline: the row turns into its own confirmation.
   const [confirmDelete, setConfirmDelete] = useState<"click" | "key" | null>(null);
   const pointerSelect = useRef(false);
+  /** Arrow keys are moving the highlight, so a parked pointer must not steal it. */
+  const [keyboardNav, setKeyboardNav] = useState(false);
+  const [, setNavRender] = useState(0);
+  /**
+   * cmdk's rows read the pointer-selection setting one render late (it lands in a layout
+   * effect of the parent), so flip it in its own render and follow with a second one.
+   */
+  function setNav(next: boolean) {
+    flushSync(() => setKeyboardNav(next));
+    setNavRender((n) => n + 1);
+  }
   /** The command that closed the palette put the keyboard somewhere itself. */
   const keepFocus = useRef(false);
   // Re-render on store changes so labels and availability stay current.
@@ -382,6 +413,7 @@ export function CommandPalette() {
       setSelectedCommand("");
       setSelectedTheme("");
       setConfirmDelete(null);
+      setKeyboardNav(false);
       clearSearch();
       // Drop any theme preview: show what is actually chosen.
       const st = useStore.getState();
@@ -525,15 +557,32 @@ export function CommandPalette() {
   const availableGroups = COMMAND_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => isAvailable(i.id)) })).filter(
     (g) => g.items.length > 0,
   );
-  const availableCommands = availableGroups.flatMap((g) => g.items);
 
-  function firstMatchingCommand(search: string) {
-    return (
-      availableCommands
-        .map((item) => ({ label: item.label, score: search.trim() ? defaultFilter(item.label, search.trim()) : 1 }))
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score)[0]?.label ?? ""
-    );
+  /**
+   * Actions that match the query, best first, grouped. The palette filters and ranks
+   * these itself: cmdk only syncs a controlled input's text in an effect and re-selects in a
+   * follow-up render, so the frame after a keystroke would show a stale or empty highlight.
+   */
+  function rankedGroups(search: string) {
+    const q = search.trim();
+    if (!q) return availableGroups;
+    return availableGroups
+      .map((group) => {
+        const scored = group.items
+          // Only what the row shows: "Toggle sidebar" reads "Hide sidebar", so "t" must not find it first.
+          .map((item) => ({ item, score: defaultFilter(liveLabel(item), q) }))
+          .filter((entry) => entry.score > 0)
+          .sort((a, b) => b.score - a.score);
+        return { ...group, items: scored.map((entry) => entry.item), best: scored[0]?.score ?? 0 };
+      })
+      .filter((group) => group.items.length > 0)
+      .sort((a, b) => b.best - a.best);
+  }
+
+  const visibleGroups = mode === "commands" ? rankedGroups(query) : availableGroups;
+
+  function firstCommand(search: string): string {
+    return rankedGroups(search)[0]?.items[0]?.label ?? "";
   }
 
   function changeMode(next: PaletteMode) {
@@ -541,7 +590,7 @@ export function CommandPalette() {
       const st = useStore.getState();
       applyToDOM(st.theme, resolveMode(st.mode));
     }
-    setSelectedCommand(next === "commands" ? firstMatchingCommand(query) : "");
+    setSelectedCommand(next === "commands" ? firstCommand(query) : "");
     setMode(next);
   }
 
@@ -582,10 +631,19 @@ export function CommandPalette() {
         <CommandPrimitive
           key={mode}
           value={mode === "commands" ? selectedCommand : isPicker(mode) ? selectedTheme : undefined}
-          shouldFilter={mode !== "search"}
+          shouldFilter={false}
           loop
+          // While arrow keys drive the list it scrolls under a parked pointer, and the
+          // pointer-moves that causes would pull the highlight onto the row beneath it.
+          disablePointerSelection={keyboardNav}
+          onPointerMove={(event) => {
+            if (keyboardNav && (event.movementX || event.movementY)) setNav(false);
+          }}
           className="flex flex-col"
           onKeyDown={(event) => {
+            if (!keyboardNav && (event.key === "ArrowUp" || event.key === "ArrowDown" || event.key === "Home" || event.key === "End")) {
+              setNav(true);
+            }
             if (event.key === "Tab") {
               event.preventDefault();
               changeMode(mode === "search" ? "commands" : "search");
@@ -603,7 +661,6 @@ export function CommandPalette() {
               return;
             }
             if (mode !== "commands") return;
-            if (query.trim() && defaultFilter(value, query.trim()) <= 0) return;
             if (value !== "Delete") setConfirmDelete(null);
             setSelectedCommand(value);
           }}
@@ -626,7 +683,14 @@ export function CommandPalette() {
               onValueChange={(value) => {
                 setQuery(value);
                 setConfirmDelete(null);
-                if (mode === "commands") setSelectedCommand(firstMatchingCommand(value));
+                // Same render as the new list, so the highlight never lags the ranking.
+                if (mode === "commands") setSelectedCommand(firstCommand(value));
+                if (isPicker(mode)) {
+                  const first = rankEntries(pickerEntries(mode), value)[0]?.value ?? "";
+                  setSelectedTheme(first);
+                  // Preview with the highlight, not a tick after it.
+                  if (first) previewTheme(first);
+                }
               }}
               placeholder={mode === "search" ? "Search notes, or tag: to filter…" : mode === "themes" ? "Pick a theme…" : mode === "modes" ? "Light, dark or system…" : "Search actions…"}
               className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-muted-foreground"
@@ -644,7 +708,7 @@ export function CommandPalette() {
             <Kbd>Esc</Kbd>
           </div>
 
-          <CommandPrimitive.List className="max-h-[min(30rem,58vh)] scroll-py-2 overflow-y-auto overscroll-contain p-2 [&::-webkit-scrollbar]:hidden">
+          <CommandPrimitive.List className="max-h-[min(30rem,58vh)] scroll-py-20 overflow-y-auto overscroll-contain p-2 [&::-webkit-scrollbar]:hidden">
             {mode === "search" ? (
               noteRows.length === 0 && tagSuggestions.length === 0 ? (
                 <p className="px-3 py-10 text-center text-[14px] text-muted-foreground">
@@ -700,17 +764,20 @@ export function CommandPalette() {
                 </>
               )
             ) : mode === "modes" ? (
-              <ModeList currentMode={useStore.getState().mode} onSelect={commitTheme} />
+              <ModeList entries={rankEntries(MODE_ENTRIES, query)} currentMode={useStore.getState().mode} onSelect={commitTheme} />
             ) : mode === "themes" ? (
               <ThemeList
+                entries={rankEntries(THEME_ENTRIES, query)}
                 current={useStore.getState().theme}
                 currentMode={useStore.getState().mode}
                 onSelect={commitTheme}
               />
             ) : (
               <>
-                <CommandPrimitive.Empty className="py-10 text-center text-[14px] text-muted-foreground">No actions found.</CommandPrimitive.Empty>
-                {availableGroups.map((group, index) => (
+                {visibleGroups.length === 0 ? (
+                  <p className="py-10 text-center text-[14px] text-muted-foreground">No actions found.</p>
+                ) : null}
+                {visibleGroups.map((group, index) => (
                   <div key={group.heading}>
                     {index > 0 ? <CommandPrimitive.Separator className="mx-2 my-1.5 h-px bg-border/60" /> : null}
                     <CommandPrimitive.Group heading={group.heading} className={groupClass}>
@@ -721,7 +788,6 @@ export function CommandPalette() {
                           <CommandPrimitive.Item
                             key={item.id}
                             value={item.label}
-                            keywords={[liveLabel(item)]}
                             onPointerDown={() => { pointerSelect.current = true; }}
                             onSelect={() => {
                               const byPointer = pointerSelect.current;
@@ -823,39 +889,37 @@ export function CommandPalette() {
 }
 
 /** Themes, then modes. Highlighting one previews it; Enter keeps it. */
-function ThemeList({ current, currentMode, onSelect }: { current: ThemeId; currentMode: ThemeMode; onSelect: (value: string) => void }) {
+function ThemeList({ entries, current, currentMode, onSelect }: { entries: PickerEntry[]; current: ThemeId; currentMode: ThemeMode; onSelect: (value: string) => void }) {
   const resolved = resolveMode(currentMode);
+  const shown = entries.flatMap((entry) => themes.filter((t) => `theme:${t.id}` === entry.value));
+  if (shown.length === 0) return <p className="py-10 text-center text-[14px] text-muted-foreground">No themes found.</p>;
   return (
-    <>
-      <CommandPrimitive.Empty className="py-10 text-center text-[14px] text-muted-foreground">No themes found.</CommandPrimitive.Empty>
-      <CommandPrimitive.Group heading="Theme" className={groupClass}>
-        {themes.map((t) => (
-          <CommandPrimitive.Item key={t.id} value={`theme:${t.id}`} keywords={[t.label]} onSelect={onSelect} className={itemClass}>
-            <ThemeSwatch theme={t.id} mode={resolved} className="size-[18px]" />
-            <span className="truncate">{t.label}</span>
-            {t.id === current ? <CheckIcon className="ml-auto size-4 text-muted-foreground" /> : null}
-          </CommandPrimitive.Item>
-        ))}
-      </CommandPrimitive.Group>
-    </>
+    <CommandPrimitive.Group heading="Theme" className={groupClass}>
+      {shown.map((t) => (
+        <CommandPrimitive.Item key={t.id} value={`theme:${t.id}`} onSelect={onSelect} className={itemClass}>
+          <ThemeSwatch theme={t.id} mode={resolved} className="size-[18px]" />
+          <span className="truncate">{t.label}</span>
+          {t.id === current ? <CheckIcon className="ml-auto size-4 text-muted-foreground" /> : null}
+        </CommandPrimitive.Item>
+      ))}
+    </CommandPrimitive.Group>
   );
 }
 
 /** Light, dark or system. Highlighting one previews it; Enter keeps it. */
-function ModeList({ currentMode, onSelect }: { currentMode: ThemeMode; onSelect: (value: string) => void }) {
+function ModeList({ entries, currentMode, onSelect }: { entries: PickerEntry[]; currentMode: ThemeMode; onSelect: (value: string) => void }) {
+  const shown = entries.flatMap((entry) => MODE_OPTIONS.filter((m) => `mode:${m.id}` === entry.value));
+  if (shown.length === 0) return <p className="py-10 text-center text-[14px] text-muted-foreground">No modes found.</p>;
   return (
-    <>
-      <CommandPrimitive.Empty className="py-10 text-center text-[14px] text-muted-foreground">No modes found.</CommandPrimitive.Empty>
-      <CommandPrimitive.Group heading="Mode" className={groupClass}>
-        {MODE_OPTIONS.map((m) => (
-          <CommandPrimitive.Item key={m.id} value={`mode:${m.id}`} keywords={[m.label, "appearance"]} onSelect={onSelect} className={itemClass}>
-            <m.icon className="size-[18px] shrink-0 text-muted-foreground [[data-selected=true]_&]:text-foreground" />
-            <span className="truncate">{m.label}</span>
-            {m.id === currentMode ? <CheckIcon className="ml-auto size-4 text-muted-foreground" /> : null}
-          </CommandPrimitive.Item>
-        ))}
-      </CommandPrimitive.Group>
-    </>
+    <CommandPrimitive.Group heading="Mode" className={groupClass}>
+      {shown.map((m) => (
+        <CommandPrimitive.Item key={m.id} value={`mode:${m.id}`} onSelect={onSelect} className={itemClass}>
+          <m.icon className="size-[18px] shrink-0 text-muted-foreground [[data-selected=true]_&]:text-foreground" />
+          <span className="truncate">{m.label}</span>
+          {m.id === currentMode ? <CheckIcon className="ml-auto size-4 text-muted-foreground" /> : null}
+        </CommandPrimitive.Item>
+      ))}
+    </CommandPrimitive.Group>
   );
 }
 
@@ -863,4 +927,6 @@ const groupClass =
   "text-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
 const itemClass =
-  "relative flex min-h-10 cursor-default items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-foreground outline-hidden select-none data-[selected=true]:bg-foreground/[0.08] [&_svg]:pointer-events-none";
+  // transition-none: rows are role="option", which globally fades its background; a fading
+  // row scrolling away from the held highlight reads as a smear.
+  "relative flex min-h-10 cursor-default items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-foreground outline-hidden select-none transition-none data-[selected=true]:bg-foreground/[0.08] [&_svg]:pointer-events-none";
