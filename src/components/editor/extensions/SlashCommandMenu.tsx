@@ -119,8 +119,6 @@ export const SlashCommandMenu = forwardRef<
 	selectedIndexRef.current = selectedIndex;
 
 	const directionRef = useRef<SuggestionNavigationDirection | null>(null);
-	// Arrow keys scroll the list under a parked mouse; its hover tint would smear across rows.
-	const [keyboardNav, setKeyboardNav] = useState(false);
 
 	useEffect(() => {
 		directionRef.current = null;
@@ -159,8 +157,16 @@ export const SlashCommandMenu = forwardRef<
 			direction === "up" ? (current + count - 1) % count : (current + 1) % count;
 		if (next !== current) directionRef.current = direction;
 		selectedIndexRef.current = next;
-		setKeyboardNav(true);
 		setSelectedIndex(next);
+	};
+
+	/** Hover selects, but only on real mouse movement: a pointer resting over the list while
+	 * you type or use the arrow keys must not take the highlight as rows move under it. */
+	const hoverSelect = (event: React.MouseEvent, index: number) => {
+		if (!(event.movementX || event.movementY) || index === selectedIndexRef.current) return;
+		directionRef.current = null;
+		selectedIndexRef.current = index;
+		setSelectedIndex(index);
 	};
 
 	useImperativeHandle(ref, () => ({
@@ -207,9 +213,6 @@ export const SlashCommandMenu = forwardRef<
 			>
 				<div
 					ref={commandListRef}
-					onMouseMove={(event) => {
-						if (keyboardNav && (event.movementX || event.movementY)) setKeyboardNav(false);
-					}}
 					className="max-h-80 overflow-y-auto p-1"
 					style={{ scrollbarWidth: "none" }}
 				>
@@ -228,12 +231,12 @@ export const SlashCommandMenu = forwardRef<
 							<div
 								onMouseDown={(event) => event.preventDefault()}
 								onClick={() => props.command(item)}
+								onMouseMove={(event) => hoverSelect(event, index)}
 								data-selected={index === selectedIndex}
 								className={cn(
 									"group relative flex cursor-pointer items-center gap-2 rounded-sm px-2 py-1 text-sm outline-hidden select-none",
-									index === selectedIndex
-										? "bg-foreground/[0.09] text-foreground"
-										: !keyboardNav && "hover:bg-foreground/[0.06]",
+									index === selectedIndex &&
+										"bg-foreground/[0.09] text-foreground"
 								)}
 							>
 								<span
@@ -252,7 +255,6 @@ export const SlashCommandMenu = forwardRef<
 										aria-hidden="true"
 										className={cn(
 											"ml-auto shrink-0 pl-4 font-mono text-xs",
-											!keyboardNav && "group-hover:text-foreground/55",
 											index === selectedIndex
 												? "text-foreground/55"
 												: "text-muted-foreground/60",
