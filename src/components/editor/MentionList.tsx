@@ -7,6 +7,10 @@ import {
 	useRef,
 } from "react";
 import { cn } from "@/lib/utils";
+import {
+	getSuggestionScrollTop,
+	type SuggestionNavigationDirection,
+} from "./suggestionScroll";
 
 interface MentionListProps {
 	items: {
@@ -37,52 +41,64 @@ export const MentionList = forwardRef<MentionListHandle, MentionListProps>(
 		const [selectedIndex, setSelectedIndex] = useState(0);
 		const commandListRef = useRef<HTMLDivElement>(null);
 
+		const selectedIndexRef = useRef(0);
+		selectedIndexRef.current = selectedIndex;
+		const directionRef = useRef<SuggestionNavigationDirection | null>(null);
+
 		useEffect(() => {
+			directionRef.current = null;
 			setSelectedIndex(0);
+			if (commandListRef.current) commandListRef.current.scrollTop = 0;
 		}, [props.items]);
 
 		useLayoutEffect(() => {
-			if (commandListRef.current) {
-				const container = commandListRef.current;
-				const selectedItem = container.querySelector(
-					'[data-selected="true"]',
-				) as HTMLElement | null;
-				if (selectedItem) {
-					const containerRect = container.getBoundingClientRect();
-					const itemRect = selectedItem.getBoundingClientRect();
+			const direction = directionRef.current;
+			directionRef.current = null;
+			const container = commandListRef.current;
+			const selectedItem = container?.querySelector(
+				'[data-selected="true"]',
+			) as HTMLElement | null;
+			if (!direction || !container || !selectedItem) return;
 
-					const relativeTop = itemRect.top - containerRect.top;
-					const relativeBottom = itemRect.bottom - containerRect.top;
+			const containerRect = container.getBoundingClientRect();
+			const itemRect = selectedItem.getBoundingClientRect();
+			container.scrollTop = getSuggestionScrollTop({
+				direction,
+				selectedIndex,
+				itemCount: props.items.length,
+				itemTop: itemRect.top - containerRect.top + container.scrollTop,
+				itemHeight: itemRect.height,
+				scrollTop: container.scrollTop,
+				clientHeight: container.clientHeight,
+				scrollHeight: container.scrollHeight,
+			});
+		}, [selectedIndex, props.items.length]);
 
-					if (relativeBottom > containerRect.height - 4) {
-						container.scrollTop += relativeBottom - (containerRect.height - 4);
-					} else if (relativeTop < 4) {
-						container.scrollTop += relativeTop - 4;
-					}
-				}
-			}
-		}, [selectedIndex]);
+		const moveSelection = (direction: SuggestionNavigationDirection) => {
+			const count = props.items.length;
+			if (count === 0) return;
+			const current = selectedIndexRef.current;
+			const next =
+				direction === "up"
+					? (current + count - 1) % count
+					: (current + 1) % count;
+			if (next !== current) directionRef.current = direction;
+			selectedIndexRef.current = next;
+			setSelectedIndex(next);
+		};
 
 		useImperativeHandle(ref, () => ({
 			onKeyDown: ({ event }: { event: KeyboardEvent }) => {
 				if (event.key === "ArrowUp") {
-					setSelectedIndex(
-						(prev) => (prev + props.items.length - 1) % props.items.length,
-					);
+					moveSelection("up");
 					return true;
 				}
 				if (event.key === "ArrowDown") {
-					setSelectedIndex((prev) => (prev + 1) % props.items.length);
+					moveSelection("down");
 					return true;
 				}
 				if (event.key === "Tab") {
-					if (event.shiftKey) {
-						setSelectedIndex(
-							(prev) => (prev + props.items.length - 1) % props.items.length,
-						);
-					} else {
-						setSelectedIndex((prev) => (prev + 1) % props.items.length);
-					}
+					moveSelection(event.shiftKey ? "up" : "down");
 					return true;
 				}
 				if (event.key === "Enter") {
