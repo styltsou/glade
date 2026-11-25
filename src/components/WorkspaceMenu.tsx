@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Sun, X } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Settings, Sun, X } from "lucide-react";
 import { openModePicker, openThemePicker } from "@/components/CommandPalette";
 import { AboutDialog } from "@/components/AboutDialog";
+import { openSettings } from "@/components/SettingsDialog";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { invoke } from "@tauri-apps/api/core";
 import { useStore } from "@/store";
@@ -119,9 +120,12 @@ export function WorkspaceMenu({
           </>
         )}
         <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={openSettings}>
+          <Settings className="size-4" /> Settings…
+          <DropdownMenuShortcut>{formatShortcut(bindingFor("open-settings")!)}</DropdownMenuShortcut>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={openThemePicker}>
           <Palette className="size-4" /> Theme…
-          <DropdownMenuShortcut>{formatShortcut(bindingFor("open-settings")!)}</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={openModePicker}>
           <Sun className="size-4" /> Mode…

@@ -19,7 +19,7 @@ type ListedCommand = Exclude<GlobalCommand, `go-to-tab-${TabDigit}`>;
 const LABELS: Record<ListedCommand, string> = {
   "toggle-command-palette": "Command palette",
   "show-shortcuts": "Keyboard shortcuts",
-  "open-settings": "Choose a theme",
+  "open-settings": "Settings",
   "open-mode-picker": "Light, dark or system",
   "new-note": "New note",
   "new-folder": "New folder",

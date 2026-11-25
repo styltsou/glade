@@ -3,6 +3,8 @@ import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/
 import { FileText, Folder, Pin, PinOff, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
+import { useNoteLabel } from "@/lib/noteLabel";
+import { NoteTipLabel } from "@/components/sidebar/NoteTipLabel";
 import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 import { canPin, type Group as TabGroup, type Tab, type TabDrop } from "@/lib/tabs";
 import { dragGhost, hitTest, sameDrop } from "@/lib/paneDnd";
@@ -78,7 +80,9 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
   const noteCache = useStore((s) => s.noteCache);
   const entries = useStore((s) => s.entries);
   /** A note's title; its file name until that is known. */
-  const noteLabel = (path: string) => noteCache[path]?.title || findEntryByPath(entries, path)?.name || baseName(path);
+  const labelOf = useNoteLabel();
+  const titleOf = (path: string) => noteCache[path]?.title || findEntryByPath(entries, path)?.name;
+  const noteLabel = (path: string) => labelOf(path, titleOf(path));
   const viewport = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -256,7 +260,7 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
               !focused && "opacity-65 hover:opacity-100",
               // The tab being dragged keeps its shape (which also marks where it came from), with a quieter title.
               draggingId === tab.id && "text-muted-foreground")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
-              <Tip label={draggingId ? null : tab.path ?? (typeof tab.folder === "string" ? tab.folder : rootName)} align="start"><button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
+              <Tip label={draggingId ? null : tab.path ? <NoteTipLabel path={tab.path} title={titleOf(tab.path)} /> : typeof tab.folder === "string" ? tab.folder : rootName} align="start"><button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {
                 if (e.altKey || e.ctrlKey || e.metaKey) return;
                 const at = group.tabs.findIndex((t) => t.id === tab.id);
                 const next = e.key === "ArrowRight" ? group.tabs[(at + 1) % group.tabs.length] : e.key === "ArrowLeft" ? group.tabs[(at - 1 + group.tabs.length) % group.tabs.length] : e.key === "Home" ? group.tabs[0] : e.key === "End" ? group.tabs[group.tabs.length - 1] : null;

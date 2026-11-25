@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/popover";
 import type { NoteCard as NoteCardType } from "@/types";
 import { formatShortDate } from "@/lib/dates";
+import { useNoteLabel } from "@/lib/noteLabel";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 
 interface NoteCardProps {
@@ -26,6 +27,7 @@ interface NoteCardProps {
 
 export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const selectNote = useStore((state) => state.selectNote);
+  const label = useNoteLabel()(card.path, card.title);
   const duplicateNote = useStore((state) => state.duplicateNote);
   const pinNote = useStore((state) => state.pinNote);
   const unpinNote = useStore((state) => state.unpinNote);
@@ -142,7 +144,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
               <DrawingPinFilledIcon className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary rotate-45" />
             )}
             <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2 pr-2">
-              {card.title}
+              {label}
             </span>
           </div>
 
@@ -249,7 +251,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={() => openDelete(card.path, card.title)}>
+        <ContextMenuItem variant="destructive" onClick={() => openDelete(card.path, label)}>
           <TrashIcon className="mr-2 h-4 w-4" />
           Delete
         </ContextMenuItem>

@@ -8,6 +8,7 @@ import { createDialogSlice, type DialogSlice } from "./slices/dialogSlice";
 import { createHomeSlice, type HomeSlice } from "./slices/homeSlice";
 import { createSidebarSlice, type SidebarSlice } from "./slices/sidebarSlice";
 import { createTabsSlice, type TabsSlice } from "./slices/tabsSlice";
+import { createSettingsSlice, type SettingsSlice } from "./slices/settingsSlice";
 
 export type StoreState = ThemeSlice &
   WorkspaceSlice &
@@ -16,7 +17,8 @@ export type StoreState = ThemeSlice &
   DialogSlice &
   HomeSlice &
   SidebarSlice &
-  TabsSlice;
+  TabsSlice &
+  SettingsSlice;
 
 
 export const useStore = create<StoreState>()(
@@ -30,12 +32,14 @@ export const useStore = create<StoreState>()(
       ...createHomeSlice(...a),
       ...createSidebarSlice(...a),
       ...createTabsSlice(...a),
+      ...createSettingsSlice(...a),
     }),
     {
       name: "glade-store",
       partialize: (state) => ({
         theme: state.theme,
         mode: state.mode,
+        noteLabel: state.noteLabel,
         onboarded: state.onboarded,
         tocOpen: state.tocOpen,
         isRawMode: state.isRawMode,

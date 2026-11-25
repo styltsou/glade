@@ -5,7 +5,8 @@ import { ArrowLeft, ArrowRight, Minus, Square, X, Maximize2, PanelLeft, PanelLef
 import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
-import { baseName, splitExtension } from "@/lib/paths";
+import { baseName } from "@/lib/paths";
+import { useNoteLabel } from "@/lib/noteLabel";
 import { historyTarget, type View } from "@/lib/tabs";
 import { FRAME_GAP, useSidebarVisible } from "@/lib/surfaces";
 import { Tip } from "@/components/ui/tooltip";
@@ -25,6 +26,7 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   const goBack = useStore((s) => s.goBack);
   const goForward = useStore((s) => s.goForward);
   const noteCache = useStore((s) => s.noteCache);
+  const labelOf = useNoteLabel();
 
   useEffect(() => {
     const checkMaximized = async () => {
@@ -46,7 +48,7 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
   const navOpen = !!target && !homeOpen;
   /** A place in history, as the tooltips name it. */
   const nameOf = (view: View) => {
-    if (view.path !== null) return noteCache[view.path]?.title || splitExtension(view.path).stem;
+    if (view.path !== null) return labelOf(view.path, noteCache[view.path]?.title);
     return baseName(view.folder ?? target?.path ?? "");
   };
   const sidebarVisible = useSidebarVisible();

@@ -26,8 +26,10 @@ import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Tip } from "@/components/ui/tooltip";
 import { NoteTipLabel } from "./NoteTipLabel";
 import { MarqueeText } from "@/components/ui/marquee-text";
+import { useNoteLabel } from "@/lib/noteLabel";
 
 export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
+  const label = useNoteLabel();
   if (entry.is_dir) {
     return (
       <div className="flex items-center gap-1 w-full rounded-md px-2 py-1.5 text-sm font-medium bg-sidebar-accent text-foreground shadow-lg">
@@ -38,7 +40,7 @@ export function FileTreeNodeStatic({ entry }: { entry: VaultEntry }) {
   }
   return (
     <div className="flex items-center w-full rounded-md py-1.5 px-2 text-sm text-left bg-sidebar-accent text-foreground shadow-lg">
-      <span className="truncate">{entry.name}</span>
+      <span className="truncate">{label(entry.path, entry.name)}</span>
     </div>
   );
 }
@@ -102,6 +104,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     pinnedNotePaths,
     toggleFolderExpanded,
   } = useFileTreeStore();
+  const label = useNoteLabel();
 
   const expanded = expandedFolders.includes(entry.path);
   const isDraggingThis = isDraggingId === entry.path;
@@ -274,7 +277,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
     <ContextMenu>
       <ContextMenuTrigger>
         <div className={cn("relative group/note", isDraggingThis && "opacity-35")}>
-          <Tip label={<NoteTipLabel title={entry.name} path={entry.path} />} side="right">
+          <Tip label={<NoteTipLabel path={entry.path} title={entry.name} />} side="right">
             <button
               onClick={handleClick}
               onAuxClick={(e) => e.button === 1 && (e.preventDefault(), openNote(entry.path, "tab"))}
@@ -287,7 +290,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                   : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09]"
               )}
             >
-              <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
+              <MarqueeText disabled={!!isDraggingId}>{label(entry.path, entry.name)}</MarqueeText>
             </button>
           </Tip>
         </div>
@@ -327,7 +330,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         <ContextMenuSeparator />
         <ContextMenuItem
           variant="destructive"
-          onClick={() => openDelete(entry.path, entry.name)}
+          onClick={() => openDelete(entry.path, label(entry.path, entry.name))}
         >
           <TrashIcon className="h-4 w-4 mr-2" />
           Delete note

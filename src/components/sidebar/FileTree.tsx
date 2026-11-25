@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { VaultEntry } from "@/types";
 import type { TabDrop } from "@/lib/tabs";
 import { hitTest, sameDrop } from "@/lib/paneDnd";
+import { noteLabel } from "@/lib/noteLabel";
 
 function isDescendant(ancestorPath: string, nodePath: string): boolean {
   const ancestorParts = ancestorPath.split("/");
@@ -173,8 +174,9 @@ export function FileTree() {
       if (!started && Math.hypot(ev.clientX - startX, ev.clientY - startY) > 5) {
         started = true;
         document.documentElement.setAttribute("data-dragging-tab", "");
-        dragRef.current = { id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" };
-        setDragState({ id: item.path, name: item.name, type: item.is_dir ? "folder" : "note" });
+        const name = item.is_dir ? item.name : noteLabel(useStore.getState().noteLabel, item.path, item.name);
+        dragRef.current = { id: item.path, name, type: item.is_dir ? "folder" : "note" };
+        setDragState({ id: item.path, name, type: item.is_dir ? "folder" : "note" });
       }
       
       if (!started) return;

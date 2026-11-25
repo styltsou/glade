@@ -21,10 +21,6 @@ export interface DialogSlice {
   deleteIsFolder: boolean;
   openDelete: (path: string, name: string, isFolder?: boolean) => void;
   closeDelete: () => void;
-
-  // Settings dialog
-
-
 }
 
 import type { StoreState } from "../index";

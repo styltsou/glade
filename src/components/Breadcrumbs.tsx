@@ -18,10 +18,12 @@ import { usePanePath } from "@/components/editor/PaneContext";
 import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { Ellipsis, Folder } from "lucide-react";
+import { useNoteLabel } from "@/lib/noteLabel";
+import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 
 interface BreadcrumbsProps {
   path?: string | null;
-  /** The note this trail ends in, shown by file name. */
+  /** The note this trail ends in, named as the "show notes by" setting says. */
   file?: string;
   className?: string;
 }
@@ -65,6 +67,10 @@ export function Breadcrumbs({ path, file, className }: BreadcrumbsProps) {
   const navigateToFolder = useStore((state) => state.navigateToFolder);
   const openRename = useStore((state) => state.openRename);
   const rootName = useStore((state) => (state.target ? baseName(state.target.path) : "Folder"));
+  const labelOf = useNoteLabel();
+  const fileTitle = useStore((state) =>
+    file ? state.noteCache[file]?.title || findEntryByPath(state.entries, file)?.name : undefined,
+  );
 
   const panePath = usePanePath();
   const looseFile = useStore((state) => {
@@ -81,7 +87,7 @@ export function Breadcrumbs({ path, file, className }: BreadcrumbsProps) {
   const items: Crumb[] = [
     { key: "root", label: rootName, folderPath: null },
     ...segments.map((folder, i) => ({ key: segments.slice(0, i + 1).join("/"), label: folder, folderPath: segments.slice(0, i + 1).join("/") })),
-    ...(file ? [{ key: "active", label: baseName(file), folderPath: undefined, onRename: () => openRename(file) }] : []),
+    ...(file ? [{ key: "active", label: labelOf(file, fileTitle), folderPath: undefined, onRename: () => openRename(file) }] : []),
   ];
 
   return (

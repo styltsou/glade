@@ -21,6 +21,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
 import { NoteTipLabel } from "./NoteTipLabel";
+import { useNoteLabel } from "@/lib/noteLabel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, SIDEBAR_COLLAPSE } from "@/lib/utils";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
@@ -168,12 +169,13 @@ function PinnedItem({
   const openRename = useStore((state) => state.openRename);
   const openNote = useStore((state) => state.openNote);
   const openDelete = useStore((state) => state.openDelete);
+  const label = useNoteLabel()(path, name);
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
         <div className="relative group/note">
-          <Tip label={<NoteTipLabel title={name} path={path} />} side="right">
+          <Tip label={<NoteTipLabel path={path} title={name} />} side="right">
             <button
               onClick={onClick}
               className={cn(
@@ -183,7 +185,7 @@ function PinnedItem({
                   : "text-sidebar-foreground font-normal hover:text-foreground hover:bg-sidebar-accent/60"
               )}
             >
-              <MarqueeText>{name}</MarqueeText>
+              <MarqueeText>{label}</MarqueeText>
             </button>
           </Tip>
         </div>
@@ -213,7 +215,7 @@ function PinnedItem({
           Unpin note
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem variant="destructive" onClick={() => openDelete(path, name)}>
+        <ContextMenuItem variant="destructive" onClick={() => openDelete(path, label)}>
           <TrashIcon className="mr-2 h-4 w-4" />
           Delete
         </ContextMenuItem>

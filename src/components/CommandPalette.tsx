@@ -35,6 +35,7 @@ import {
   Sun as SunIcon,
   Trash2 as TrashIcon,
   X as XIcon,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
@@ -61,6 +62,7 @@ import { themes, type ThemeId, type ThemeMode } from "@/themes";
 import { applyToDOM, resolveMode } from "@/store/slices/themeSlice";
 import { ThemeSwatch } from "@/components/ThemeSwatch";
 import { openShortcuts } from "@/components/ShortcutsDialog";
+import { openSettings } from "@/components/SettingsDialog";
 
 type PaletteMode = "search" | "commands" | "themes" | "modes";
 const isPicker = (m: PaletteMode) => m === "themes" || m === "modes";
@@ -118,6 +120,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
       { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
       { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
+      { id: "open-settings", label: "Settings…", icon: SettingsIcon },
       { id: "change-theme", label: "Change theme…", icon: PaletteIcon },
       { id: "change-mode", label: "Light, dark or system…", icon: MoonIcon },
     ],
@@ -310,6 +313,8 @@ function runCommand(id: CommandId): boolean {
       void s.closeTarget();
       break;
     case "open-settings":
+      openSettings();
+      break;
     case "change-theme":
       paletteControls.openThemes();
       break;
@@ -783,7 +788,7 @@ export function CommandPalette() {
                     <CommandPrimitive.Group heading={group.heading} className={groupClass}>
                       {group.items.map((item) => {
                         const Icon = liveIcon(item);
-                        const binding = bindingFor((item.id === "change-theme" ? "open-settings" : item.id === "change-mode" ? "open-mode-picker" : item.id) as GlobalCommand);
+                        const binding = item.id === "change-theme" ? undefined : bindingFor((item.id === "change-mode" ? "open-mode-picker" : item.id) as GlobalCommand);
                         return (
                           <CommandPrimitive.Item
                             key={item.id}

@@ -20,6 +20,7 @@ import { FRAME_GAP, pageCorner, useSidebarVisible } from "@/lib/surfaces";
 import { FolderSwitcher } from "@/components/FolderSwitcher";
 import { MissingLinkDialog } from "@/components/MissingLinkDialog";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { RootMissing } from "@/components/RootMissing";
 import { invoke } from "@tauri-apps/api/core";
@@ -98,6 +99,7 @@ function SharedDialogs() {
       </ErrorBoundary>
       <MissingLinkDialog />
       <ShortcutsDialog />
+      <SettingsDialog />
       <ConfirmDialog />
     </>
   );

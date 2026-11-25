@@ -71,7 +71,7 @@ function key(element: HTMLElement, value: string) {
 describe("editor tab controls", () => {
   it("labels tabs by filename until a title is known and shows the full path in our tooltip, not a native title", () => {
     const controls = render(["drafts/plan.md", "archive/plan.md"]);
-    expect(controls().map((tab) => tab.getAttribute("aria-label"))).toEqual(["plan.md", "plan.md"]);
+    expect(controls().map((tab) => tab.getAttribute("aria-label"))).toEqual(["plan", "plan"]);
     expect(controls().every((tab) => !tab.title && tab.dataset.slot === "tooltip-trigger")).toBe(true);
   });
 
@@ -79,6 +79,12 @@ describe("editor tab controls", () => {
     useStore.setState({ noteCache: { "drafts/plan.md": { title: "Launch plan" } as any } });
     const controls = render(["drafts/plan.md"]);
     expect(controls()[0].getAttribute("aria-label")).toBe("Launch plan");
+  });
+
+  it("labels tabs by file name when the setting says so, even with a title", () => {
+    useStore.setState({ noteLabel: "filename", noteCache: { "drafts/plan.md": { title: "Launch plan" } as any } });
+    const controls = render(["drafts/plan.md"]);
+    expect(controls()[0].getAttribute("aria-label")).toBe("plan");
   });
 
   it("moves focus and selection with arrows and Home/End, wrapping at the ends", () => {
@@ -122,7 +128,7 @@ describe("editor tab controls", () => {
 
   it("can close the last file with its close button, leaving no tabs", () => {
     const controls = render(["a.md"]);
-    const close = host.querySelector<HTMLButtonElement>('[aria-label="Close a.md"]')!;
+    const close = host.querySelector<HTMLButtonElement>('[aria-label="Close a"]')!;
     act(() => close.click());
     expect(controls()).toHaveLength(0);
     expect(host.querySelector('[aria-label="New tab"]')).not.toBeNull();
@@ -133,7 +139,7 @@ describe("editor tab controls", () => {
     key(controls()[0], "Delete");
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
     expect(controls()).toHaveLength(1);
-    expect(controls()[0].getAttribute("aria-label")).toBe("b.md");
+    expect(controls()[0].getAttribute("aria-label")).toBe("b");
     expect(document.activeElement).toBe(controls()[0]);
   });
 
