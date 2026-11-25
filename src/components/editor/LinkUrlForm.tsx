@@ -8,7 +8,6 @@ import { paneNotePath } from "./extensions/PaneNote";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { CornerDownLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tip } from "@/components/ui/tooltip";
 
 /** Inline "Paste or type a link" form: sets, changes or (when empty) removes the link on the selection. */
 export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => void }) {
@@ -38,7 +37,7 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
   };
 
   return (
-    <form className="flex items-center gap-1 rounded-lg border border-border/80 bg-popover p-0.5 shadow-none transition-colors focus-within:border-primary/70" onSubmit={apply}>
+    <form className="flex items-center gap-1 glass-bubble rounded-lg border border-border/80 p-0.5 pr-1 shadow-none transition-colors focus-within:border-primary/70" onSubmit={apply}>
       <input
         autoFocus
         className="h-7 w-52 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"
@@ -52,11 +51,9 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
           editor.commands.focus();
         }}
       />
-      <Tip label="Apply (Enter)" side="bottom">
-        <Button type="submit" size="icon-xs" aria-label="Apply link">
-          <CornerDownLeft />
-        </Button>
-      </Tip>
+      <Button type="submit" size="icon-xs" aria-label="Apply link">
+        <CornerDownLeft />
+      </Button>
     </form>
   );
 }

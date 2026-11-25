@@ -173,9 +173,10 @@ function BubbleButton({
 			onClick={onClick}
 			className={cn(
 				"inline-flex items-center justify-center h-8 w-8 rounded-sm text-sm font-medium transition-colors",
-				"hover:bg-accent hover:text-accent-foreground",
-				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-				isActive && "bg-primary/10 text-primary",
+				// A wash of the text colour, as in the menus: a solid fill would sit on the glass.
+				"hover:bg-foreground/[0.06] active:bg-foreground/[0.09]",
+				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+				isActive && "bg-primary/10 text-primary hover:bg-primary/15",
 				className,
 			)}
 		>
@@ -483,7 +484,7 @@ export function NoteEditor({
 						) : (
 						<div
 							data-suggestion-menu="true"
-							className="flex items-center bg-popover border shadow-lg rounded-md p-0.5 gap-0.5"
+							className="glass-bubble flex items-center shadow-[var(--elev-pop)] rounded-md p-0.5 gap-0.5"
 						>
 							<Popover
 								open={blockPopoverOpen}
@@ -517,8 +518,8 @@ export function NoteEditor({
 										type="button"
 										className={cn(
 											"inline-flex items-center justify-center gap-2 h-8 px-2 rounded-sm text-sm font-medium outline-hidden select-none",
-											"hover:bg-accent hover:text-accent-foreground",
-											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+											"hover:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.09]",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
 										)}
 									>
 										{(() => {
@@ -537,7 +538,7 @@ export function NoteEditor({
 									</button>
 								</PopoverTrigger>
 								<PopoverContent
-									className="w-48 p-0 rounded-md border border-border/60 bg-background/65 text-popover-foreground shadow-lg ring-1 ring-foreground/10 backdrop-blur-xl backdrop-saturate-150 data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100"
+									className="glass-bubble w-48 p-0 rounded-md text-popover-foreground data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100"
 									side={blockPopoverSide}
 									align="start"
 									sideOffset={4}
@@ -589,7 +590,7 @@ export function NoteEditor({
 								<Link2 className="h-4 w-4" />
 							</BubbleButton>
 
-							<div className="w-px h-5 bg-border mx-0.5" />
+							<div className="w-px h-5 bg-foreground/10 mx-0.5" />
 
 							<BubbleButton
 								onClick={() => editor.chain().focus().toggleBold().run()}

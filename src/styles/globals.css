@@ -207,6 +207,15 @@ html[data-fullscreen="true"] .app-frame {
   color: hsl(var(--foreground));
 }
 
+/* The selection bubble and the link field are glass too, only a little more
+   opaque than the menus: they sit right on the text being edited, and the
+   bubble's controls are small icons with no label to carry them. */
+.glass-bubble {
+  background-color: hsl(var(--background) / 0.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  backdrop-filter: blur(24px) saturate(1.5);
+}
+
 /* How floating surfaces enter. They stay anchored to their trigger, but the
    scale is barely there and a short move away from the trigger carries the
    motion, so a menu drops out of its button instead of growing diagonally
