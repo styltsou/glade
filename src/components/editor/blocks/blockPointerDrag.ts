@@ -89,7 +89,14 @@ function dropLineRect(view: EditorView, at: number): { left: number; top: number
 }
 
 /** Start following the pointer from a press on the grip of the block at `from`. */
-export function startBlockDrag(event: PointerEvent, editor: Editor, from: number, controls: HTMLElement) {
+export function startBlockDrag(
+	event: PointerEvent,
+	editor: Editor,
+	from: number,
+	controls: HTMLElement,
+	/** Called when the press was released without moving: a click on the grip. */
+	onTap?: () => void,
+) {
 	if (event.button !== 0 || !editor.isEditable) return;
 	// No text selection, no native drag, no focus change.
 	event.preventDefault();
@@ -193,7 +200,11 @@ export function startBlockDrag(event: PointerEvent, editor: Editor, from: number
 		editor.commands.setMeta("hideDragHandle", true);
 	};
 
-	const onUp = () => finish(true);
+	const onUp = () => {
+		const tapped = !dragging;
+		finish(true);
+		if (tapped) onTap?.();
+	};
 	const onCancel = () => finish(false);
 	const onKey = (e: KeyboardEvent) => {
 		if (e.key !== "Escape") return;

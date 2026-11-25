@@ -96,6 +96,14 @@ describe("shouldShowBubble", () => {
 		expect(ask(editor, { focused: true })).toBe(false);
 	});
 
+	it("does not show for text in a code block", () => {
+		const editor = open("<p>some words</p><pre><code>let value = 1</code></pre>");
+		const start = at(editor, "let value");
+		editor.commands.setTextSelection({ from: start, to: start + 5 });
+		expect(editor.state.selection.$from.parent.type.name).toBe("codeBlock");
+		expect(ask(editor)).toBe(false);
+	});
+
 	it("needs the editor to be focused, or the bubble itself", () => {
 		const editor = open("<p>some words here</p>");
 		editor.commands.setTextSelection({ from: 2, to: 7 });

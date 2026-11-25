@@ -8,7 +8,6 @@ import {
   Eye,
   Copy,
   Check,
-  Trash2,
   Download,
 } from 'lucide-react'
 import { useStore } from '@/store'
@@ -22,16 +21,11 @@ import { renderMermaid, renderMermaidForExport, svgToPng, onMermaidThemeChange }
 interface MermaidBlockViewProps {
   node: any
   updateAttributes: (attrs: Record<string, any>) => void
-  deleteNode: () => void
-  selected: boolean
-  editor: any
 }
 
 export function MermaidBlockView({
   node,
   updateAttributes,
-  deleteNode,
-  editor,
 }: MermaidBlockViewProps) {
   const source: string = node.attrs.source || ''
 
@@ -221,22 +215,6 @@ export function MermaidBlockView({
             </TooltipContent>
           </Tooltip>
 
-          {editor?.isEditable && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => deleteNode()}
-                  className="hover:!text-destructive"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Delete Diagram</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
         </div>
 
         {/* Inline Content */}

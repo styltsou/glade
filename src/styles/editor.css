@@ -348,6 +348,23 @@
   outline-offset: 2px;
 }
 
+/* A caret beside a lone image would be as tall as the image: hide it, and let the image show the cursor is there. */
+.tiptap-editor p.image-lone {
+  caret-color: transparent;
+}
+
+.tiptap-editor.ProseMirror-focused img.image-caret {
+  outline: 2px solid hsl(var(--ring) / 0.45);
+  outline-offset: 2px;
+}
+
+/* A whole block picked with its grip (or a diagram, table or code block clicked as a whole). */
+.tiptap-editor :is(p, h1, h2, h3, h4, ul, ol, li, blockquote, hr, .code-block, .note-table-scroller, [data-type="mermaid-block"]).ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--ring) / 0.6);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .tiptap-editor a img:not(.ProseMirror-separator) {
   cursor: pointer;
 }

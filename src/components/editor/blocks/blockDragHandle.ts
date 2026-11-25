@@ -144,8 +144,11 @@ export function createBlockDragHandleExtension() {
 		dragButtonMount,
 		addBlock,
 		/** A press on the grip: drag the block it belongs to. */
-		startDrag: (event: PointerEvent) => {
-			if (target) startBlockDrag(event, target.editor, target.pos, controls);
+		startDrag: (event: PointerEvent, onTap?: (block: { node: ProseMirrorNode; pos: number }) => void) => {
+			if (!target) return;
+			// The hovered block can change before the release; the click belongs to the one pressed.
+			const { node, pos } = target;
+			startBlockDrag(event, target.editor, pos, controls, onTap && (() => onTap({ node, pos })));
 		},
 		clearAltGuard: () => document.removeEventListener("keydown", preserveBlockControlsOnAlt, true),
 	};

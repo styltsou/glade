@@ -1,8 +1,17 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { CopyPlus, Trash2 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { BlockDragHandle } from "./blockDragHandle";
+import { deleteBlock, duplicateBlock, selectBlock } from "./blockActions";
 
 /**
  * The "+" and drag-grip buttons, rendered into the mount points owned by the
@@ -10,6 +19,30 @@ import type { BlockDragHandle } from "./blockDragHandle";
  * handle from flickering while scrolling or moving between list items.
  */
 export function BlockHandles({ editor, blockControls }: { editor: Editor; blockControls: BlockDragHandle }) {
+	// The block the grip menu is open for: the one pressed, whatever is hovered later.
+	const [menuBlock, setMenuBlock] = useState<{ node: ProseMirrorNode; pos: number } | null>(null);
+
+	const openMenu = (block: { node: ProseMirrorNode; pos: number }) => {
+		const tr = selectBlock(editor.state, block.pos, block.node);
+		if (!tr) return;
+		// Picked as a whole, so it is clear what the menu acts on (and Backspace would remove it).
+		editor.view.dispatch(tr);
+		editor.commands.setMeta("lockDragHandle", true);
+		setMenuBlock(block);
+	};
+
+	const closeMenu = () => {
+		setMenuBlock(null);
+		editor.commands.setMeta("lockDragHandle", false);
+		editor.commands.setMeta("hideDragHandle", true);
+	};
+
+	const run = (action: typeof deleteBlock) => {
+		if (!menuBlock) return;
+		const tr = action(editor.state, menuBlock.pos, menuBlock.node);
+		if (tr) editor.view.dispatch(tr);
+	};
+
 	useEffect(() => {
 		let pointer: { x: number; y: number } | undefined;
 		let pointerAtScroll: { x: number; y: number } | undefined;
@@ -142,14 +175,40 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 				blockControls.addButtonMount,
 			)}
 			{createPortal(
-				<Tooltip>
+				<div className="relative flex">
+				{/* Where the menu anchors: the grip itself, which can't also be its trigger. */}
+				<DropdownMenu open={menuBlock !== null} onOpenChange={(open) => !open && closeMenu()}>
+					<DropdownMenuTrigger asChild>
+						<span aria-hidden className="pointer-events-none absolute inset-0" />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent
+						side="bottom"
+						align="start"
+						className="w-40"
+						onCloseAutoFocus={(event) => {
+							event.preventDefault();
+							editor.view.focus();
+						}}
+					>
+						<DropdownMenuItem onSelect={() => run(duplicateBlock)}>
+							<CopyPlus />
+							Duplicate
+						</DropdownMenuItem>
+						<DropdownMenuItem variant="destructive" onSelect={() => run(deleteBlock)}>
+							<Trash2 />
+							Delete
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
+				<Tooltip open={menuBlock ? false : undefined}>
 					<TooltipTrigger asChild>
 						<button
 							type="button"
 							data-drag-handle=""
-							aria-label="Drag block to move"
+							aria-label="Drag block to move; click for more"
+							aria-haspopup="menu"
 							className="note-block-drag-button"
-							onPointerDown={(event) => blockControls.startDrag(event.nativeEvent)}
+							onPointerDown={(event) => blockControls.startDrag(event.nativeEvent, openMenu)}
 						>
 							<svg viewBox="6 2 12 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
 								<circle cx="9" cy="12" r="1" />
@@ -161,11 +220,18 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 							</svg>
 						</button>
 					</TooltipTrigger>
-					<TooltipContent side="top" className="transition-none">
-						<span className="font-semibold">Drag</span>
-						<span className="text-background/75"> to move</span>
+					<TooltipContent side="top" className="block space-y-0.5 text-center transition-none">
+						<div>
+							<span className="font-semibold">Drag</span>
+							<span className="text-background/75"> to move</span>
+						</div>
+						<div>
+							<span className="font-semibold">Click</span>
+							<span className="text-background/75"> for options</span>
+						</div>
 					</TooltipContent>
-				</Tooltip>,
+				</Tooltip>
+				</div>,
 				blockControls.dragButtonMount,
 			)}
 		</>

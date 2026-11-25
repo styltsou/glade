@@ -21,7 +21,7 @@ interface Box {
  * selection is still changing, and a bubble would trail it and sit under the
  * pointer, so it waits for the release. A node picked as a whole (the block
  * just dropped after a drag, an image that was clicked) is not text to format,
- * so it gets no bubble.
+ * so it gets no bubble; nor does text in a code block.
  */
 export const shouldShowBubble: NonNullable<BubbleMenuPluginProps["shouldShow"]> = ({
 	editor,
@@ -34,6 +34,8 @@ export const shouldShowBubble: NonNullable<BubbleMenuPluginProps["shouldShow"]> 
 	const { selection, doc } = state;
 	if (!editor.isEditable || selection.empty || selection instanceof NodeSelection) return false;
 	if (selectingWithPointer.has(editor)) return false;
+	// Code is not formatted text: no bold or links in it.
+	if (selection.$from.parent.type.spec.code || selection.$to.parent.type.spec.code) return false;
 	if (isTextSelection(selection) && !doc.textBetween(from, to).length) return false;
 	// A click inside the bubble moves focus to it: it is still part of the editor.
 	return view.hasFocus() || element.contains(document.activeElement);

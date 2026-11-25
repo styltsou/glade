@@ -77,7 +77,9 @@ function imageParagraphClass(node: PMNode): string | null {
     } else if (child.type.name !== "hardBreak" && child.text?.trim() !== "") other = true;
   });
   if (images === 0 || other) return null;
-  return images === 1 && !linked ? "image-paragraph image-single" : "image-paragraph";
+  // A lone image makes the line as tall as itself, and so the caret beside it.
+  const lone = images === 1 ? " image-lone" : "";
+  return (images === 1 && !linked ? "image-paragraph image-single" : "image-paragraph") + lone;
 }
 
 /**
@@ -132,10 +134,22 @@ export const LocalImage = Image.extend({
           // Images on their own get room around them; those in a sentence sit in the line.
           decorations(state) {
             const found: Decoration[] = [];
+            const { selection } = state;
             state.doc.descendants((node, pos) => {
               if (!node.isTextblock) return true;
               const name = imageParagraphClass(node);
-              if (name) found.push(Decoration.node(pos, pos + node.nodeSize, { class: name }));
+              if (name) {
+                found.push(Decoration.node(pos, pos + node.nodeSize, { class: name }));
+                // The caret is hidden beside a lone image (it would be as tall as the image),
+                // so the image shows that it is where the caret is: Backspace or Delete removes it.
+                if (name.includes("image-lone") && selection.empty && selection.from > pos && selection.from < pos + node.nodeSize) {
+                  node.forEach((child, offset) => {
+                    if (child.type.name !== "image") return;
+                    const from = pos + 1 + offset;
+                    found.push(Decoration.node(from, from + child.nodeSize, { class: "image-caret" }));
+                  });
+                }
+              }
               return false;
             });
             return DecorationSet.create(state.doc, found);
