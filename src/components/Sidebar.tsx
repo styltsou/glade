@@ -174,7 +174,7 @@ function SidebarResizeHandle({ dragging, onPointerDown }: {
       <TooltipContent
         side="right"
         align="center"
-        sideOffset={12}
+        sideOffset={16}
         updatePositionStrategy="always"
         className="block space-y-0.5 text-center"
       >
