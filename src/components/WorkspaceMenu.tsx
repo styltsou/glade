@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Palette, Pin, PinOff, FolderSearch, FolderOpen, Settings, Sun, X } from "lucide-react";
-import { openModePicker, openThemePicker } from "@/components/CommandPalette";
+import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Pin, PinOff, FolderSearch, FolderOpen, Settings, X } from "lucide-react";
 import { AboutDialog } from "@/components/AboutDialog";
 import { openSettings } from "@/components/SettingsDialog";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
@@ -89,13 +88,13 @@ export function WorkspaceMenu({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={openSwitcher}>
-          <FolderOpen className="size-4" /> Open recent…
+          <FolderOpen className="size-4" /> Open recent
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={pickFolder}>
-          <FolderOpen className="size-4" /> Open folder…
+          <FolderOpen className="size-4" /> Open folder
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={pickFile}>
-          <FileText className="size-4" /> Open file…
+          <FileText className="size-4" /> Open file
         </DropdownMenuItem>
         {folderTarget && (
           <>
@@ -121,15 +120,8 @@ export function WorkspaceMenu({
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={openSettings}>
-          <Settings className="size-4" /> Settings…
+          <Settings className="size-4" /> Settings
           <DropdownMenuShortcut>{formatShortcut(bindingFor("open-settings")!)}</DropdownMenuShortcut>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={openThemePicker}>
-          <Palette className="size-4" /> Theme…
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={openModePicker}>
-          <Sun className="size-4" /> Mode…
-          <DropdownMenuShortcut>{formatShortcut(bindingFor("open-mode-picker")!)}</DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setAboutOpen(true)}>
           <Info className="size-4" /> About Glade
