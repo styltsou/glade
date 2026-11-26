@@ -1,13 +1,12 @@
-import type { ReactNode } from "react";
-import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SEGMENT_SLIDE_MS, Segmented } from "@/components/ui/segmented";
 import { ThemeSwatch } from "@/components/ThemeSwatch";
 import { useStore } from "@/store";
 import { themes, type ThemeId, type ThemeMode } from "@/themes";
 import type { NoteLabel } from "@/store/slices/settingsSlice";
-import { cn } from "@/lib/utils";
 
 export const openSettings = () => useStore.getState().setSettingsOpen(true);
 
@@ -32,6 +31,18 @@ export function SettingsDialog() {
   const resolvedMode = useStore((s) => s.resolvedMode);
   const noteLabel = useStore((s) => s.noteLabel);
   const setNoteLabel = useStore((s) => s.setNoteLabel);
+
+  // Recolouring the whole app takes long enough to swallow the thumb's slide,
+  // so the switch shows the pick at once and the mode follows once it lands.
+  const [shownMode, setShownMode] = useState(mode);
+  const modeTimer = useRef<number>();
+  useEffect(() => setShownMode(mode), [mode]);
+  useEffect(() => () => window.clearTimeout(modeTimer.current), []);
+  const pickMode = (next: ThemeMode) => {
+    setShownMode(next);
+    window.clearTimeout(modeTimer.current);
+    modeTimer.current = window.setTimeout(() => setMode(next), SEGMENT_SLIDE_MS);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -60,8 +71,8 @@ export function SettingsDialog() {
             <Row label="Mode">
               <Segmented
                 label="Mode"
-                value={mode}
-                onChange={setMode}
+                value={shownMode}
+                onChange={pickMode}
                 options={MODES.map((m) => ({ id: m.id, label: <><m.icon className="size-3.5" />{m.label}</> }))}
               />
             </Row>
@@ -95,43 +106,5 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
       </div>
       <div className="shrink-0">{children}</div>
     </div>
-  );
-}
-
-/** A row of mutually exclusive choices; one is always picked. */
-function Segmented<T extends string>({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: { id: T; label: ReactNode }[];
-}) {
-  return (
-    <ToggleGroupPrimitive.Root
-      type="single"
-      aria-label={label}
-      value={value}
-      // Clicking the picked option would clear it; keep it picked.
-      onValueChange={(v) => v && onChange(v as T)}
-      className="flex h-8 items-center gap-0.5 rounded-lg bg-foreground/[0.06] p-0.5"
-    >
-      {options.map((o) => (
-        <ToggleGroupPrimitive.Item
-          key={o.id}
-          value={o.id}
-          className={cn(
-            "flex h-full cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-[13px] text-muted-foreground outline-none transition-colors",
-            "hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
-            "data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-xs",
-          )}
-        >
-          {o.label}
-        </ToggleGroupPrimitive.Item>
-      ))}
-    </ToggleGroupPrimitive.Root>
   );
 }
