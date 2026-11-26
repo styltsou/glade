@@ -685,6 +685,12 @@
   cursor: grabbing;
 }
 
+/* While its menu is open, the grip stays pressed (without the grabbing cursor of a drag). */
+.note-float-block-controls [data-drag-handle][aria-expanded="true"] {
+  background: hsl(var(--foreground) / 0.15);
+  color: hsl(var(--foreground));
+}
+
 .note-block-add-button svg,
 .note-float-block-controls [data-drag-handle] svg {
   width: 1rem;

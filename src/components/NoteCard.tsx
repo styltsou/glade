@@ -97,7 +97,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="block h-full">
+      <ContextMenuTrigger className="group/menu block h-full">
         <div
           onClick={handleClick}
           onMouseEnter={handleMouseEnter}
@@ -115,6 +115,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
             bg-card border border-border/70 shadow-xs
             transition-[border-color,background-color] duration-100
             hover:border-foreground/15 hover:bg-accent/20
+            group-data-[state=open]/menu:border-foreground/15 group-data-[state=open]/menu:bg-accent/30
             active:bg-accent/30
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
           "
@@ -163,7 +164,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
                     <span
                       onMouseEnter={() => setIsPopoverOpen(true)}
                       onMouseLeave={() => setIsPopoverOpen(false)}
-                      className={cn(TAG_PILL, "shrink-0 cursor-pointer whitespace-nowrap hover:bg-primary/20 hover:border-primary/30 transition-colors")}
+                      className={cn(TAG_PILL, "shrink-0 cursor-pointer whitespace-nowrap hover:bg-primary/20 hover:border-primary/30 data-[state=open]:bg-primary/25 data-[state=open]:border-primary/40 transition-colors")}
                     >
                       +{card.tags.length - visibleCount}
                     </span>

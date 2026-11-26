@@ -61,7 +61,7 @@ export function WorkspaceMenu({
       <DropdownMenuTrigger
         aria-label={`${label} menu`}
         className={cn(
-          "flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 text-[13px] font-semibold tracking-[-0.01em] outline-none hover:bg-foreground/[0.07] data-[state=open]:bg-foreground/[0.07]",
+          "flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2.5 text-[13px] font-semibold tracking-[-0.01em] outline-none hover:bg-foreground/[0.07] data-[state=open]:bg-foreground/[0.11]",
           className,
         )}
       >

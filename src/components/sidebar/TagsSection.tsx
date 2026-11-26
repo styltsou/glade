@@ -89,7 +89,7 @@ export function TagsSection() {
                         "flex h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2.5 text-left text-sm transition-colors",
                         active
                           ? "bg-sidebar-accent font-medium text-foreground"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground",
+                          : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-foreground data-[state=open]:bg-sidebar-accent data-[state=open]:text-foreground",
                       )}
                     >
                       {/* Lowercase tags have few ascenders, so the line box looks low: lift the text a pixel. */}

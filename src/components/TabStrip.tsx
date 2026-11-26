@@ -257,10 +257,10 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
             <div onPointerDown={(e) => startTabDrag(e, tab, label)} className={cn("group relative flex h-full w-full items-center overflow-hidden rounded-lg transition-colors duration-100 has-[[role=tab]:focus-visible]:ring-1 has-[[role=tab]:focus-visible]:ring-inset has-[[role=tab]:focus-visible]:ring-ring/50", active
                 // The shape behind is the fill. No transition, or the hover fill would fade out over it.
                 ? "transition-none text-foreground"
-                : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground",
+                : "text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground data-[state=open]:bg-foreground/[0.09] data-[state=open]:text-foreground",
               // The pane without focus dims its labels (not the shapes). By opacity, as
               // in many themes the muted colour is almost the foreground's.
-              !focused && "opacity-65 hover:opacity-100",
+              !focused && "opacity-65 hover:opacity-100 data-[state=open]:opacity-100",
               // The tab being dragged keeps its shape (which also marks where it came from), with a quieter title.
               draggingId === tab.id && "text-muted-foreground")} onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); close(index, tab.id); } }}>
               <Tip label={draggingId ? null : tab.path ? <NoteTipLabel path={tab.path} title={titleOf(tab.path)} /> : typeof tab.folder === "string" ? tab.folder : rootName} align="start"><button type="button" role="tab" id={`file-tab-${tab.id}`} aria-label={label} aria-selected={active} aria-controls={`editor-workspace-${group.id}`} data-group-focused={focused} tabIndex={active ? 0 : -1} className="flex h-full min-w-0 flex-1 items-center gap-2 rounded-lg pl-2.5 pr-8 text-[13px] outline-none @max-[100px]/tab:pr-1.5 @max-[60px]/tab:justify-center @max-[60px]/tab:px-0" onPointerDown={(e) => { if (e.button === 0) activate(index, tab.id); }} onClick={() => { if (!focused || !active) activate(index, tab.id); }} onKeyDown={(e) => {

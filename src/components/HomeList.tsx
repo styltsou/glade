@@ -45,7 +45,7 @@ function Row({ entry, group, selected, onOpen, onHover }: RowProps) {
             "flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors",
             selected
               ? "bg-foreground/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.05)]"
-              : "hover:bg-foreground/[0.05]",
+              : "hover:bg-foreground/[0.05] data-[state=open]:bg-foreground/[0.08]",
             !entry.exists && "opacity-50",
           )}
         >

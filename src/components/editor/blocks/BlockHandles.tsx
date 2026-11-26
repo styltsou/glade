@@ -207,6 +207,7 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 							data-drag-handle=""
 							aria-label="Drag block to move; click for more"
 							aria-haspopup="menu"
+							aria-expanded={menuBlock !== null}
 							className="note-block-drag-button"
 							onPointerDown={(event) => blockControls.startDrag(event.nativeEvent, openMenu)}
 						>

@@ -40,7 +40,7 @@ export function FolderCard({ folder }: FolderCardProps) {
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger className="block h-full">
+      <ContextMenuTrigger className="group/menu block h-full">
         <div
           onClick={handleClick}
           tabIndex={0}
@@ -57,6 +57,7 @@ export function FolderCard({ folder }: FolderCardProps) {
             bg-card border border-border/70 shadow-xs
             transition-[border-color,background-color] duration-100
             hover:border-foreground/15 hover:bg-accent/20
+            group-data-[state=open]/menu:border-foreground/15 group-data-[state=open]/menu:bg-accent/30
             active:bg-accent/30
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
           "
