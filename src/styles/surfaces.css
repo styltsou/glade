@@ -30,6 +30,18 @@
   transition: --flush 180ms var(--ease-ui);
 }
 
+/* Blend the accent into the edge around the corners rather than joining two
+   solid border colours halfway through each curve. */
+.app-frame:has(.sidebar-resize-handle:hover) .surface-page:is([data-pane-index="0"], :not([data-pane-index])),
+[data-resizing="sidebar"] .surface-page:is([data-pane-index="0"], :not([data-pane-index])) {
+  border-color: transparent;
+  background-image:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))),
+    linear-gradient(to right, hsl(var(--primary)), var(--edge) var(--radius-lg));
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+}
+
 .surface-page[data-flush] {
   --flush: 1;
 }

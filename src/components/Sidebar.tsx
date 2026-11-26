@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
 import { TagsSection } from "@/components/sidebar/TagsSection";
 import { FileTree } from "@/components/sidebar/FileTree";
-import { ResizeGrip } from "@/components/ResizeGrip";
+import { GRIP_REACH } from "@/components/ResizeGrip";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { FRAME_GAP } from "@/lib/surfaces";
 import { startSidebarResize } from "@/lib/sidebarResize";
@@ -113,19 +113,81 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
         </div>
       </aside>
 
-      {/* Resize handle: the same as between panes, spanning the pages' height. It starts 1px
-          inside the strip, so the file tree's scrollbar thumb stays as reachable as before. */}
+      {/* The invisible grab area straddles the page's border. */}
       {!sidebarCollapsed && (
-        <ResizeGrip
-          before={-1}
-          dragging={isResizing}
-          aria-label="Resize sidebar"
-          onPointerDown={handlePointerDown}
-          className="top-0 z-20 touch-none"
-          style={{ right: 0, bottom: FRAME_GAP }}
-        />
+        <SidebarResizeHandle dragging={isResizing} onPointerDown={handlePointerDown} />
       )}
     </div>
+  );
+}
+
+/** Follow the pointer vertically while keeping the tooltip anchored to the seam horizontally. */
+function SidebarResizeHandle({ dragging, onPointerDown }: {
+  dragging: boolean;
+  onPointerDown: React.PointerEventHandler<HTMLDivElement>;
+}) {
+  const reach = GRIP_REACH;
+  const [pointerY, setPointerY] = useState(0);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const openTimer = useRef<number>();
+  useEffect(() => () => window.clearTimeout(openTimer.current), []);
+
+  const closeTooltip = () => {
+    window.clearTimeout(openTimer.current);
+    setTooltipOpen(false);
+  };
+  const trackPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (dragging) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPointerY(event.clientY - rect.top);
+  };
+
+  return (
+    <Tooltip open={tooltipOpen && !dragging} onOpenChange={setTooltipOpen}>
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
+        onPointerDown={(event) => {
+          closeTooltip();
+          onPointerDown(event);
+        }}
+        onPointerEnter={(event) => {
+          if (event.pointerType === "touch" || dragging) return;
+          trackPointer(event);
+          window.clearTimeout(openTimer.current);
+          openTimer.current = window.setTimeout(() => setTooltipOpen(true), 100);
+        }}
+        onPointerMove={trackPointer}
+        onPointerLeave={closeTooltip}
+        className="sidebar-resize-handle absolute top-0 z-40 cursor-ew-resize touch-none"
+        style={{ right: -reach / 2, bottom: FRAME_GAP, width: reach }}
+      >
+        <TooltipTrigger asChild>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute size-px"
+            style={{ left: reach / 2, top: pointerY }}
+          />
+        </TooltipTrigger>
+      </div>
+      <TooltipContent
+        side="right"
+        align="center"
+        sideOffset={12}
+        updatePositionStrategy="always"
+        className="block space-y-0.5 text-center"
+      >
+        <div>
+          <span className="font-semibold">Drag</span>
+          <span className="text-background/75"> to resize</span>
+        </div>
+        <div>
+          <span className="font-semibold">{formatShortcut(bindingFor("toggle-sidebar")!)}</span>
+          <span className="text-background/75"> to collapse</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

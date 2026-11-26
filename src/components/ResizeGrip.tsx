@@ -5,18 +5,15 @@ import { SPLIT_GAP } from "@/lib/surfaces";
 export const GRIP_REACH = 10;
 
 /**
- * The draggable seam between two surfaces: between split panes, and between
- * the sidebar and the page. It is one component so the two can't drift apart:
- * a strip of frame, `SPLIT_GAP` wide, holds a 3px rounded line that shows on
- * hover and while dragging, and the grab area around it is always `GRIP_REACH`.
+ * The draggable seam between split panes: a strip of frame, `SPLIT_GAP` wide,
+ * holds a 3px rounded line that shows on hover and while dragging. The grab
+ * area around it is always `GRIP_REACH`.
  *
  * Only the grab area responds to the pointer, so its width is exactly that and
  * not also the strip's. The strip is placed by the caller, against the
  * right-hand page's left edge.
  * `before` is how far the grab area reaches past the strip's left side, over
- * whatever is there (the left page's edge, or the sidebar's scrollbar), and
- * may be negative to start inside the strip. The rest of the reach goes over
- * the right-hand page.
+ * the left page's edge. The rest of the reach goes over the right-hand page.
  */
 export function ResizeGrip({
   before,

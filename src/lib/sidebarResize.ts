@@ -13,7 +13,7 @@ export function startSidebarResize(
   let frame = 0;
   let ended = false;
   root.dataset.resizing = "sidebar";
-  document.body.style.cursor = "col-resize";
+  document.body.style.cursor = "ew-resize";
   handle.setPointerCapture(event.pointerId);
 
   const preview = () => {
