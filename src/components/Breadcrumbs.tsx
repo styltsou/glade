@@ -7,7 +7,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import React, { useLayoutEffect, useRef } from "react";
+import React, { cloneElement, useLayoutEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { HoverCard } from "radix-ui";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -17,7 +17,9 @@ import { isAbsolutePath } from "@/lib/links";
 import { usePanePath } from "@/components/editor/PaneContext";
 import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
-import { Ellipsis, Folder } from "lucide-react";
+import { ChevronDown, ClipboardCopy, Copy, Ellipsis, Folder, FolderSearch, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 import { useNoteLabel } from "@/lib/noteLabel";
 import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 
@@ -28,11 +30,127 @@ interface BreadcrumbsProps {
   className?: string;
 }
 
+/**
+ * Every crumb that does something: the same rounded hover as tabs, sidebar rows
+ * and toolbar buttons. Keyboard focus shows the same fill, not a ring: a menu
+ * hands focus back to its crumb as it closes, and a ring there looked stuck on.
+ * No press scale on text either: on a wide pill it nudges the words sideways.
+ */
+const CRUMB =
+  "flex h-7 cursor-pointer items-center rounded-lg px-2 outline-none transition-colors hover:bg-foreground/[0.07] focus-visible:bg-foreground/[0.07]";
+
+/** What the pointer or focus is on is measured before the tooltip may open, so it shows only for text that is cut off. */
+function measureTruncation(element: HTMLElement): boolean {
+  const text = element.querySelector<HTMLElement>("[data-truncate]") ?? element;
+  return text.scrollWidth > text.clientWidth + 1;
+}
+
+/**
+ * A tooltip with the full name, for text that is cut off. Where all of it shows,
+ * there is nothing more to say, so none opens (`always`: the text is not shown at all).
+ */
+function TruncatedTip({ label, always, children }: { label: ReactNode; always?: boolean; children: ReactElement }) {
+  const worth = useRef(!!always);
+  const [open, setOpen] = useState(false);
+  const measure = (e: { currentTarget: HTMLElement }) => {
+    worth.current = !!always || measureTruncation(e.currentTarget);
+  };
+  return (
+    <Tooltip open={open} onOpenChange={(next) => setOpen(next && worth.current)}>
+      <TooltipTrigger asChild>{cloneElement(children, { onPointerEnter: measure, onFocus: measure })}</TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * The note's actions, from its name in the trail, as in a chat's title menu.
+ * A single opened file has no folder around it to pin, copy or delete it in.
+ */
+function NoteMenu({ file, label, loose }: { file: string; label: string; loose?: boolean }) {
+  const openRename = useStore((state) => state.openRename);
+  const openDelete = useStore((state) => state.openDelete);
+  const duplicateNote = useStore((state) => state.duplicateNote);
+  const pinNote = useStore((state) => state.pinNote);
+  const unpinNote = useStore((state) => state.unpinNote);
+  const pinned = useStore((state) => state.pinnedNotePaths.includes(file));
+  // Set when an item is chosen: focus then goes where the action takes it (the rename
+  // dialog, the note), not back to the crumb, which made the two fight over it.
+  const chose = useRef(false);
+
+  return (
+    <DropdownMenu>
+      <TruncatedTip label={label}>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-current={loose ? undefined : "page"}
+            // Open from aria-expanded: the tooltip shares this element and writes its own data-state over the menu's.
+            className={cn(CRUMB, "group/crumb max-w-[480px] gap-1 font-semibold text-foreground aria-expanded:bg-foreground/[0.11]")}
+          >
+            <span data-truncate className="min-w-0 truncate">{label}</span>
+            <ChevronDown className="size-3.5 shrink-0 text-muted-foreground transition-[color,rotate] duration-100 ease-[var(--ease-ui)] group-hover/crumb:text-foreground group-aria-expanded/crumb:rotate-180 group-aria-expanded/crumb:text-foreground" />
+          </button>
+        </DropdownMenuTrigger>
+      </TruncatedTip>
+      <DropdownMenuContent
+        align="start"
+        sideOffset={6}
+        className="min-w-52"
+        onClick={() => (chose.current = true)}
+        onCloseAutoFocus={(event) => {
+          if (!chose.current) return;
+          chose.current = false;
+          event.preventDefault();
+        }}
+      >
+        {!loose && (
+          <>
+            {pinned ? (
+              <DropdownMenuItem onSelect={() => unpinNote(file)}>
+                <PinOff /> Unpin note
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={() => pinNote(file)}>
+                <Pin /> Pin note
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem onSelect={() => openRename(file)}>
+          <Pencil /> Rename file
+          <DropdownMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</DropdownMenuShortcut>
+        </DropdownMenuItem>
+        {!loose && (
+          <DropdownMenuItem onSelect={() => duplicateNote(file)}>
+            <Copy /> Duplicate
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => revealInFileManager(file)}>
+          <FolderSearch /> Reveal in file manager
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void copyPath(file)}>
+          <ClipboardCopy /> Copy path
+        </DropdownMenuItem>
+        {!loose && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={() => openDelete(file, label)}>
+              <Trash2 /> Delete note
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /** Breadcrumb for a single opened file: its real path, plus ways to open around it. */
 function LooseFileCrumb({ filePath, className }: { filePath: string; className?: string }) {
   const openPath = useStore((state) => state.openPath);
   const home = useStore((state) => state.homeDir);
-  const openRename = useStore((state) => state.openRename);
   const [repoRoot, setRepoRoot] = useState<string | null>(null);
   const dir = dirName(filePath);
 
@@ -46,9 +164,7 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
     <div className={cn("flex items-center gap-3 select-none overflow-hidden text-[14px]", className)}>
       <Tip label={filePath}><span className="truncate text-muted-foreground">
         {shortenPath(dir, home)}/
-        <button className="font-semibold text-foreground hover:underline underline-offset-4" onClick={() => openRename(filePath)}>
-          {baseName(filePath)}
-        </button>
+        <NoteMenu file={filePath} label={baseName(filePath)} loose />
       </span></Tip>
       <button className="shrink-0 text-xs text-muted-foreground hover:text-foreground" onClick={() => openPath(dir)}>
         Open containing folder
@@ -65,7 +181,6 @@ function LooseFileCrumb({ filePath, className }: { filePath: string; className?:
 export function Breadcrumbs({ path, file, className }: BreadcrumbsProps) {
   const currentFolder = useStore((state) => state.currentFolder);
   const navigateToFolder = useStore((state) => state.navigateToFolder);
-  const openRename = useStore((state) => state.openRename);
   const rootName = useStore((state) => (state.target ? baseName(state.target.path) : "Folder"));
   const labelOf = useNoteLabel();
   const fileTitle = useStore((state) =>
@@ -87,7 +202,7 @@ export function Breadcrumbs({ path, file, className }: BreadcrumbsProps) {
   const items: Crumb[] = [
     { key: "root", label: rootName, folderPath: null },
     ...segments.map((folder, i) => ({ key: segments.slice(0, i + 1).join("/"), label: folder, folderPath: segments.slice(0, i + 1).join("/") })),
-    ...(file ? [{ key: "active", label: labelOf(file, fileTitle), folderPath: undefined, onRename: () => openRename(file) }] : []),
+    ...(file ? [{ key: "active", label: labelOf(file, fileTitle), folderPath: undefined, file }] : []),
   ];
 
   return (
@@ -104,8 +219,8 @@ interface Crumb {
   label: string;
   /** Folder to open when clicked; `undefined` = the current (non-link) item. */
   folderPath: string | null | undefined;
-  /** The note's file name renames it when clicked. */
-  onRename?: () => void;
+  /** The note this item is: clicking it opens the note's actions. */
+  file?: string;
 }
 
 /**
@@ -158,42 +273,33 @@ function CollapsingCrumbs({
     const isRoot = item === items[0];
     const content = isRoot ? <Folder className="size-4" aria-label={item.label} /> : item.label;
     const isLast = item.folderPath === undefined || item === items[items.length - 1];
-    // The tooltip always shows the full name, truncated or not.
+    if (item.file) return <NoteMenu file={item.file} label={item.label} />;
+    // The text is what gets measured for being cut off; the root's icon is not text.
+    const text = isRoot ? content : <span data-truncate className="block truncate">{content}</span>;
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          {item.onRename ? (
-            <button
-              type="button"
-              aria-current="page"
-              onClick={item.onRename}
-              className="max-w-[480px] cursor-pointer truncate rounded-sm font-semibold text-foreground underline-offset-4 hover:underline"
-            >
-              {content}
-            </button>
-          ) : isLast ? (
-            <BreadcrumbPage className="max-w-[480px] truncate font-semibold text-foreground">{content}</BreadcrumbPage>
-          ) : (
-            <BreadcrumbLink
-              onClick={() => onNavigate(item.folderPath ?? null)}
-              className="flex max-w-[160px] cursor-pointer items-center truncate text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {content}
-            </BreadcrumbLink>
-          )}
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {item.label}
-          {item.onRename && <span className="ml-2 opacity-60">Rename {formatShortcut(bindingFor("rename-file")!)}</span>}
-        </TooltipContent>
-      </Tooltip>
+      // The root shows only an icon, so its name is always worth saying.
+      <TruncatedTip label={item.label} always={isRoot}>
+        {isLast ? (
+          <BreadcrumbPage className="flex h-7 max-w-[480px] items-center px-2 font-semibold text-foreground">
+            {text}
+          </BreadcrumbPage>
+        ) : (
+          <BreadcrumbLink
+            onClick={() => onNavigate(item.folderPath ?? null)}
+            className={cn(CRUMB, "max-w-[160px] text-muted-foreground hover:text-foreground", isRoot && "press w-7 justify-center px-0")}
+          >
+            {text}
+          </BreadcrumbLink>
+        )}
+      </TruncatedTip>
     );
   };
 
   return (
-    <div ref={outerRef} className={cn("flex min-w-0 select-none items-center overflow-hidden", className)}>
+    <div ref={outerRef} className={cn("-ml-1.5 flex min-w-0 select-none items-center overflow-hidden", className)}>
       <Breadcrumb className="min-w-0">
-        <BreadcrumbList className="flex-nowrap text-[14px]">
+        {/* The crumbs carry their own padding, so the gaps between them are small. */}
+        <BreadcrumbList className="flex-nowrap gap-0.5 text-[14px] sm:gap-0.5">
           <BreadcrumbItem>{renderItem(visible[0])}</BreadcrumbItem>
           {hidden > 0 && (
             <>
@@ -204,7 +310,7 @@ function CollapsingCrumbs({
                     <button
                       type="button"
                       aria-label={`Show ${collapsed.length} hidden folders`}
-                      className="press flex h-5 items-center rounded-md px-1 text-muted-foreground transition-colors hover:bg-foreground/[0.08] hover:text-foreground"
+                      className={cn(CRUMB, "press w-7 justify-center px-0 text-muted-foreground hover:text-foreground data-[state=open]:bg-foreground/[0.11]")}
                     >
                       <Ellipsis className="size-4" />
                     </button>
