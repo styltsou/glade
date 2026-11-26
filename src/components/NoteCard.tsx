@@ -24,9 +24,10 @@ import { cn } from "@/lib/utils";
 /** Space between tags, in px (gap-1.5). */
 const TAG_GAP = 6;
 
-/** A tag, as a pill like the @ references in notes: a neutral tint, not the accent colour. */
+/** A tag, as a pill like the @ references in notes, in tints of the accent colour. */
 const TAG_PILL =
-  "inline-flex items-center rounded-md border border-foreground/10 bg-foreground/[0.07] px-2 py-1 text-xs leading-none font-medium text-foreground/80";
+  // Line height of its own: a tighter one clips descenders (the g in "glade") where the label truncates.
+  "inline-flex items-center rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs leading-4 font-medium text-primary";
 
 interface NoteCardProps {
   card: NoteCardType;
@@ -49,7 +50,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const [visibleCount, setVisibleCount] = useState(Math.min(card.tags.length, MAX_VISIBLE_TAGS));
   const measureRef = useRef<HTMLDivElement>(null);
 
-  // How many tags fit beside the "more" tag, from the real widths of a hidden copy of them.
+  // How many tags fit beside the "+N" tag, from the real widths of a hidden copy of them.
   useLayoutEffect(() => {
     const container = containerRef.current;
     const measure = measureRef.current;
@@ -61,6 +62,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
       setVisibleCount(
         visibleTagCount({
           widths: items.map((item) => item.offsetWidth),
+          total: card.tags.length,
           available: container.clientWidth,
           moreWidth: more?.offsetWidth ?? 0,
           gap: TAG_GAP,
@@ -140,14 +142,14 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           {/* Footer: tags + date */}
           <div className="flex items-center justify-between gap-4 mt-auto pt-3">
             <div ref={containerRef} className="relative flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-              {/* A hidden copy of the tags and the "more" tag: what is measured to see how many fit. */}
+              {/* A hidden copy of the tags and the "+N" tag: what is measured to see how many fit. */}
               <div ref={measureRef} aria-hidden className="pointer-events-none invisible absolute flex gap-1.5 whitespace-nowrap">
                 {card.tags.slice(0, MAX_VISIBLE_TAGS).map((tag) => (
                   <span key={tag} className={cn(TAG_PILL, "max-w-[120px] shrink-0")}>
                     <span className="truncate">{tag}</span>
                   </span>
                 ))}
-                <span className={TAG_PILL}>{card.tags.length} more</span>
+                <span className={TAG_PILL}>+{card.tags.length}</span>
               </div>
               {card.tags.slice(0, visibleCount).map((tag) => (
                 <span key={tag} className={cn(TAG_PILL, "max-w-[120px] shrink-0")}>
@@ -160,9 +162,9 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
                     <span
                       onMouseEnter={() => setIsPopoverOpen(true)}
                       onMouseLeave={() => setIsPopoverOpen(false)}
-                      className={cn(TAG_PILL, "shrink-0 cursor-default whitespace-nowrap text-muted-foreground hover:bg-foreground/[0.12] hover:text-foreground transition-colors")}
+                      className={cn(TAG_PILL, "shrink-0 cursor-pointer whitespace-nowrap hover:bg-primary/20 hover:border-primary/30 transition-colors")}
                     >
-                      {card.tags.length - visibleCount} more
+                      +{card.tags.length - visibleCount}
                     </span>
                   </PopoverTrigger>
                   <PopoverContent

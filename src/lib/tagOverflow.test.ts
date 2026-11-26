@@ -35,6 +35,12 @@ describe("visibleTagCount", () => {
 		expect(visibleTagCount({ ...base, widths: [30, 30, 30, 30], available: 110 })).toBe(2);
 	});
 
+	it("counts the tags that were not measured", () => {
+		// Only the first three have widths; a fourth exists, so one more would be left and two show.
+		expect(visibleTagCount({ ...base, widths: [40, 40, 40], total: 4, available: 400 })).toBe(2);
+		expect(visibleTagCount({ ...base, widths: [40, 40, 40], total: 6, available: 400 })).toBe(3);
+	});
+
 	it("can show none, leaving only the more tag", () => {
 		expect(visibleTagCount({ ...base, widths: [200, 200], available: 100 })).toBe(0);
 	});

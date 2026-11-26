@@ -29,6 +29,7 @@ import { createBlockDragHandleExtension } from "@/components/editor/blocks/block
 import { BlockHandles } from "@/components/editor/blocks/BlockHandles";
 import { PreviewRail } from "@/components/editor/PreviewRail";
 import { ConflictBanner } from "@/components/editor/ConflictBanner";
+import { shouldResetEditor } from "@/lib/editorSync";
 import { isAbsolutePath } from "@/lib/links";
 import { PaneProvider } from "@/components/editor/PaneContext";
 import { cn } from "@/lib/utils";
@@ -231,6 +232,17 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
     if (editor && activeNote) {
       const pathChanged = currentPathRef.current !== activeNote.path;
       (editor.storage as any).paneNote.path = activeNote.path;
+      // This also runs for our own save coming back and for scroll positions. Then the
+      // editor keeps what it holds: resetting it would undo what was typed since, and
+      // jump the scroll and the cursor.
+      const currentMarkdown = getMarkdown(editor);
+      const reset = shouldResetEditor({
+        pathChanged,
+        storedBody: activeNote.body || "",
+        lastSaved: lastSavedContentRef.current,
+        editorMarkdown: currentMarkdown,
+      });
+      if (!reset) return;
       isLoadingRef.current = true;
 
       // Save scroll position for the *previous* note before switching
@@ -276,10 +288,8 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
       }
       if (left && !conflictRef.current) void useStore.getState().leaveNote(left, leftContent, leftSaved);
 
-      const currentMarkdown = getMarkdown(editor);
-
       // Only update content if it actually changed
-      if (pathChanged || currentMarkdown !== activeNote.body) {
+      {
         // Set refs BEFORE setContent so onUpdate sees correct values
         lastSavedContentRef.current = activeNote.body || "";
         latestContentRef.current = activeNote.body || "";
@@ -310,7 +320,7 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
       }
 
       // Restore scroll position for the *new* note immediately after content is set
-      if (pathChanged || currentMarkdown !== activeNote.body) {
+      {
         const savedPosition = noteScrollPositions[activeNote.path];
         if (scrollRef.current) {
           scrollRef.current.scrollTop = savedPosition || 0;
