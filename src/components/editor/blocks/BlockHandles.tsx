@@ -184,7 +184,7 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 					<DropdownMenuContent
 						side="bottom"
 						align="start"
-						className="w-40"
+						className="min-w-40"
 						onCloseAutoFocus={(event) => {
 							event.preventDefault();
 							editor.view.focus();

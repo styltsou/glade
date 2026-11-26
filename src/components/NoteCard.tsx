@@ -1,5 +1,5 @@
 import { useState, useCallback, useLayoutEffect, useRef } from "react";
-import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon, Plus as PlusIcon, Columns2 as ColumnsIcon } from "lucide-react";
+import { Pin as DrawingPinFilledIcon, PinOff as PinOffIcon, Trash2 as TrashIcon, Pencil as PencilIcon, Copy as CopyIcon, Plus as PlusIcon, Columns2 as ColumnsIcon, FolderSearch as FolderSearchIcon, ClipboardCopy as ClipboardCopyIcon } from "lucide-react";
 import { useStore } from "@/store";
 import {
   ContextMenu,
@@ -18,6 +18,7 @@ import type { NoteCard as NoteCardType } from "@/types";
 import { formatShortDate } from "@/lib/dates";
 import { useNoteLabel } from "@/lib/noteLabel";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 import { MAX_VISIBLE_TAGS, visibleTagCount } from "@/lib/tagOverflow";
 import { cn } from "@/lib/utils";
 
@@ -192,7 +193,7 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
         </div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="min-w-48">
         <ContextMenuItem onClick={() => openNote(card.path, "tab")}>
           <PlusIcon className="mr-2 h-4 w-4" />
           Open in new tab
@@ -200,16 +201,6 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
         <ContextMenuItem onClick={() => openNote(card.path, "side")}>
           <ColumnsIcon className="mr-2 h-4 w-4" />
           Open to the side
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => openRename(card.path)}>
-          <PencilIcon className="mr-2 h-4 w-4" />
-          Rename file
-          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => duplicateNote(card.path)}>
-          <CopyIcon className="mr-2 h-4 w-4" />
-          Duplicate
         </ContextMenuItem>
         <ContextMenuSeparator />
         {card.pinned ? (
@@ -224,9 +215,28 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => openRename(card.path)}>
+          <PencilIcon className="mr-2 h-4 w-4" />
+          Rename file
+          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => duplicateNote(card.path)}>
+          <CopyIcon className="mr-2 h-4 w-4" />
+          Duplicate
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => revealInFileManager(card.path)}>
+          <FolderSearchIcon className="mr-2 h-4 w-4" />
+          Reveal in file manager
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => void copyPath(card.path)}>
+          <ClipboardCopyIcon className="mr-2 h-4 w-4" />
+          Copy path
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onClick={() => openDelete(card.path, label)}>
           <TrashIcon className="mr-2 h-4 w-4" />
-          Delete
+          Delete note
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

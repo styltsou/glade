@@ -10,6 +10,8 @@ import {
   ChevronDown,
   Plus as PlusIcon,
   Columns2 as ColumnsIcon,
+  FolderSearch as FolderSearchIcon,
+  ClipboardCopy as ClipboardCopyIcon,
 } from "lucide-react";
 import { useStore } from "@/store";
 import {
@@ -25,6 +27,7 @@ import { useNoteLabel } from "@/lib/noteLabel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn, SIDEBAR_COLLAPSE } from "@/lib/utils";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 import type { NoteCard } from "@/types";
 
 const PINNED_MIN_HEIGHT = 40;
@@ -190,7 +193,7 @@ function PinnedItem({
           </Tip>
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="min-w-48">
         <ContextMenuItem onClick={() => openNote(path, "tab")}>
           <PlusIcon className="mr-2 h-4 w-4" />
           Open in new tab
@@ -198,6 +201,11 @@ function PinnedItem({
         <ContextMenuItem onClick={() => openNote(path, "side")}>
           <ColumnsIcon className="mr-2 h-4 w-4" />
           Open to the side
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onUnpin()}>
+          <PinOffIcon className="mr-2 h-4 w-4" />
+          Unpin note
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => openRename(path)}>
@@ -210,14 +218,18 @@ function PinnedItem({
           Duplicate
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onUnpin()}>
-          <PinOffIcon className="mr-2 h-4 w-4" />
-          Unpin note
+        <ContextMenuItem onClick={() => revealInFileManager(path)}>
+          <FolderSearchIcon className="mr-2 h-4 w-4" />
+          Reveal in file manager
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => void copyPath(path)}>
+          <ClipboardCopyIcon className="mr-2 h-4 w-4" />
+          Copy path
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onClick={() => openDelete(path, label)}>
           <TrashIcon className="mr-2 h-4 w-4" />
-          Delete
+          Delete note
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

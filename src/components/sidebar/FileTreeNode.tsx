@@ -11,6 +11,8 @@ import {
   Trash2 as TrashIcon,
   Plus as PlusIcon,
   Columns2 as ColumnsIcon,
+  FolderSearch as FolderSearchIcon,
+  ClipboardCopy as ClipboardCopyIcon,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -23,6 +25,7 @@ import {
 import { sortEntries } from "./file-tree-helpers";
 import { cn, SIDEBAR_COLLAPSE } from "@/lib/utils";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 import { Tip } from "@/components/ui/tooltip";
 import { NoteTipLabel } from "./NoteTipLabel";
 import { MarqueeText } from "@/components/ui/marquee-text";
@@ -190,7 +193,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
           </ContextMenuTrigger>
 
           <ContextMenuContent
-            className="w-48"
+            className="min-w-48"
             onCloseAutoFocus={(e) => {
               if (!madeNote.current) return;
               madeNote.current = false;
@@ -223,6 +226,15 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             <ContextMenuItem onClick={() => openRename(entry.path, true)}>
               <PencilIcon className="mr-2 h-4 w-4" />
               Rename folder
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={() => revealInFileManager(entry.path)}>
+              <FolderSearchIcon className="mr-2 h-4 w-4" />
+              Reveal in file manager
+            </ContextMenuItem>
+            <ContextMenuItem onClick={() => void copyPath(entry.path)}>
+              <ClipboardCopyIcon className="mr-2 h-4 w-4" />
+              Copy path
             </ContextMenuItem>
             <ContextMenuSeparator />
             <ContextMenuItem
@@ -296,7 +308,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         </div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="min-w-48">
         <ContextMenuItem onClick={() => openNote(entry.path, "tab")}>
           <PlusIcon className="mr-2 h-4 w-4" />
           Open in new tab
@@ -304,16 +316,6 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
         <ContextMenuItem onClick={() => openNote(entry.path, "side")}>
           <ColumnsIcon className="mr-2 h-4 w-4" />
           Open to the side
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => openRename(entry.path)}>
-          <PencilIcon className="mr-2 h-4 w-4" />
-          Rename file
-          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
-        </ContextMenuItem>
-        <ContextMenuItem onClick={() => duplicateNote(entry.path)}>
-          <CopyIcon className="mr-2 h-4 w-4" />
-          Duplicate
         </ContextMenuItem>
         <ContextMenuSeparator />
         {isPinned ? (
@@ -327,6 +329,25 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
             Pin note
           </ContextMenuItem>
         )}
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => openRename(entry.path)}>
+          <PencilIcon className="mr-2 h-4 w-4" />
+          Rename file
+          <ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => duplicateNote(entry.path)}>
+          <CopyIcon className="mr-2 h-4 w-4" />
+          Duplicate
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => revealInFileManager(entry.path)}>
+          <FolderSearchIcon className="mr-2 h-4 w-4" />
+          Reveal in file manager
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => void copyPath(entry.path)}>
+          <ClipboardCopyIcon className="mr-2 h-4 w-4" />
+          Copy path
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
           variant="destructive"

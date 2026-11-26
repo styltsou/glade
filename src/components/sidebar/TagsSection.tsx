@@ -98,7 +98,7 @@ export function TagsSection() {
                       <span className="flex w-3.5 shrink-0 -translate-y-px justify-center text-xs tabular-nums text-muted-foreground/75">{tag.count}</span>
                     </button>
                   </ContextMenuTrigger>
-                  <ContextMenuContent className="w-48">
+                  <ContextMenuContent className="min-w-48">
                     <ContextMenuItem onClick={() => setRenaming(tag.name)}>
                       <PencilIcon className="mr-2 h-4 w-4" />
                       Rename or merge…

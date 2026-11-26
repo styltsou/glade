@@ -13,6 +13,7 @@ import { FRAME_GAP, paneBox, tabsStartFlush, useSidebarVisible } from "@/lib/sur
 import { Tip } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 
 /** A tab's width when the bar has room, and the narrowest it shrinks to. */
 const TAB_WIDTH = 192;
@@ -71,6 +72,7 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
   const splitActive = useStore((s) => s.splitActive);
   const moveToOther = useStore((s) => s.moveTabToOtherGroup);
   const setTabPinned = useStore((s) => s.setTabPinned);
+  const openRename = useStore((s) => s.openRename);
   const tabsState = useStore((s) => s.tabsState);
   const otherGroup = useStore((s) => s.tabsState.groups[index === 0 ? 1 : 0]);
   /** The other pane already shows this note, so there is nothing to move. */
@@ -309,6 +311,16 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
                   ? (tab.path === null || !otherHas(tab.path)) && <ContextMenuItem key="move" onSelect={() => moveToOther(index, tab.id)}>Move to {index === 0 ? "right" : "left"} pane</ContextMenuItem>
                   : <ContextMenuItem key="split" onSelect={() => { activate(index, tab.id); splitActive(); }}>Split right<ContextMenuShortcut>{formatShortcut(bindingFor("split-right")!)}</ContextMenuShortcut></ContextMenuItem>,
               ],
+              // The file or folder the tab shows. A blank tab has none.
+              (() => {
+                const where = tab.path ?? (typeof tab.folder === "string" ? tab.folder : null);
+                if (!where) return [];
+                return [
+                  !!tab.path && <ContextMenuItem key="rename" onSelect={() => openRename(tab.path!)}>Rename file<ContextMenuShortcut>{formatShortcut(bindingFor("rename-file")!)}</ContextMenuShortcut></ContextMenuItem>,
+                  <ContextMenuItem key="reveal" onSelect={() => revealInFileManager(where)}>Reveal in file manager</ContextMenuItem>,
+                  <ContextMenuItem key="copy" onSelect={() => void copyPath(where)}>Copy path</ContextMenuItem>,
+                ];
+              })(),
               // Closing, last. Pinned tabs stay, so the others show only when they would close something.
               [
                 <ContextMenuItem key="close" onSelect={() => close(index, tab.id)}>Close tab<ContextMenuShortcut>{formatShortcut(bindingFor("close-tab")!)}</ContextMenuShortcut></ContextMenuItem>,

@@ -1,8 +1,11 @@
 import {
   Folder,
+  FolderOpen,
   Pencil as PencilIcon,
   Trash2 as TrashIcon,
   Columns2 as ColumnsIcon,
+  FolderSearch as FolderSearchIcon,
+  ClipboardCopy as ClipboardCopyIcon,
 } from "lucide-react";
 import { useCallback } from "react";
 import {
@@ -14,6 +17,7 @@ import {
 } from "@/components/ui/context-menu";
 import { formatShortDate } from "@/lib/dates";
 import { useStore } from "@/store";
+import { copyPath, revealInFileManager } from "@/lib/fileActions";
 import type { VaultEntry } from "@/types";
 
 interface FolderCardProps {
@@ -88,7 +92,11 @@ export function FolderCard({ folder }: FolderCardProps) {
         </div>
       </ContextMenuTrigger>
 
-      <ContextMenuContent className="w-48">
+      <ContextMenuContent className="min-w-48">
+        <ContextMenuItem onClick={handleClick}>
+          <FolderOpen className="mr-2 h-4 w-4" />
+          Open folder
+        </ContextMenuItem>
         <ContextMenuItem onClick={() => openFolderToSide(folder.path)}>
           <ColumnsIcon className="mr-2 h-4 w-4" />
           Open to the side
@@ -98,7 +106,16 @@ export function FolderCard({ folder }: FolderCardProps) {
           onClick={() => openRename(folder.path, true)}
         >
           <PencilIcon className="mr-2 h-4 w-4" />
-          Rename
+          Rename folder
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => revealInFileManager(folder.path)}>
+          <FolderSearchIcon className="mr-2 h-4 w-4" />
+          Reveal in file manager
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => void copyPath(folder.path)}>
+          <ClipboardCopyIcon className="mr-2 h-4 w-4" />
+          Copy path
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -106,7 +123,7 @@ export function FolderCard({ folder }: FolderCardProps) {
           onClick={() => openDelete(folder.path, folder.name, true)}
         >
           <TrashIcon className="mr-2 h-4 w-4" />
-          Delete
+          Delete folder
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
