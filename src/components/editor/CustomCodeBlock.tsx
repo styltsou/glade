@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { Check, Copy } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 const CodeBlockView = ({ node }: any) => {
   const [copied, setCopied] = useState(false)
@@ -33,7 +32,8 @@ const CodeBlockView = ({ node }: any) => {
         <span className="code-block-lang-label">{language || 'code'}</span>
         <button 
           type="button" 
-          className={cn("code-block-btn", copied && "visible")} 
+          className="code-block-btn"
+          aria-label={copied ? "Copied" : "Copy code"}
           onClick={copyToClipboard}
         >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}

@@ -192,12 +192,6 @@
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: all 0.1s ease;
-  opacity: 0;
-}
-
-.tiptap-editor .code-block:hover .code-block-btn,
-.tiptap-editor .code-block-btn.visible {
-  opacity: 1;
 }
 
 .tiptap-editor .code-block-btn:hover {
@@ -205,46 +199,6 @@
   color: hsl(var(--accent-foreground));
 }
 
-.tiptap-editor .code-block-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.tiptap-editor .code-block:hover .code-block-toolbar {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.tiptap-editor .code-block-toolbar-visible {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-
-.tiptap-editor .code-block-copy-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-  padding: 0;
-  transition: all 0.1s ease;
-}
-
-.tiptap-editor .code-block-copy-btn:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
-}
 
 
 .tiptap-editor .code-block .hljs-keyword,

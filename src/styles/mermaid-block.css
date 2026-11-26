@@ -59,7 +59,7 @@
   overflow: hidden;
 }
 
-/* Hover toolbar */
+/* The block's actions: always shown, straight on the block. */
 .mermaid-block-toolbar {
   position: absolute;
   top: 8px;
@@ -67,23 +67,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
-  border-radius: var(--radius);
-  background: hsl(var(--popover) / 90%);
-  backdrop-filter: blur(4px);
-  border: 1px solid hsl(var(--border));
-  opacity: 0;
-  pointer-events: none;
   z-index: 10;
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  transform: translateY(-2px);
-}
-
-.mermaid-block:hover .mermaid-block-toolbar,
-.mermaid-block-source .mermaid-block-toolbar {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
 }
 
 .mermaid-block-toolbar button {
