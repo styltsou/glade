@@ -399,6 +399,21 @@ kbd {
   cursor: grabbing !important;
 }
 
+/* While a resizer is dragged the pointer runs ahead of it, onto pages and
+   editors with cursors of their own: hold the resize cursor everywhere. */
+[data-resizing],
+[data-resizing] * {
+  user-select: none !important;
+}
+[data-resizing="sidebar"],
+[data-resizing="sidebar"] * {
+  cursor: ew-resize !important;
+}
+[data-resizing="pane"],
+[data-resizing="pane"] * {
+  cursor: col-resize !important;
+}
+
 /*
  * Popups (menus, context menus, selects, popovers, tooltips): quick, strong
  * ease-out, and they grow from the trigger or pointer (Radix sets the
