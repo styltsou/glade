@@ -45,7 +45,7 @@ export interface EditorProps {
   split: boolean;
 }
 
-export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps) {
+export function Editor({ path, focused, onFocus, split }: EditorProps) {
   const activeNote = useStore(
     (state) => state.noteCache[path] ?? (state.activeNote?.path === path ? state.activeNote : null),
   );
@@ -354,8 +354,6 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   ]);
 
   // Switching tabs or closing a pane unmounts this editor: never lose unsaved edits.
-  const paneIndexRef = useRef(paneIndex);
-  paneIndexRef.current = paneIndex;
   useEffect(() => {
     return () => {
       const path = currentPathRef.current;
@@ -680,10 +678,10 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   const handleCloseDeleted = useCallback(() => {
     setConflict(null);
     lastSavedContentRef.current = latestContentRef.current;
-    const store = useStore.getState();
-    store.focusGroup(paneIndexRef.current);
-    store.setFocusedPathNull();
-  }, []);
+    // Close the tab, not blank it: a blank tab opened from a single file has no
+    // folder to show, and sat on the loading skeleton.
+    useStore.getState().closePathTab(path);
+  }, [path]);
 
   if (!activeNote) {
     return (

@@ -121,6 +121,13 @@
   margin-bottom: 0;
 }
 
+/* The space after a list is the list's own margin. Its last item's margin would add to it,
+   and more so for a task item, which is the reason a list below a task list sat further away. */
+.tiptap-editor > :is(ul, ol) > li:last-child,
+.tiptap-editor > ul[data-type="taskList"] > :last-child > li {
+  margin-bottom: 0;
+}
+
 .tiptap-editor ul[data-type="taskList"] li[data-checked="true"] > div {
   text-decoration: line-through;
   color: hsl(var(--muted-foreground));

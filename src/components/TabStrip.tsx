@@ -242,9 +242,10 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
 
   const action = "press flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-foreground/[0.07] hover:text-foreground";
   // Not flush, the tabs start 4px in and the first curve overlaps the empty
-  // padding beside the folder name: the scroller reaches back for it.
+  // padding beside the folder name: the scroller reaches back for it. With no
+  // tabs it is just that padding, so the + sits where the first tab would.
   return <div className="sidebar-motion pointer-events-auto flex h-full min-w-0 items-center pr-1" style={{ marginLeft: lead, paddingLeft: flush ? 0 : 4, paddingRight: trailing || undefined }}>
-    <div ref={viewport} role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} data-tab-strip={index} data-no-drag className="sidebar-motion overlay-scroll relative flex h-full min-w-0 items-center overflow-x-auto overflow-y-hidden pr-1 scroll-pl-4 scroll-pr-2" style={{ flex: "0 1 auto", marginLeft: flush ? 0 : -CURVE, paddingLeft: flush ? 0 : CURVE, minWidth: group.tabs.length ? undefined : 48 }}>
+    <div ref={viewport} role="tablist" aria-label={split ? `${index === 0 ? "Left" : "Right"} pane tabs` : "Open files"} data-tab-strip={index} data-no-drag className="sidebar-motion overlay-scroll relative flex h-full min-w-0 items-center overflow-x-auto overflow-y-hidden pr-1 scroll-pl-4 scroll-pr-2" style={{ flex: "0 1 auto", marginLeft: flush ? 0 : -CURVE, paddingLeft: flush ? 0 : CURVE }}>
       <AnimatePresence initial={false}>
       {group.tabs.map((tab, position) => {
         const active = tab.id === group.activeId;

@@ -18,6 +18,15 @@ import type { NoteCard as NoteCardType } from "@/types";
 import { formatShortDate } from "@/lib/dates";
 import { useNoteLabel } from "@/lib/noteLabel";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
+import { MAX_VISIBLE_TAGS, visibleTagCount } from "@/lib/tagOverflow";
+import { cn } from "@/lib/utils";
+
+/** Space between tags, in px (gap-1.5). */
+const TAG_GAP = 6;
+
+/** A tag, as a pill like the @ references in notes: a neutral tint, not the accent colour. */
+const TAG_PILL =
+  "inline-flex items-center rounded-md border border-foreground/10 bg-foreground/[0.07] px-2 py-1 text-xs leading-none font-medium text-foreground/80";
 
 interface NoteCardProps {
   card: NoteCardType;
@@ -37,61 +46,30 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
   const prefetchNote = useStore((state) => state.prefetchNote);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [visibleCount, setVisibleCount] = useState(card.tags.length > 3 ? 3 : card.tags.length);
+  const [visibleCount, setVisibleCount] = useState(Math.min(card.tags.length, MAX_VISIBLE_TAGS));
+  const measureRef = useRef<HTMLDivElement>(null);
 
+  // How many tags fit beside the "more" tag, from the real widths of a hidden copy of them.
   useLayoutEffect(() => {
-    if (!containerRef.current) return;
-
     const container = containerRef.current;
-    const calculateVisibleTags = () => {
-      const containerWidth = container.offsetWidth;
-      const tagsToConsider = card.tags.slice(0, 3);
-      if (tagsToConsider.length === 0) return 0;
+    const measure = measureRef.current;
+    if (!container || !measure) return;
 
-      // Temporary element to measure tag widths
-      const measureDiv = document.createElement("div");
-      measureDiv.style.visibility = "hidden";
-      measureDiv.style.position = "absolute";
-      measureDiv.style.display = "flex";
-      measureDiv.style.gap = "6px"; // gap-1.5
-      measureDiv.style.fontSize = "10px";
-      measureDiv.style.padding = "0 6px"; // buffer
-      document.body.appendChild(measureDiv);
-
-      let currentWidth = 0;
-      let count = 0;
-      const indicatorWidth = card.tags.length > 3 ? 25 : 0; // Estimated '+N' width
-
-      for (let i = 0; i < tagsToConsider.length; i++) {
-        const span = document.createElement("span");
-        span.innerText = tagsToConsider[i];
-        span.style.padding = "0 6px"; // px-1.5
-        span.style.border = "1px solid"; // border
-        measureDiv.appendChild(span);
-        
-        const tagWidth = span.offsetWidth + 6; // item + gap
-        if (currentWidth + tagWidth + indicatorWidth > containerWidth && count > 0) {
-          break;
-        }
-        currentWidth += tagWidth;
-        count++;
-      }
-
-      document.body.removeChild(measureDiv);
-      
-      // If we have tags left over, ensure there are at least 2 in the popover
-      // so it doesn't look weird with just one tag.
-      let finalCount = count;
-      const leftover = card.tags.length - count;
-      if (leftover === 1 && finalCount > 0) {
-        finalCount -= 1;
-      }
-      
-      setVisibleCount(finalCount);
+    const calculate = () => {
+      const items = Array.from(measure.children) as HTMLElement[];
+      const more = items.pop();
+      setVisibleCount(
+        visibleTagCount({
+          widths: items.map((item) => item.offsetWidth),
+          available: container.clientWidth,
+          moreWidth: more?.offsetWidth ?? 0,
+          gap: TAG_GAP,
+        }),
+      );
     };
 
-    calculateVisibleTags();
-    const observer = new ResizeObserver(calculateVisibleTags);
+    calculate();
+    const observer = new ResizeObserver(calculate);
     observer.observe(container);
     return () => observer.disconnect();
   }, [card.tags]);
@@ -161,49 +139,42 @@ export function NoteCard({ card, onOpen, showPin = true }: NoteCardProps) {
 
           {/* Footer: tags + date */}
           <div className="flex items-center justify-between gap-4 mt-auto pt-3">
-            <div ref={containerRef} className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
-              <div className="flex items-center gap-1 flex-nowrap overflow-hidden min-w-0">
-                {card.tags.slice(0, visibleCount).map((tag) => (
-                  <span
-                    key={tag}
-                    className="
-                      text-[10px] font-medium px-1.5 py-0.5 rounded-sm border
-                      text-primary/70 bg-primary/5 border-primary/10
-                      truncate max-w-[120px] shrink-0
-                    "
-                  >
-                    {tag}
+            <div ref={containerRef} className="relative flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
+              {/* A hidden copy of the tags and the "more" tag: what is measured to see how many fit. */}
+              <div ref={measureRef} aria-hidden className="pointer-events-none invisible absolute flex gap-1.5 whitespace-nowrap">
+                {card.tags.slice(0, MAX_VISIBLE_TAGS).map((tag) => (
+                  <span key={tag} className={cn(TAG_PILL, "max-w-[120px] shrink-0")}>
+                    <span className="truncate">{tag}</span>
                   </span>
                 ))}
+                <span className={TAG_PILL}>{card.tags.length} more</span>
               </div>
-              {(card.tags.length > visibleCount) && (
+              {card.tags.slice(0, visibleCount).map((tag) => (
+                <span key={tag} className={cn(TAG_PILL, "max-w-[120px] shrink-0")}>
+                  <span className="truncate">{tag}</span>
+                </span>
+              ))}
+              {card.tags.length > visibleCount && (
                 <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                   <PopoverTrigger asChild>
                     <span
                       onMouseEnter={() => setIsPopoverOpen(true)}
                       onMouseLeave={() => setIsPopoverOpen(false)}
-                      className="
-                        text-[10px] font-bold shrink-0 cursor-default px-1.5 py-0.5 rounded-sm border
-                        text-primary/70 bg-primary/5 border-primary/10
-                        hover:text-primary transition-colors
-                      "
+                      className={cn(TAG_PILL, "shrink-0 cursor-default whitespace-nowrap text-muted-foreground hover:bg-foreground/[0.12] hover:text-foreground transition-colors")}
                     >
-                      +{card.tags.length - visibleCount}
+                      {card.tags.length - visibleCount} more
                     </span>
                   </PopoverTrigger>
                   <PopoverContent
                     side="top"
                     align="start"
-                    className="w-auto p-2 flex flex-wrap gap-1.5 max-w-[280px] bg-popover/95 backdrop-blur-sm border-primary/10 shadow-xl"
+                    className="w-auto p-2 flex flex-wrap gap-1.5 max-w-[280px]"
                     onMouseEnter={() => setIsPopoverOpen(true)}
                     onMouseLeave={() => setIsPopoverOpen(false)}
                   >
                     {card.tags.slice(visibleCount).map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary border border-primary/20"
-                      >
-                        {tag}
+                      <span key={tag} className={cn(TAG_PILL, "max-w-full")}>
+                        <span className="truncate">{tag}</span>
                       </span>
                     ))}
                   </PopoverContent>
