@@ -178,3 +178,15 @@ const foldMarkers = foldGutter({
 });
 
 export const mermaidEditorExtensions = [mermaidLanguage, indentFold, foldMarkers, syntaxHighlighting(highlight), theme, EditorView.lineWrapping];
+
+/**
+ * The block's own code view, in the note: the same highlighting, sized like a
+ * code block's text, with room at the top for the block's buttons.
+ */
+const inlineTheme = EditorView.theme({
+  "&.cm-editor .cm-scroller": { lineHeight: "1.6" },
+  "&.cm-editor .cm-content": { padding: "2.5rem 0 1rem" },
+  "&.cm-editor .cm-line": { padding: "0 1rem" },
+});
+
+export const mermaidInlineExtensions = [mermaidLanguage, syntaxHighlighting(highlight), theme, inlineTheme, EditorView.lineWrapping];

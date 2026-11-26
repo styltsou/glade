@@ -42,21 +42,9 @@
   background: hsl(var(--muted) / 10%);
 }
 
-.mermaid-block-textarea {
-  width: 100%;
+/* Its CodeMirror editor (lib/mermaidCodemirror.ts), at least as tall as an empty diagram. */
+.mermaid-block-source .cm-editor {
   min-height: 120px;
-  padding: 1.25rem;
-  padding-top: 2.5rem; /* Room for toolbar */
-  font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.6;
-  border: none;
-  outline: none;
-  resize: none;
-  background: transparent;
-  color: hsl(var(--foreground));
-  display: block;
-  overflow: hidden;
 }
 
 /* The block's actions: always shown, straight on the block. */

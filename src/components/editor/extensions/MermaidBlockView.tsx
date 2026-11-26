@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper } from '@tiptap/react'
 import { invoke } from '@tauri-apps/api/core'
@@ -15,6 +15,8 @@ import { AnimatePresence } from 'motion/react'
 import { MermaidFullView } from './MermaidFullView'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import CodeMirror from '@uiw/react-codemirror'
+import { mermaidInlineExtensions } from '@/lib/mermaidCodemirror'
 
 import { renderMermaid, renderMermaidForExport, svgToPng, onMermaidThemeChange } from '@/lib/mermaid'
 
@@ -40,8 +42,8 @@ export function MermaidBlockView({
   const [copied, setCopied] = useState(false)
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null)
   
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** The source last sent to Mermaid, so the same text isn't drawn twice. */
+  const renderedRef = useRef<string | null>(null)
 
   // Find portal target on mount
   useEffect(() => {
@@ -57,6 +59,7 @@ export function MermaidBlockView({
 
   // Render diagram (debounced)
   const doRender = useCallback(async (src: string) => {
+    renderedRef.current = src
     if (!src.trim()) {
       setSvg(null)
       setError(null)
@@ -76,18 +79,16 @@ export function MermaidBlockView({
     }
   }, [])
 
-  // Instant render when in code view (typing), deferred for initial/preview
+  // Redraw shortly after the text changes: typing in either code view, or the
+  // note changing underneath. (The inline view saves every keystroke, so the
+  // text never differs from the saved source; compare with what was drawn.)
   useEffect(() => {
-    if ((viewMode === 'code' || isFullViewOpen) && draft !== source) {
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      debounceRef.current = setTimeout(() => {
-        doRender(draft)
-      }, 150)
-      return () => {
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-      }
-    }
-  }, [draft, viewMode, isFullViewOpen, source, doRender])
+    if (draft === renderedRef.current) return
+    const timer = setTimeout(() => {
+      if (draft !== renderedRef.current) doRender(draft)
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [draft, doRender])
 
   // Deferred initial render - let editor paint first
   useEffect(() => {
@@ -157,23 +158,6 @@ export function MermaidBlockView({
     }
   }, [draft, source])
 
-  // Auto-resize textarea height
-  useLayoutEffect(() => {
-    if (viewMode === 'code' && textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
-  }, [draft, viewMode])
-
-  // Position cursor at end when switching to code mode
-  useEffect(() => {
-    if (viewMode === 'code' && textareaRef.current) {
-      const len = textareaRef.current.value.length
-      textareaRef.current.setSelectionRange(len, len)
-      textareaRef.current.focus()
-    }
-  }, [viewMode])
-
   // ─── Inline View ───
   return (
     <NodeViewWrapper data-type="mermaid-block">
@@ -241,23 +225,38 @@ export function MermaidBlockView({
             )}
           </div>
         ) : (
-          <div className="mermaid-block-source">
-            <textarea
-              ref={textareaRef}
-              className="mermaid-block-textarea"
+          <div
+            className="mermaid-block-source"
+            onKeyDown={(e) => {
+              // Esc goes back to the diagram; keys typed here stay out of the app's shortcuts.
+              if (e.key === 'Escape') setViewMode('preview')
+              e.stopPropagation()
+            }}
+          >
+            <CodeMirror
               value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value)
-                updateAttributes({ source: e.target.value })
+              theme="none"
+              extensions={mermaidInlineExtensions}
+              onChange={(value) => {
+                setDraft(value)
+                updateAttributes({ source: value })
               }}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') {
-                  setViewMode('preview')
-                }
-                e.stopPropagation()
+              placeholder="Type Mermaid syntax"
+              basicSetup={{
+                lineNumbers: false,
+                foldGutter: false,
+                highlightActiveLine: false,
+                highlightActiveLineGutter: false,
+                highlightSelectionMatches: true,
+                bracketMatching: true,
+                autocompletion: false,
+                searchKeymap: false,
               }}
-              placeholder="Type mermaid diagram syntax..."
-              spellCheck={false}
+              // Opens with the caret at the end of the source.
+              onCreateEditor={(view) => {
+                view.dispatch({ selection: { anchor: view.state.doc.length } })
+                view.focus()
+              }}
             />
           </div>
         )}
