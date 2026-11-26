@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
-import { PanelLeft } from "lucide-react";
+import { SidebarToggleIcon } from "@/components/SidebarToggleIcon";
 import { useStore } from "@/store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PinnedSection } from "@/components/sidebar/PinnedSection";
@@ -204,7 +204,7 @@ export function SidebarCollapseToggle() {
           onClick={toggleSidebarCollapsed}
           className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 bg-sidebar border border-border border-l-0 text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors duration-100 cursor-pointer"
         >
-          <PanelLeft className="h-4 w-4" />
+          <SidebarToggleIcon expanded={!sidebarCollapsed} />
         </button>
       </TooltipTrigger>
       <TooltipContent side="right">

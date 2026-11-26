@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ArrowLeft, ArrowRight, Minus, Square, X, Maximize2, PanelLeft, PanelLeftClose } from "lucide-react";
+import { ArrowLeft, ArrowRight, Minus, Square, X, Maximize2 } from "lucide-react";
+import { SidebarToggleIcon } from "@/components/SidebarToggleIcon";
 import { useStore } from "@/store";
 import { WorkspaceMenu } from "@/components/WorkspaceMenu";
 import { TabStrip } from "@/components/TabStrip";
@@ -120,13 +121,9 @@ export function TitleBar({ sidebarPreview }: { sidebarPreview: SidebarPreview })
         onPointerLeave={sidebarPreview.leave}
         aria-label="Toggle sidebar"
         aria-expanded={!sidebarCollapsed}
-        className={iconButton}
+        className={`${iconButton} shrink-0`}
       >
-        {sidebarCollapsed ? (
-          <PanelLeft className="h-4 w-4" />
-        ) : (
-          <PanelLeftClose className="h-4 w-4" />
-        )}
+        <SidebarToggleIcon expanded={!sidebarCollapsed} />
       </button></Tip>}
       {navOpen && (
         <div className={`flex shrink-0 items-center gap-0.5 ${sidebarVisible ? "ml-auto" : ""}`}>

@@ -89,6 +89,7 @@ textarea:focus:not([aria-invalid="true"]) {
   --dur-press: 100ms;
   --dur-fast: 100ms;
   --dur-base: 150ms;
+  --dur-sidebar: 180ms;
 
   --shadow-rgb: 24 24 27;
   --elev-xs: 0 1px 2px rgb(var(--shadow-rgb) / 0.06);
@@ -367,11 +368,28 @@ kbd {
    follow the pointer instead. */
 .sidebar-motion {
   transition-property: width, margin-left, padding-left;
-  transition-duration: 180ms;
+  transition-duration: var(--dur-sidebar);
   transition-timing-function: var(--ease-ui);
 }
 [data-resizing] .sidebar-motion {
   transition: none;
+}
+
+.sidebar-toggle-fill {
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(0.333333);
+  transition: transform var(--dur-sidebar) var(--ease-ui);
+}
+
+[data-sidebar-expanded="true"] .sidebar-toggle-fill {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-toggle-fill {
+    transition: none;
+  }
 }
 
 /* While a tab or sidebar item is dragged: no text selection, grabbing cursor. */
