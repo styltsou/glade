@@ -107,6 +107,12 @@ async function flush(scope: string | null, save: (path: string, content: string)
 	}
 }
 
+/** Save mounted editors before their window changes to another root. */
+export async function flushOpenEditors(save: (path: string, content: string) => Promise<void>): Promise<void> {
+	await lastChange;
+	await flush(null, save);
+}
+
 interface FileChange<Note> {
 	/** The note or folder that changes; null when any open note may. */
 	scope: string | null;

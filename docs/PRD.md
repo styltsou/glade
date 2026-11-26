@@ -1,3 +1,6 @@
+---
+tags: [prd]
+---
 # Glade — Product Requirements Document
 
 **Status:** Current. Replaces the original v1 draft (a fixed `~/.glade` vault with built-in Git sync).
@@ -35,7 +38,7 @@ Developers, technical writers and people who keep markdown in folders (repos, Ob
 ## 4. Features
 
 ### Opening and Home
-- Open a folder or a single file; one window per root, several windows at once.
+- Open a folder or a single file in the current window; focus its existing window if already open. External opens can create additional windows, with one window per root.
 - Home lists pinned folders, recent folders and recent files; arrow keys and Enter work without a search box. The `Cmd/Ctrl+O` switcher has a filter. `Cmd/Ctrl+O` switches folder; `Cmd/Ctrl+Shift+H` opens Home.
 - Last session is restored on launch. Missing folders offer "Locate" or "Remove".
 

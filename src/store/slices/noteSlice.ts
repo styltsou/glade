@@ -88,11 +88,17 @@ export interface NoteSlice {
 
 import type { StoreState } from "../index";
 
-/** Notes created in this session: only these are removed when left empty. */
+/** Notes created while this root is open: only these are removed when left empty. */
 const freshNotes = new Set<string>();
 
 /** The most recently requested note; stale reads must not replace it. */
 let latestSelect = "";
+
+/** Relative note paths and pending selections belong to the root being left. */
+export function resetNoteSession(): void {
+  freshNotes.clear();
+  latestSelect = "";
+}
 
 const errorText = (e: unknown) => String(e).replace(/^(Error|Invalid path): /, "");
 
@@ -201,6 +207,7 @@ const noteActions = (
 
   loadNote: async (path: string, partial?: Partial<NoteData>) => {
     latestSelect = path;
+    const target = get().target;
     const { noteCache } = get();
     
     if (partial || noteCache[path]) {
@@ -224,6 +231,7 @@ const noteActions = (
 
     try {
       const note = await invoke<NoteData>("read_note", { path });
+      if (get().target !== target) return;
       
       set((state: StoreState) => ({ 
         noteCache: { ...state.noteCache, [path]: note } 
@@ -236,6 +244,7 @@ const noteActions = (
         set({ activeNote: note, currentFolder: null, vaultError: null });
       }
     } catch (e) {
+      if (get().target !== target) return;
       if (!get().activeNote) {
         set({ vaultError: String(e) });
       }

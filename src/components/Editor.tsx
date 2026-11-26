@@ -47,6 +47,7 @@ export interface EditorProps {
 }
 
 export function Editor({ path, focused, onFocus, split }: EditorProps) {
+  const target = useStore((state) => state.target);
   const activeNote = useStore(
     (state) => state.noteCache[path] ?? (state.activeNote?.path === path ? state.activeNote : null),
   );
@@ -366,6 +367,9 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
   // Switching tabs or closing a pane unmounts this editor: never lose unsaved edits.
   useEffect(() => {
     return () => {
+      // Root changes flush first. Relative paths here belong to the old root.
+      const current = useStore.getState().target;
+      if (current?.kind !== target?.kind || current?.path !== target?.path) return;
       const path = currentPathRef.current;
       if (!path || conflictRef.current) return;
       const content = latestContentRef.current;
@@ -376,7 +380,7 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
       }
       void useStore.getState().leaveNote(path, content, saved);
     };
-  }, []);
+  }, [target]);
 
   useEffect(() => {
     return () => {
