@@ -37,7 +37,7 @@ export function LinkUrlForm({ editor, onDone }: { editor: Editor; onDone: () => 
   };
 
   return (
-    <form className="flex items-center gap-1 glass-bubble rounded-lg border border-border/80 p-0.5 pr-1 shadow-none transition-colors focus-within:border-primary/70" onSubmit={apply}>
+    <form className="flex items-center gap-1 glass-bubble rounded-lg border border-border/80 p-0.5 pr-1 shadow-none transition-colors focus-within:border-primary" onSubmit={apply}>
       <input
         autoFocus
         className="h-7 w-52 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground"

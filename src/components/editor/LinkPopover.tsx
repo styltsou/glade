@@ -14,7 +14,7 @@ type ActiveLink = { anchor: HTMLAnchorElement; href: string };
 const CARD =
   "link-popover link-card rounded-xl border-border/40 bg-background/95 shadow-xs backdrop-blur-xl";
 const FIELD =
-  "h-8 rounded-md border border-border/70 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40";
+  "h-8 rounded-md border border-border/70 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20";
 
 /**
  * Hovering a link shows a small card with its URL, a copy button and an edit

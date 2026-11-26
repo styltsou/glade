@@ -73,6 +73,12 @@
   }
 }
 
+/* Text fields share the theme accent, including fields built without Input. */
+input:focus:not([aria-invalid="true"]),
+textarea:focus:not([aria-invalid="true"]) {
+  border-color: hsl(var(--primary));
+}
+
 /* ── Motion + elevation tokens ───────────────────────────────────────────────
    Strong custom curves (built-in CSS easings are too weak), and soft layered
    shadows tinted per mode so surfaces feel lifted rather than outlined. */
@@ -454,7 +460,7 @@ kbd {
 }
 
 [data-slot="popover-content"].link-popover:not(.link-card):focus-within {
-  border-color: hsl(var(--primary) / 0.7) !important;
+  border-color: hsl(var(--primary)) !important;
 }
 
 /* Opacity only: preserve caret alignment without the shared slide or zoom. */

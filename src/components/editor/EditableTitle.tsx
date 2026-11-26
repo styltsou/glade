@@ -143,7 +143,7 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
   return (
     <div className="mb-2 flex items-center overflow-visible">
       {edit ? (
-        <div className={cn(titleSurface, "inline-block border-primary/70 bg-muted/60")}>
+        <div className={cn(titleSurface, "inline-block border-primary bg-muted/60")}>
           <span aria-hidden="true" className={cn(titleText, "invisible block overflow-hidden whitespace-pre")}>
             {edit.value || "Untitled"}
           </span>
