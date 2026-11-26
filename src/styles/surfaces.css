@@ -30,10 +30,14 @@
   transition: --flush 180ms var(--ease-ui);
 }
 
-/* Blend the accent into the edge around the corners rather than joining two
+/* A seam being hovered or dragged lights the left edge of the page to its
+   right: the sidebar's, or the one between split panes.
+   Blend the accent into the edge around the corners rather than joining two
    solid border colours halfway through each curve. */
 .app-frame:has(.sidebar-resize-handle:hover) .surface-page:is([data-pane-index="0"], :not([data-pane-index])),
-[data-resizing="sidebar"] .surface-page:is([data-pane-index="0"], :not([data-pane-index])) {
+[data-resizing="sidebar"] .surface-page:is([data-pane-index="0"], :not([data-pane-index])),
+.app-frame:has(.pane-resize-handle:hover) .surface-page[data-pane-index="1"],
+[data-resizing="pane"] .surface-page[data-pane-index="1"] {
   border-color: transparent;
   background-image:
     linear-gradient(hsl(var(--background)), hsl(var(--background))),

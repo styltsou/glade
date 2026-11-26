@@ -5,9 +5,10 @@ import { SPLIT_GAP } from "@/lib/surfaces";
 export const GRIP_REACH = 10;
 
 /**
- * The draggable seam between split panes: a strip of frame, `SPLIT_GAP` wide,
- * holds a 3px rounded line that shows on hover and while dragging. The grab
- * area around it is always `GRIP_REACH`.
+ * The draggable seam between split panes: a strip of frame, `SPLIT_GAP` wide.
+ * It draws nothing itself: on hover and while dragging, the right-hand page's
+ * left edge lights up (see styles/surfaces.css), as the sidebar's seam lights
+ * the page to its right. The grab area is always `GRIP_REACH` wide.
  *
  * Only the grab area responds to the pointer, so its width is exactly that and
  * not also the strip's. The strip is placed by the caller, against the
@@ -27,12 +28,11 @@ export function ResizeGrip({
       role="separator"
       aria-orientation="vertical"
       data-dragging={dragging ? "true" : undefined}
-      className={cn("group pointer-events-none absolute z-10 cursor-col-resize", className)}
+      className={cn("pane-resize-handle pointer-events-none absolute z-10 cursor-col-resize", className)}
       style={{ width: SPLIT_GAP, ...style }}
       {...props}
     >
       <span className="pointer-events-auto absolute inset-y-0" style={{ left: -before, right: before + SPLIT_GAP - GRIP_REACH }} />
-      <span className="absolute inset-x-px inset-y-2 rounded-full transition-colors group-hover:bg-primary/40 group-data-[dragging=true]:bg-primary/60" />
     </div>
   );
 }
