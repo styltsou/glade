@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
+import { Tip } from "@/components/ui/tooltip";
 import { useStore } from "@/store";
 import { baseName, splitExtension } from "@/lib/paths";
 
@@ -28,6 +29,7 @@ export function RenameDialog({ isOpen, onOpenChange, path, isFolder, onRename }:
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [fromTitle, setFromTitle] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Before the dialog takes focus and selects the name, or it selects the last one.
   useLayoutEffect(() => {
@@ -82,9 +84,29 @@ export function RenameDialog({ isOpen, onOpenChange, path, isFolder, onRename }:
             {isFolder ? "Type a new name for this folder." : "Type a new file name. The note's title stays as it is."}
           </DialogDescription>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="rename-input">{isFolder ? "Folder name" : "File name"}</Label>
-            <div className="flex items-center gap-2">
-              <Input
+            <div className="flex h-6 items-center justify-between gap-2">
+              <Label htmlFor="rename-input">{isFolder ? "Folder name" : "File name"}</Label>
+              {fromTitle && fromTitle !== name && (
+                <Tip label={`${fromTitle}${ext}`}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    className="text-muted-foreground"
+                    onClick={() => {
+                      setName(fromTitle);
+                      setError(null);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    Use note title
+                  </Button>
+                </Tip>
+              )}
+            </div>
+            <InputGroup>
+              <InputGroupInput
+                ref={inputRef}
                 id="rename-input"
                 value={name}
                 onChange={(e) => {
@@ -92,29 +114,16 @@ export function RenameDialog({ isOpen, onOpenChange, path, isFolder, onRename }:
                   setError(null);
                 }}
                 aria-invalid={!!error}
-                aria-describedby={error ? "rename-error" : undefined}
+                aria-describedby={[ext && "rename-extension", error && "rename-error"].filter(Boolean).join(" ") || undefined}
                 spellCheck={false}
                 autoComplete="off"
-                className="w-full"
               />
-              {ext && <span className="shrink-0 text-sm text-muted-foreground">{ext}</span>}
-            </div>
+              {ext && <InputGroupAddon id="rename-extension">{ext}</InputGroupAddon>}
+            </InputGroup>
             {error && (
               <p id="rename-error" role="alert" className="break-words text-xs text-destructive">
                 {error}
               </p>
-            )}
-            {fromTitle && fromTitle !== name && (
-              <button
-                type="button"
-                onClick={() => {
-                  setName(fromTitle);
-                  setError(null);
-                }}
-                className="max-w-full self-start truncate text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Use title: <span className="text-foreground">{fromTitle}</span>
-              </button>
             )}
           </div>
           <div className="flex justify-end gap-2">
