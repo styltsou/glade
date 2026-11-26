@@ -1,13 +1,16 @@
 import { useCallback } from "react";
 import { useStore } from "@/store";
 import type { NoteLabel } from "@/store/slices/settingsSlice";
-import { splitExtension } from "@/lib/paths";
+import { baseName, splitExtension } from "@/lib/paths";
 
-/** A note's name as the app shows it: its title, or its file name without the extension. */
+/**
+ * A note's name as the app shows it: its title, or its file name. Shown as file
+ * names they are the whole name, extension too (`plan.md`). A note with no title
+ * falls back to the name without it.
+ */
 export function noteLabel(mode: NoteLabel, path: string, title?: string | null): string {
-  const stem = splitExtension(path).stem;
-  if (mode === "filename") return stem;
-  return title?.trim() || stem;
+  if (mode === "filename") return baseName(path);
+  return title?.trim() || splitExtension(path).stem;
 }
 
 /** `noteLabel` bound to the current setting. */

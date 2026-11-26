@@ -25,12 +25,12 @@ describe("NoteTipLabel", () => {
 
   it("showing file names: the file name, then the title", () => {
     useStore.setState({ noteLabel: "filename" });
-    expect(lines("work/plan.md", "Launch plan")).toEqual(["plan", "Launch plan"]);
+    expect(lines("work/plan.md", "Launch plan")).toEqual(["plan.md", "Launch plan"]);
   });
 
   it("showing file names of a note without a title of its own: the file name, then the path", () => {
     useStore.setState({ noteLabel: "filename" });
-    expect(lines("work/plan.md", "plan")).toEqual(["plan", "work/plan.md"]);
-    expect(lines("work/plan.md")).toEqual(["plan", "work/plan.md"]);
+    expect(lines("work/plan.md", "plan")).toEqual(["plan.md", "work/plan.md"]);
+    expect(lines("work/plan.md")).toEqual(["plan.md", "work/plan.md"]);
   });
 });

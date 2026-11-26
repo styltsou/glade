@@ -84,7 +84,7 @@ describe("editor tab controls", () => {
   it("labels tabs by file name when the setting says so, even with a title", () => {
     useStore.setState({ noteLabel: "filename", noteCache: { "drafts/plan.md": { title: "Launch plan" } as any } });
     const controls = render(["drafts/plan.md"]);
-    expect(controls()[0].getAttribute("aria-label")).toBe("plan");
+    expect(controls()[0].getAttribute("aria-label")).toBe("plan.md");
   });
 
   it("moves focus and selection with arrows and Home/End, wrapping at the ends", () => {

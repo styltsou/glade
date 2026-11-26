@@ -8,8 +8,9 @@ describe("noteLabel", () => {
     expect(noteLabel("title", "work/plan.md")).toBe("plan");
   });
 
-  it("shows the file name when asked, whatever the title", () => {
-    expect(noteLabel("filename", "work/plan.md", "Launch plan")).toBe("plan");
-    expect(noteLabel("filename", "/home/me/notes/a.b.markdown", "A")).toBe("a.b");
+  it("shows the whole file name, extension too, when asked, whatever the title", () => {
+    expect(noteLabel("filename", "work/plan.md", "Launch plan")).toBe("plan.md");
+    expect(noteLabel("filename", "/home/me/notes/a.b.markdown", "A")).toBe("a.b.markdown");
+    expect(noteLabel("filename", "work/Notes.MDX")).toBe("Notes.MDX");
   });
 });
