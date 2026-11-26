@@ -543,6 +543,11 @@
   border-color: hsl(var(--primary) / 50%);
 }
 
+/* Formatting inside a reference keeps its link colour, including error states. */
+.tiptap-editor :is(a.editor-link:not(:has(.link-web)), .mention) :is(strong, em, s, u, code) {
+  color: inherit;
+}
+
 /* Web links: bold text color, underlined, with a matching link icon. The class is an editor
    decoration, which ProseMirror renders as spans *inside* the <a>; styling the
    <a> through :has() keeps it to one icon when a link has mixed formatting. */
