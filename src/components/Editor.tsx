@@ -46,6 +46,7 @@ export interface EditorProps {
 }
 
 export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps) {
+  const target = useStore((state) => state.target);
   const activeNote = useStore(
     (state) => state.noteCache[path] ?? (state.activeNote?.path === path ? state.activeNote : null),
   );
@@ -358,6 +359,9 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
   paneIndexRef.current = paneIndex;
   useEffect(() => {
     return () => {
+      // Root changes flush first. Relative paths here belong to the old root.
+      const current = useStore.getState().target;
+      if (current?.kind !== target?.kind || current?.path !== target?.path) return;
       const path = currentPathRef.current;
       if (!path || conflictRef.current) return;
       const content = latestContentRef.current;
@@ -368,7 +372,7 @@ export function Editor({ path, focused, onFocus, paneIndex, split }: EditorProps
       }
       void useStore.getState().leaveNote(path, content, saved);
     };
-  }, []);
+  }, [target]);
 
   useEffect(() => {
     return () => {

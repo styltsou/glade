@@ -1,5 +1,6 @@
 //! Routing "open this path" requests (CLI, OS file association, Home, quick
-//! switcher) to windows: one window per root, reuse idle Home windows.
+//! switcher) to windows: in-app opens reuse their window; external opens reuse
+//! idle Home windows or create a window for the new root.
 
 use std::fs;
 use std::path::Path;
@@ -22,12 +23,10 @@ fn focus(app: &AppHandle, label: &str) {
     }
 }
 
-/// A window showing Home (no folder or file), preferring `prefer`.
-fn idle_window(app: &AppHandle, prefer: Option<&str>) -> Option<String> {
-    let ws = app.state::<Workspaces>();
-    let labels: Vec<String> = app.webview_windows().keys().cloned().collect();
+/// In-app opens stay in the calling window; external opens only reuse Home.
+fn reusable_window(ws: &Workspaces, labels: Vec<String>, prefer: Option<&str>) -> Option<String> {
     if let Some(p) = prefer {
-        if labels.iter().any(|l| l == p) && ws.target(p).is_none() {
+        if labels.iter().any(|l| l == p) {
             return Some(p.to_string());
         }
     }
@@ -104,14 +103,8 @@ pub fn open_path(app: &AppHandle, path: &Path, prefer: Option<&str>) -> Result<(
         config::save_config(&cfg)?;
     }
 
-    // "Open containing folder" from a single-file window turns that window into
-    // the folder view instead of opening another one.
-    let reuse = match (&target, prefer.and_then(|l| ws.target(l))) {
-        (Target::Folder(dir), Some(Target::File(file))) if file.starts_with(dir) => prefer.map(str::to_string),
-        _ => None,
-    };
-
-    let label = match reuse.or_else(|| idle_window(app, prefer)) {
+    let labels = app.webview_windows().keys().cloned().collect();
+    let label = match reusable_window(&ws, labels, prefer) {
         Some(label) => {
             ws.set_target(&label, target.clone());
             let _ = app.emit_to(label.as_str(), "workspace-changed", target.info());
@@ -203,4 +196,39 @@ pub async fn close_target(app: AppHandle, window: tauri::Window) -> Result<(), A
     vault::invalidate_vault_cache();
     persist_session(&app);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn in_app_open_reuses_the_current_folder_window() {
+        let ws = Workspaces::default();
+        ws.set_target("main", Target::Folder("/notes".into()));
+        let labels = vec!["home".into(), "main".into()];
+        assert_eq!(reusable_window(&ws, labels, Some("main")).as_deref(), Some("main"));
+    }
+
+    #[test]
+    fn in_app_open_reuses_a_loose_file_window() {
+        let ws = Workspaces::default();
+        ws.set_target("main", Target::File("/notes/a.md".into()));
+        assert_eq!(reusable_window(&ws, vec!["main".into()], Some("main")).as_deref(), Some("main"));
+    }
+
+    #[test]
+    fn external_open_does_not_replace_an_open_folder() {
+        let ws = Workspaces::default();
+        ws.set_target("main", Target::Folder("/notes".into()));
+        assert_eq!(reusable_window(&ws, vec!["main".into()], None), None);
+    }
+
+    #[test]
+    fn external_open_reuses_home() {
+        let ws = Workspaces::default();
+        ws.set_target("main", Target::Folder("/notes".into()));
+        let labels = vec!["main".into(), "home".into()];
+        assert_eq!(reusable_window(&ws, labels, None).as_deref(), Some("home"));
+    }
 }

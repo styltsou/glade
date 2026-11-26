@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import type { HomeData, Target } from "@/types";
 import * as T from "@/lib/tabs";
 import { relativeTo } from "@/lib/paths";
+import { flushOpenEditors } from "@/lib/fileChanges";
 import { findEntryByPath } from "@/components/sidebar/file-tree-helpers";
 import type { StoreState } from "../index";
+import { resetNoteSession } from "./noteSlice";
 
 export interface WorkspaceSlice {
   /** What this window shows; null means Home. */
@@ -43,7 +45,7 @@ export interface WorkspaceSlice {
   loadHome: () => Promise<void>;
   /** One-time prompt to strip keys older Glade versions wrote into notes. */
   offerLegacyCleanup: () => Promise<void>;
-  /** Open via the backend so the one-window-per-root rule applies. */
+  /** Open in this window, or focus the window already showing the path. */
   openPath: (path: string) => Promise<void>;
   closeTarget: () => Promise<void>;
   showHome: () => void;
@@ -182,10 +184,14 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
 
   applyTarget: async (target) => {
     // Start from a clean slate so nothing from the previous root leaks in.
+    resetNoteSession();
     set({
       target,
       homeOpen: false,
+      workspaceError: null,
+      vaultError: null,
       rootMissing: false,
+      pollExternal: false,
       externalEvent: null,
       uiLoadedFor: null,
       expandedFolders: [],
@@ -195,8 +201,13 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       idToPath: {},
       noteCache: {},
       tags: [],
+      activeTagFilters: [],
+      searchResults: [],
+      sidebarQuery: "",
       activeNote: null,
       tabsState: target?.kind === "folder" ? T.rootTabs() : T.initialTabs(),
+      closedTabs: [],
+      tabDropTarget: null,
       currentFolder: null,
       pinnedNotes: [],
       folderNotes: [],
@@ -260,6 +271,8 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
         set({ homeOpen: false });
         return;
       }
+      await flushOpenEditors(get().saveNote);
+      await get().saveWorkspaceUi();
       // Opening the folder around a loose file: keep that file open afterwards.
       if (target?.kind === "file" && target.path.startsWith(path.endsWith("/") ? path : `${path}/`)) {
         set({ pendingFile: target.path });
@@ -269,7 +282,8 @@ export const createWorkspaceSlice: StateCreator<StoreState, [], [], WorkspaceSli
       set({ homeOpen: false });
       await get().loadHome();
     } catch (e) {
-      set({ workspaceError: String(e) });
+      set({ pendingFile: null, workspaceError: String(e) });
+      toast.error("Couldn't open path", { description: String(e) });
     }
   },
 
