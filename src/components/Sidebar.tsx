@@ -25,6 +25,14 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
   const sidebarWidth = useStore((state) => state.sidebarWidth);
   const setSidebarWidth = useStore((state) => state.setSidebarWidth);
   const [isResizing, setIsResizing] = useState(false);
+  // Closing keeps the docked panel and wipes it away with the aside, in step with
+  // the title bar and the page. It only takes the floating look once it is peeked,
+  // so the close never shows that card.
+  const [peeked, setPeeked] = useState(false);
+  if (sidebarCollapsed && sidebarPreview.open && !peeked) setPeeked(true);
+  if (!sidebarCollapsed && peeked) setPeeked(false);
+  const floating = sidebarCollapsed && (peeked || sidebarPreview.open);
+  const hidden = sidebarCollapsed && !sidebarPreview.open;
   // The peek stays while its menu is open: the open menu takes the pointer, which
   // would read as leaving the peek.
   const menuOpen = useRef(false);
@@ -70,7 +78,7 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
     <div className="relative z-10 h-full flex shrink-0">
       <aside
         style={{ width: sidebarCollapsed ? 0 : `var(--sidebar-live-width, ${sidebarWidth}px)` }}
-        className="relative h-full shrink-0 sidebar-motion"
+        className={`relative h-full shrink-0 sidebar-motion ${sidebarCollapsed && !floating ? "overflow-hidden" : ""}`}
       >
         {sidebarCollapsed && sidebarPreview.open && (
           <div
@@ -85,16 +93,19 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           data-sidebar-preview-zone
           onPointerEnter={sidebarPreview.enter}
           onPointerLeave={leavePeek}
-          aria-hidden={sidebarCollapsed && !sidebarPreview.open}
+          aria-hidden={hidden}
           style={{
-            width: sidebarCollapsed ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
-            visibility: sidebarCollapsed && !sidebarPreview.open ? "hidden" : "visible",
-            opacity: sidebarCollapsed && !sidebarPreview.open ? 0 : 1,
-            transform: sidebarCollapsed && !sidebarPreview.open ? "translateX(-8px)" : "translateX(0)",
-            transitionDelay: sidebarCollapsed && !sidebarPreview.open ? "0ms, 0ms, 0ms, 150ms" : "0ms",
-            pointerEvents: sidebarCollapsed && !sidebarPreview.open ? "none" : undefined,
+            width: floating ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
+            visibility: hidden ? "hidden" : "visible",
+            opacity: hidden ? 0 : 1,
+            transform: hidden ? "translateX(-8px)" : "translateX(0)",
+            // Wiped away by the aside: it hides in one step once that is done.
+            transitionDuration: hidden && !floating ? "0ms" : undefined,
+            transitionDelay: !hidden ? "0ms" : floating ? "0ms, 0ms, 150ms" : "var(--dur-sidebar)",
+            pointerEvents: hidden ? "none" : undefined,
           }}
-          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none transition-[width,opacity,transform,visibility] duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "left-1.5 top-1.5 bottom-1.5 rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
+          // Width only animates into the docked panel: the peek opens at its own width.
+          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "transition-[opacity,transform,visibility]" : "transition-[width,opacity,transform,visibility]"} ${floating ? "left-1.5 top-1.5 bottom-1.5 rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
         >
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
