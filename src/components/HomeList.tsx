@@ -66,7 +66,7 @@ function Row({ entry, group, selected, onOpen, onHover }: RowProps) {
         )}
         {!entry.exists && isFolder && (
           <ContextMenuItem onSelect={() => locateFolder(entry.path)}>
-            <FolderSearch className="size-4" /> Locate…
+            <FolderSearch className="size-4" /> Locate
           </ContextMenuItem>
         )}
         {isFolder && group === "pinned" && (

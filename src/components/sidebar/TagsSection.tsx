@@ -101,7 +101,7 @@ export function TagsSection() {
                   <ContextMenuContent className="min-w-48">
                     <ContextMenuItem onClick={() => setRenaming(tag.name)}>
                       <PencilIcon className="mr-2 h-4 w-4" />
-                      Rename or merge…
+                      Rename or merge
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>

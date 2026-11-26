@@ -27,7 +27,7 @@ export function RootMissing() {
       <p className="text-lg font-medium">This folder is no longer available</p>
       <p className="max-w-md break-all text-sm text-muted-foreground">{target && shortenPath(target.path, home)}</p>
       <div className="flex gap-2">
-        <Button variant="outline" onClick={locate}><FolderSearch className="mr-2 size-4" /> Locate…</Button>
+        <Button variant="outline" onClick={locate}><FolderSearch className="mr-2 size-4" /> Locate</Button>
         <Button onClick={closeTarget}><Home className="mr-2 size-4" /> Go to Home</Button>
       </div>
     </div>

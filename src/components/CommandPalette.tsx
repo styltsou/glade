@@ -120,16 +120,16 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
       { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
       { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
-      { id: "open-settings", label: "Settings…", icon: SettingsIcon },
-      { id: "change-theme", label: "Change theme…", icon: PaletteIcon },
-      { id: "change-mode", label: "Light, dark or system…", icon: MoonIcon },
+      { id: "open-settings", label: "Settings", icon: SettingsIcon },
+      { id: "change-theme", label: "Change theme", icon: PaletteIcon },
+      { id: "change-mode", label: "Light, dark or system", icon: MoonIcon },
     ],
   },
   {
     heading: "Help",
     items: [
       { id: "show-shortcuts", label: "Keyboard shortcuts", icon: KeyboardIcon },
-      { id: "show-welcome", label: "Welcome…", icon: SparklesIcon },
+      { id: "show-welcome", label: "Welcome", icon: SparklesIcon },
     ],
   },
   {
