@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Pin, PinOff, FolderSearch, FolderOpen, Settings, X } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, FileText, Folder, Home, Info, Pin, PinOff, FolderSearch, FolderOpen, LayoutGrid, Settings, X } from "lucide-react";
 import { AboutDialog } from "@/components/AboutDialog";
 import { openSettings } from "@/components/SettingsDialog";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
@@ -99,6 +99,12 @@ export function WorkspaceMenu({
         {folderTarget && (
           <>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => {
+              useStore.getState().hideHome();
+              useStore.getState().openFolderTab(null);
+            }}>
+              <LayoutGrid className="size-4" /> Folder overview
+            </DropdownMenuItem>
             {pinned ? (
               <DropdownMenuItem onSelect={() => unpinFolder(folderTarget.path)}>
                 <PinOff className="size-4" /> Unpin folder

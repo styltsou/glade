@@ -17,6 +17,7 @@ import {
   CornerDownLeft as CornerDownLeftIcon,
   Download as DownloadIcon,
   Keyboard as KeyboardIcon,
+  LayoutGrid as LayoutGridIcon,
   Delete as DeleteKeyIcon,
   Eye as EyeIcon,
   FilePlus as FilePlusIcon,
@@ -73,6 +74,7 @@ type CommandId =
   | "add-property"
   | "export-note"
   | "close-folder"
+  | "folder-overview"
   | "toggle-appearance"
   | "change-theme"
   | "change-mode"
@@ -104,6 +106,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
     items: [
       { id: "go-back", label: "Back", icon: ArrowLeftIcon },
       { id: "go-forward", label: "Forward", icon: ArrowRightIcon },
+      { id: "folder-overview", label: "Folder overview", icon: LayoutGridIcon },
       { id: "toggle-home", label: "Go to Home", icon: HomeIcon },
       { id: "reopen-closed-tab", label: "Reopen closed tab", icon: HistoryIcon },
       { id: "open-recent", label: "Open recent", icon: HistoryIcon },
@@ -181,6 +184,8 @@ function isAvailable(id: CommandId): boolean {
       return inWorkspace && s.tabsState.groups.length < 2 && group.tabs.length > 0;
     case "close-folder":
       return !!s.target;
+    case "folder-overview":
+      return inFolder;
     case "show-welcome":
       // Only to look at the first-run screen while developing; release builds don't list it.
       return import.meta.env.DEV;
@@ -311,6 +316,10 @@ function runCommand(id: CommandId): boolean {
       break;
     case "close-folder":
       void s.closeTarget();
+      break;
+    case "folder-overview":
+      s.hideHome();
+      s.openFolderTab(null);
       break;
     case "open-settings":
       openSettings();

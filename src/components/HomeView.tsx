@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FolderCard } from "@/components/FolderCard";
 import { NoteCard } from "@/components/NoteCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useStore } from "@/store";
 import { baseName } from "@/lib/paths";
 import type { VaultEntry } from "@/types";
@@ -49,6 +50,7 @@ export function HomeView() {
   const isHomeLoading = useStore((state) => state.isHomeLoading);
   const isFolderNotesLoading = useStore((state) => state.isFolderNotesLoading);
   const isVaultLoading = useStore((state) => state.isVaultLoading);
+  const isVaultLoaded = useStore((state) => state.isVaultLoaded);
   const currentFolder = useStore((state) => state.currentFolder);
   const loadAll = useStore((state) => state.loadAll);
   const createNote = useStore((state) => state.createNote);
@@ -74,12 +76,14 @@ export function HomeView() {
     : entries.filter((e) => !e.is_dir).length; // Depending on how home notes are fetched, this might just be 0 if home only shows pinned, but we'll assume folder notes if any exist. Just for skeletons.
 
 
-  // Show skeletons only while data is actively loading, never when vault is confirmed empty.
+  // Skeletons only while the folder is first read, or while notes the tree
+  // already knows about load. Never for a folder known to be empty: that
+  // would flash a "Notes" section that then vanishes.
   const shouldShowFolderSkeletons = isVaultLoading && subFolders.length === 0;
   const shouldShowNoteSkeletons =
     (isVaultLoading && !hasNotes) ||
-    (isFolderNotesLoading && expectedNoteCount > 0 && !hasNotes) ||
-    (isHomeLoading && !currentFolder && !hasNotes);
+    ((isFolderNotesLoading || isHomeLoading) && expectedNoteCount > 0 && !hasNotes);
+  const isEmpty = isVaultLoaded && !isVaultLoading && subFolders.length === 0 && expectedNoteCount === 0 && !hasNotes;
 
   return (
     <div className="flex flex-col flex-1 h-full w-full bg-background overflow-hidden relative">
@@ -140,6 +144,13 @@ export function HomeView() {
             </div>
           </div>
 
+        {isEmpty && (
+          <EmptyFolder
+            onNewNote={() => void createNote(currentFolder ?? undefined)}
+            onNewFolder={() => openCreateFolder(currentFolder ?? undefined)}
+          />
+        )}
+
         <div className="space-y-12">
           {/* Folders section */}
           {(shouldShowFolderSkeletons || subFolders.length > 0) && (
@@ -187,7 +198,29 @@ function findEntryByPath(
   return null;
 }
 
-/** A dashed card at the end of a grid that creates a new item there. */
+/** A folder with no notes or subfolders: say so, and offer to start one. */
+function EmptyFolder({ onNewNote, onNewFolder }: { onNewNote: () => void; onNewFolder: () => void }) {
+  const noteKey = bindingFor("new-note");
+  const folderKey = bindingFor("new-folder");
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-16 text-center">
+      <div className="space-y-1">
+        <p className="text-base font-medium">This folder is empty</p>
+        <p className="text-sm text-muted-foreground">Notes and folders you add here will show up here.</p>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={onNewFolder}>
+          <FolderPlus className="size-4" /> New folder
+          {folderKey && <span className="ml-1 text-xs text-muted-foreground">{formatShortcut(folderKey)}</span>}
+        </Button>
+        <Button onClick={onNewNote}>
+          <Plus className="size-4" /> New note
+          {noteKey && <span className="ml-1 text-xs opacity-70">{formatShortcut(noteKey)}</span>}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function SectionHeader({ label }: { label: string }) {
   return (

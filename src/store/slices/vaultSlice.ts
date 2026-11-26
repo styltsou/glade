@@ -68,7 +68,8 @@ export const createVaultSlice: StateCreator<StoreState, [], [], VaultSlice> = (
   loadVault: async () => {
     // Only the first load shows skeletons; refreshes (file watcher, renames,
     // moves) update in place instead of flashing the tree.
-    if (get().entries.length === 0) set({ isVaultLoading: true, vaultError: null });
+    // (Keyed on "loaded", not on "no entries": an empty folder is loaded too.)
+    if (!get().isVaultLoaded) set({ isVaultLoading: true, vaultError: null });
     else set({ vaultError: null });
 
     try {
