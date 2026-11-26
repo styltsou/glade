@@ -21,8 +21,9 @@ export interface FindBarProps {
   onToggleCaseSensitive: () => void;
   wholeWord: boolean;
   onToggleWholeWord: () => void;
-  /** Absent where the text cannot be changed (reading mode). */
   replace?: {
+    /** The text cannot be changed (reading mode): the toggle is dimmed and the row stays shut. */
+    disabled: boolean;
     open: boolean;
     onToggle: () => void;
     text: string;
@@ -41,36 +42,41 @@ interface BarButtonProps {
   hint?: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Why it is disabled, said in its tooltip. The button gets no pointer events, so its wrapper shows the cursor and the tooltip. */
+  disabledReason?: string;
   pressed?: boolean;
   small?: boolean;
   children: ReactNode;
 }
 
-function BarButton({ label, hint, onClick, disabled, pressed, small, children }: BarButtonProps) {
+function BarButton({ label, hint, onClick, disabled, disabledReason, pressed, small, children }: BarButtonProps) {
+  const button = (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={pressed}
+      disabled={disabled}
+      // Keep the focus in the field being typed in.
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      className={cn(
+        "press flex shrink-0 items-center justify-center rounded-sm transition-colors disabled:pointer-events-none disabled:opacity-40",
+        small ? "size-5 rounded-[3px]" : "size-7",
+        pressed ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
-          type="button"
-          aria-label={label}
-          aria-pressed={pressed}
-          disabled={disabled}
-          // Keep the focus in the field being typed in.
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onClick}
-          className={cn(
-            "press flex shrink-0 items-center justify-center rounded-sm transition-colors disabled:pointer-events-none disabled:opacity-40",
-            small ? "size-5 rounded-[3px]" : "size-7",
-            pressed ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
-          )}
-        >
-          {children}
-        </button>
+        {disabled ? <span className="flex cursor-not-allowed">{button}</span> : button}
       </TooltipTrigger>
       <TooltipContent side="bottom">
         <p className="flex items-center gap-2">
-          {label}
-          {hint && <span className="opacity-60">{hint}</span>}
+          {disabled && disabledReason ? disabledReason : label}
+          {hint && !disabled && <span className="opacity-60">{hint}</span>}
         </p>
       </TooltipContent>
     </Tooltip>
@@ -135,6 +141,8 @@ export function FindBar({
             <BarButton
               label={replace.open ? "Hide replace" : "Show replace"}
               hint={formatShortcut(FIND_SHORTCUTS.replace)}
+              disabled={replace.disabled}
+              disabledReason="Replace isn't available in reading mode"
               onClick={replace.onToggle}
             >
               {replace.open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}

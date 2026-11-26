@@ -326,18 +326,18 @@ export function useNoteFind({
       onToggleCaseSensitive: () => setCaseSensitive((v) => !v),
       wholeWord,
       onToggleWholeWord: () => setWholeWord((v) => !v),
-      replace: canEdit
-        ? {
-            open: replaceShown,
-            onToggle: toggleReplace,
-            text: replacement,
-            onTextChange: setReplacement,
-            inputRef: replaceInputRef,
-            onKeyDown: onReplaceKeyDown,
-            onReplace: replaceOne,
-            onReplaceAll: replaceAll,
-          }
-        : undefined,
+      replace: {
+        // Where the text cannot change the toggle stays, dimmed, and the row never opens.
+        disabled: !canEdit,
+        open: replaceShown,
+        onToggle: toggleReplace,
+        text: replacement,
+        onTextChange: setReplacement,
+        inputRef: replaceInputRef,
+        onKeyDown: onReplaceKeyDown,
+        onReplace: replaceOne,
+        onReplaceAll: replaceAll,
+      },
     }),
     [
       query, shown, count, go, close, onFindKeyDown, caseSensitive, wholeWord, canEdit, replaceShown,

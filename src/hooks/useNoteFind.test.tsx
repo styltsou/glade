@@ -160,12 +160,14 @@ describe("useNoteFind", () => {
     expect(text()).toBe("kept");
   });
 
-  it("offers no replace where the text cannot change", async () => {
+  it("keeps replace disabled, and shut, where the text cannot change", async () => {
     await render({ canEdit: false });
     await ctrlF();
-    expect(find.barProps.replace).toBeUndefined();
+    expect(find.barProps.replace?.disabled).toBe(true);
+    expect(find.barProps.replace?.open).toBe(false);
     await key({ code: "KeyH", key: "h", ctrlKey: true });
     expect(find.visible).toBe(true);
+    expect(find.barProps.replace?.open).toBe(false);
   });
 
   it("leaves other panes and shortcuts with Shift alone", async () => {
