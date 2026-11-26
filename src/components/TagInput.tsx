@@ -212,7 +212,7 @@ export function TagInput() {
           className={cn(
             TAG_BOX,
             // pb-0.5 lifts the text 1px, like the saved tag's.
-            "absolute inset-0 h-8 w-full min-w-0 pb-0.5 rounded-full bg-foreground/[0.06] text-muted-foreground outline-none placeholder:text-muted-foreground/60 hover:bg-foreground/[0.1] focus:border-border focus:bg-transparent focus:text-foreground focus:ring-0 transition-colors",
+            "absolute inset-0 h-8 w-full min-w-0 pb-0.5 rounded-full bg-foreground/[0.06] text-muted-foreground outline-none placeholder:text-muted-foreground/60 hover:bg-foreground/[0.1] focus:border-primary focus:bg-transparent focus:text-foreground focus:ring-0 transition-colors",
           )}
           value={inputValue}
           onChange={(e) => {
