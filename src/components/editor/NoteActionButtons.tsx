@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { CopyIcon, IconSwap } from "@/components/ui/icon-swap";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { FileText, Code, Copy, Check, Download, BookOpen } from "lucide-react";
+import { FileText, Code, Download, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ExportDialog, type ExportFormat } from "@/components/editor/ExportDialog";
 import { cn } from "@/lib/utils";
@@ -107,11 +108,7 @@ export function NoteActionButtons({
         onClick={() => onToggleRaw(!isRawMode)}
         disabled={!notePath}
       >
-        {isRawMode ? (
-          <FileText className="h-4 w-4" />
-        ) : (
-          <Code className="h-4 w-4" />
-        )}
+        <IconSwap show={isRawMode ? "raw" : "rich"} icons={{ rich: <Code className="size-4" />, raw: <FileText className="size-4" /> }} />
       </Button>
 
       <div className="h-10 w-px bg-border" />
@@ -125,7 +122,7 @@ export function NoteActionButtons({
         onClick={handleCopyMarkdown}
         disabled={!notePath}
       >
-        {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        <CopyIcon copied={copied} className="size-4" />
       </Button>
 
       <div className="h-10 w-px bg-border" />

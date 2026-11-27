@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { Tip } from "@/components/ui/tooltip";
 import { MarqueeText } from "@/components/ui/marquee-text";
 import {
@@ -87,11 +88,13 @@ export function PinnedSection() {
           onClick={() => togglePinnedNotesCollapsed()}
           className="flex-1 flex items-center gap-1.5 group text-left transition-colors hover:bg-sidebar-accent/60 px-2 py-2 cursor-pointer"
         >
-          {pinnedNotesCollapsed ? (
-            <ChevronRight className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
-          ) : (
-            <ChevronDown className="h-3 w-3 text-muted-foreground/60 group-hover:text-foreground" />
-          )}
+          <IconSwap
+            show={pinnedNotesCollapsed ? "collapsed" : "expanded"}
+            icons={{
+              collapsed: <ChevronRight className="size-3 text-muted-foreground/60 group-hover:text-foreground" />,
+              expanded: <ChevronDown className="size-3 text-muted-foreground/60 group-hover:text-foreground" />,
+            }}
+          />
           <span className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground">
             Pinned
           </span>

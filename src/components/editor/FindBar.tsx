@@ -1,4 +1,5 @@
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowDown, ArrowUp, CaseSensitive, ChevronDown, ChevronRight, Replace, ReplaceAll, WholeWord, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -145,7 +146,7 @@ export function FindBar({
               disabledReason="Replace isn't available in reading mode"
               onClick={replace.onToggle}
             >
-              {replace.open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+              <IconSwap show={replace.open ? "open" : "closed"} icons={{ closed: <ChevronRight className="size-4" />, open: <ChevronDown className="size-4" /> }} />
             </BarButton>
           )}
         </div>

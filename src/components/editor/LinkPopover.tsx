@@ -1,5 +1,6 @@
 import { getMarkRange, type Editor } from "@tiptap/core";
-import { Check, Copy, PenLine } from "lucide-react";
+import { CopyIcon } from "@/components/ui/icon-swap";
+import { PenLine } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { readableHref } from "@/lib/links";
@@ -188,7 +189,7 @@ export function LinkInteractionPopover({ editor }: { editor: Editor }) {
               <div className="flex items-center">
                 <Tip label={copied ? "Copied" : "Copy link"} side="top">
                   <Button type="button" variant="ghost" size="icon-xs" aria-label="Copy link" onClick={copyLink}>
-                    {copied ? <Check /> : <Copy />}
+                    <CopyIcon copied={copied} />
                   </Button>
                 </Tip>
                 {editor.isEditable && (

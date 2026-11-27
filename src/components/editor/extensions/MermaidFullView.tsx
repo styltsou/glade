@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { CopyIcon } from "@/components/ui/icon-swap";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import CodeMirror from "@uiw/react-codemirror";
-import { Check, Code, Copy, Download, X } from "lucide-react";
+import { Code, Download, X } from "lucide-react";
 import { Tip } from "@/components/ui/tooltip";
 import { mermaidEditorExtensions } from "@/lib/mermaidCodemirror";
 import { MermaidCanvas } from "./MermaidCanvas";
@@ -237,7 +238,7 @@ export function MermaidFullView({ draft, onDraftChange, svg, error, copied, onCo
         </Tip>
         <Tip label="Copy source" className="z-[110]">
           <button type="button" aria-label="Copy source" className={btn} onClick={onCopy}>
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            <CopyIcon copied={copied} className="size-4" />
           </button>
         </Tip>
         <Tip label="Export as PNG" className="z-[110]">

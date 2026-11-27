@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
+import { CopyIcon } from '@/components/ui/icon-swap'
 import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
 import { CodeLanguagePicker } from './CodeLanguagePicker'
 import type { Attributes } from '@tiptap/core'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
-import { Check, Copy } from 'lucide-react'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -50,7 +50,7 @@ const CodeBlockView = ({ node, editor, updateAttributes }: NodeViewProps) => {
               aria-label={copied ? "Copied" : "Copy code"}
               onClick={copyToClipboard}
             >
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+              <CopyIcon copied={copied} className="size-3.5" />
             </button>
           </TooltipTrigger>
           <TooltipContent side="bottom">

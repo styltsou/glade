@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
+import { CopyIcon } from "@/components/ui/icon-swap";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, Copy, Check, BookOpen, PencilOff } from "lucide-react";
+import { Clock, BookOpen, PencilOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -177,7 +178,7 @@ export function NoteHeader({
               onClick={handleCopyMarkdown}
               disabled={!notePath}
             >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              <CopyIcon copied={copied} className="size-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="bottom">

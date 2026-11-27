@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { CopyIcon, IconSwap } from '@/components/ui/icon-swap'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper } from '@tiptap/react'
 import { invoke } from '@tauri-apps/api/core'
@@ -7,8 +8,6 @@ import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import {
   Code,
   Eye,
-  Copy,
-  Check,
   Download,
 } from 'lucide-react'
 import { useStore } from '@/store'
@@ -172,7 +171,7 @@ export function MermaidBlockView({
           <Tooltip>
             <TooltipTrigger asChild>
               <button type="button" aria-label={copied ? 'Copied' : 'Copy code'} onClick={() => handleCopySource(source)}>
-                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                <CopyIcon copied={copied} className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
@@ -198,7 +197,7 @@ export function MermaidBlockView({
                 aria-label={viewMode === 'preview' ? 'Show code' : 'Show diagram'}
                 onClick={() => setViewMode(viewMode === 'preview' ? 'code' : 'preview')}
               >
-                {viewMode === 'preview' ? <Code className="size-3.5" /> : <Eye className="size-3.5" />}
+                <IconSwap show={viewMode} icons={{ preview: <Code className="size-3.5" />, code: <Eye className="size-3.5" /> }} />
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">

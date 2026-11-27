@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { HIDDEN, SHOWN, SWAP } from "@/components/ui/icon-swap";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { FileText, Folder, Pin, PinOff, Plus, X } from "lucide-react";
 import { useStore } from "@/store";
@@ -14,6 +15,10 @@ import { Tip } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuShortcut, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { bindingFor, formatShortcut } from "@/lib/keybindings";
 import { copyPath, revealInFileManager } from "@/lib/fileActions";
+
+/** The close button's pin and unpin trade places under the pointer (see icon-swap). */
+const PIN_HIDES_ON_HOVER = "group-hover/close:opacity-0 group-hover/close:blur-[2px] group-hover/close:scale-[0.6]";
+const UNPIN_SHOWS_ON_HOVER = "group-hover/close:opacity-100 group-hover/close:blur-none group-hover/close:scale-100";
 
 /** A tab's width when the bar has room, and the narrowest it shrinks to. */
 const TAB_WIDTH = 192;
@@ -282,15 +287,14 @@ function GroupTabs({ group, index, lead, trailing }: { group: TabGroup; index: n
               <button type="button" data-tab-close aria-label={tab.pinned ? `Unpin ${label}` : `Close ${label}`} tabIndex={-1} onPointerDown={(e) => e.stopPropagation()} onClick={() => (tab.pinned ? setTabPinned(index, tab.id, false) : close(index, tab.id))} className={cn("group/close","absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground/70 transition-[color,background-color,opacity] duration-100 hover:bg-foreground/[0.12] hover:text-foreground @max-[60px]/tab:right-1/2 @max-[60px]/tab:translate-x-1/2",
                 // Narrow inactive tabs show their close button only on hover, like a browser's.
                 active ? "text-foreground/70" : "@max-[100px]/tab:pointer-events-none @max-[100px]/tab:opacity-0 @max-[100px]/tab:group-hover:pointer-events-auto @max-[100px]/tab:group-hover:opacity-100")}>
-                {/* A pinned tab shows its pin in the close button's place; pressing it unpins. */}
-                {tab.pinned ? (
-                  <>
-                    <Pin className="size-3.5 group-hover/close:hidden" />
-                    <PinOff className="hidden size-3.5 group-hover/close:block" />
-                  </>
-                ) : (
-                  <X className="size-3.5" />
-                )}
+                {/* A pinned tab shows its pin in the close button's place, turning
+                    into unpin under the pointer; pressing it unpins. The icons
+                    crossfade like every other icon swap. */}
+                <span aria-hidden className="inline-grid place-items-center *:col-start-1 *:row-start-1">
+                  <X className={cn("size-3.5", SWAP, tab.pinned ? HIDDEN : SHOWN)} />
+                  <Pin className={cn("size-3.5", SWAP, tab.pinned ? cn(SHOWN, PIN_HIDES_ON_HOVER) : HIDDEN)} />
+                  <PinOff className={cn("size-3.5", SWAP, tab.pinned ? cn(HIDDEN, UNPIN_SHOWS_ON_HOVER) : HIDDEN)} />
+                </span>
               </button>
             </div>
           </ContextMenuTrigger><ContextMenuContent

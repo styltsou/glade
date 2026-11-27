@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { IconSwap } from "@/components/ui/icon-swap";
 import { useStore } from "@/store";
 import type { VaultEntry } from "@/types";
 import {
@@ -181,11 +182,7 @@ export function FileTreeNode({ entry, isDraggingId, dropTarget, onMouseDown, onT
                     "flex items-center gap-1.5 w-full rounded-lg px-2.5 py-[7px] text-sm font-medium tracking-[-0.005em] transition-colors cursor-pointer text-sidebar-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/[0.09] group-data-[state=open]/menu:bg-foreground/[0.09] group-data-[state=open]/menu:text-foreground"
                   )}
                 >
-                  {expanded ? (
-                    <FolderOpen className="size-4 shrink-0" />
-                  ) : (
-                    <Folder className="size-4 shrink-0" />
-                  )}
+                  <IconSwap show={expanded ? "open" : "closed"} icons={{ closed: <Folder className="size-4" />, open: <FolderOpen className="size-4" /> }} />
                   <MarqueeText disabled={!!isDraggingId}>{entry.name}</MarqueeText>
                 </button>
               </Tip>
