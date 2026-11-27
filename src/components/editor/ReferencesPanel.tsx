@@ -72,10 +72,13 @@ function NoteList({ notes }: { notes: NoteRef[] }) {
             <button
               type="button"
               onClick={() => selectNote(n.path)}
-              className="flex w-full min-w-0 cursor-pointer items-baseline gap-2 rounded-lg px-2.5 py-[7px] text-left text-sm tracking-[-0.005em] text-sidebar-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground active:bg-foreground/[0.09]"
+              className="flex w-full min-w-0 cursor-pointer items-center rounded-lg px-2.5 py-[7px] text-left text-sm tracking-[-0.005em] text-sidebar-foreground transition-colors hover:bg-foreground/[0.06] hover:text-foreground active:bg-foreground/[0.09]"
             >
-              <MarqueeText>{n.title}</MarqueeText>
-              {folder && <span className="truncate text-xs text-muted-foreground">{folder}</span>}
+              {/* The folder scrolls with the title: a cut-off name fades, and slides into view on hover. */}
+              <MarqueeText>
+                {n.title}
+                {folder && <span className="ml-2 text-xs text-muted-foreground">{folder}</span>}
+              </MarqueeText>
             </button>
           </li>
         );

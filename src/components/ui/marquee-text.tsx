@@ -12,7 +12,7 @@ export function MarqueeText({
   className,
   disabled = false,
 }: {
-  children: string;
+  children: React.ReactNode;
   className?: string;
   disabled?: boolean;
 }) {

@@ -3,6 +3,7 @@ import { Editor } from "@tiptap/react";
 import { ChevronRight, X } from "lucide-react";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { MarqueeText } from "@/components/ui/marquee-text";
 import { usePanelResize } from "@/hooks/usePanelResize";
 import { PanelResizeHandle, PANEL_CARD } from "./PanelResizeHandle";
 
@@ -310,11 +311,11 @@ function TocList({
                 }
               }}
               className={cn(
-                "block min-w-0 flex-1 truncate py-[7px] pr-1.5 pl-1 text-left text-sm tracking-[-0.005em]",
+                "flex min-w-0 flex-1 py-[7px] pr-1.5 pl-1 text-left text-sm tracking-[-0.005em]",
                 isActive && "font-medium"
               )}
             >
-              {entry.text}
+              <MarqueeText>{entry.text}</MarqueeText>
             </button>
           </li>
         );
