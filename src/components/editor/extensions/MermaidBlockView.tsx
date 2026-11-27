@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { NodeViewWrapper } from '@tiptap/react'
 import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
+import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import {
   Code,
   Eye,
@@ -113,10 +114,13 @@ export function MermaidBlockView({
   // Copy helpers
   const handleCopySource = useCallback(async (text: string) => {
     try {
-      await navigator.clipboard.writeText(text)
+      // The webview's clipboard API is not reliably allowed; the rest of the app copies this way too.
+      await writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
-    } catch {}
+    } catch {
+      toast.error("Couldn't copy the code")
+    }
   }, [])
 
   const previewSvg = error ? lastValidSvg : (svg || lastValidSvg)
@@ -163,39 +167,42 @@ export function MermaidBlockView({
     <NodeViewWrapper data-type="mermaid-block">
       <div className="mermaid-block group/mermaid">
         {/* Inline Toolbar */}
+        {/* The same buttons in both views, so none moves when the view flips. */}
         <div className="mermaid-block-toolbar">
-          {viewMode === 'preview' ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" onClick={handleExportPng}>
-                  <Download className="size-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Export as PNG</p>
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" onClick={() => handleCopySource(source)}>
-                  {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p>Copy Source</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button type="button" aria-label={copied ? 'Copied' : 'Copy code'} onClick={() => handleCopySource(source)}>
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>{copied ? 'Copied' : 'Copy code'}</p>
+            </TooltipContent>
+          </Tooltip>
 
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" onClick={() => setViewMode(viewMode === 'preview' ? 'code' : 'preview')}>
+              <button type="button" aria-label="Export as PNG" onClick={handleExportPng}>
+                <Download className="size-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>Export as PNG</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={viewMode === 'preview' ? 'Show code' : 'Show diagram'}
+                onClick={() => setViewMode(viewMode === 'preview' ? 'code' : 'preview')}
+              >
                 {viewMode === 'preview' ? <Code className="size-3.5" /> : <Eye className="size-3.5" />}
               </button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>{viewMode === 'preview' ? 'Show Code' : 'Show Preview'}</p>
+              <p>{viewMode === 'preview' ? 'Show code' : 'Show diagram'}</p>
             </TooltipContent>
           </Tooltip>
 
