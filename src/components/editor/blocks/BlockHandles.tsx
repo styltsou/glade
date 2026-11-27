@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
-import { CopyPlus, Trash2 } from "lucide-react";
+import { Copy, CopyPlus, Trash2 } from "lucide-react";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
 	DropdownMenu,
@@ -11,7 +13,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { BlockDragHandle } from "./blockDragHandle";
-import { deleteBlock, duplicateBlock, selectBlock } from "./blockActions";
+import { blockText, deleteBlock, duplicateBlock, selectBlock } from "./blockActions";
 
 /**
  * The "+" and drag-grip buttons, rendered into the mount points owned by the
@@ -41,6 +43,18 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 		if (!menuBlock) return;
 		const tr = action(editor.state, menuBlock.pos, menuBlock.node);
 		if (tr) editor.view.dispatch(tr);
+	};
+
+	const copyBlock = async () => {
+		const text = menuBlock && blockText(editor.view, menuBlock.pos, menuBlock.node);
+		if (text == null) return;
+		try {
+			// The webview's clipboard API is not reliably allowed; the rest of the app copies this way too.
+			await writeText(text);
+			toast.success("Block copied");
+		} catch {
+			toast.error("Couldn't copy the block");
+		}
 	};
 
 	useEffect(() => {
@@ -190,6 +204,10 @@ export function BlockHandles({ editor, blockControls }: { editor: Editor; blockC
 							editor.view.focus();
 						}}
 					>
+						<DropdownMenuItem onSelect={copyBlock}>
+							<Copy />
+							Copy
+						</DropdownMenuItem>
 						<DropdownMenuItem onSelect={() => run(duplicateBlock)}>
 							<CopyPlus />
 							Duplicate

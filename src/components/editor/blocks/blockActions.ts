@@ -1,5 +1,6 @@
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import { Fragment, Slice, type Node as ProseMirrorNode } from "@tiptap/pm/model";
 import { NodeSelection, TextSelection, type EditorState, type Transaction } from "@tiptap/pm/state";
+import type { EditorView } from "@tiptap/pm/view";
 
 /**
  * What the block menu (opened from the grip) does to the block at `pos`. Each
@@ -11,6 +12,24 @@ import { NodeSelection, TextSelection, type EditorState, type Transaction } from
 export function selectBlock(state: EditorState, pos: number, node: ProseMirrorNode): Transaction | null {
 	if (state.doc.nodeAt(pos) !== node || !NodeSelection.isSelectable(node)) return null;
 	return state.tr.setSelection(NodeSelection.create(state.doc, pos));
+}
+
+/**
+ * The block as markdown, through the editor's clipboard serializer (what Cmd+C
+ * puts on the clipboard). A list item keeps its marker, numbered as shown, by
+ * going out inside a list of its own. Null if the block has moved.
+ */
+export function blockText(view: EditorView, pos: number, node: ProseMirrorNode): string | null {
+	const { doc } = view.state;
+	if (doc.nodeAt(pos) !== node) return null;
+	const $pos = doc.resolve(pos);
+	const list = $pos.parent;
+	let block = node;
+	if ($pos.depth > 0 && /List$/.test(list.type.name)) {
+		const start = typeof list.attrs.start === "number" ? { start: list.attrs.start + $pos.index() } : {};
+		block = list.type.create({ ...list.attrs, ...start }, node);
+	}
+	return view.serializeForClipboard(new Slice(Fragment.from(block), 0, 0)).text.replace(/\s+$/, "");
 }
 
 /** Remove the block. Deleting through the selection also removes a list left empty by it. */
