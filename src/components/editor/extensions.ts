@@ -52,6 +52,9 @@ export const extensions = [
   }),
   CustomCodeBlock.configure({
     lowlight,
+    // A block without a language stays plain: guessing picks the wrong
+    // grammar for most short snippets, and the block's picker sets one.
+    defaultLanguage: "plaintext",
     HTMLAttributes: { class: "code-block" },
   }),
   Link.extend({

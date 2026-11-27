@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
-import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer } from '@tiptap/react'
+import { NodeViewWrapper, NodeViewContent, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react'
+import { CodeLanguagePicker } from './CodeLanguagePicker'
+import type { Attributes } from '@tiptap/core'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { Check, Copy } from 'lucide-react'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-const CodeBlockView = ({ node }: any) => {
+const CodeBlockView = ({ node, editor, updateAttributes }: NodeViewProps) => {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -32,12 +34,14 @@ const CodeBlockView = ({ node }: any) => {
     }
   }
 
-  const language = node.attrs.language;
-
   return (
     <NodeViewWrapper className="code-block">
-      <div className="code-block-header">
-        <span className="code-block-lang-label">{language || 'code'}</span>
+      <div className="code-block-header" contentEditable={false}>
+        <CodeLanguagePicker
+          language={node.attrs.language}
+          onChange={(language) => updateAttributes({ language })}
+          onClose={() => editor.view.focus()}
+        />
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -64,6 +68,13 @@ const CodeBlockView = ({ node }: any) => {
 }
 
 export const CustomCodeBlock = CodeBlockLowlight.extend({
+  // `defaultLanguage` only picks the grammar for a block without one; the
+  // block itself keeps no language, so its fence stays bare in the file.
+  addAttributes() {
+    const attributes: Attributes = this.parent?.() ?? {}
+    return { ...attributes, language: { ...attributes.language, default: null } }
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(CodeBlockView)
   },
