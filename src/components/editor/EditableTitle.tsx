@@ -147,6 +147,8 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
           <span aria-hidden="true" className={cn(titleText, "invisible block overflow-hidden whitespace-pre")}>
             {edit.value || "Untitled"}
           </span>
+          {/* Its box reaches past the text by 4px each way, as padding, so the
+              input does not clip accents and overhangs; the text stays put. */}
           <input
             ref={inputRef}
             type="text"
@@ -157,7 +159,7 @@ export function EditableTitle({ title, path, created, onDone }: EditableTitlePro
             onBlur={commit}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
-            className={cn(titleText, "absolute inset-x-3 top-2 h-8 w-[calc(100%-1.5rem)] min-w-0 border-0 bg-transparent p-0 text-foreground outline-none placeholder:text-muted-foreground/50")}
+            className={cn(titleText, "absolute inset-x-2 top-1 h-10 w-[calc(100%-1rem)] min-w-0 border-0 bg-transparent px-1 py-1 text-foreground outline-none placeholder:text-muted-foreground/50")}
           />
         </div>
       ) : (
