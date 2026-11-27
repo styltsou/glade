@@ -101,7 +101,7 @@
   border-radius: 2px;
 }
 
-.tiptap-editor .tableWrapper .note-table-drag-copy {
+.tiptap-editor table.note-table-drag-copy {
   position: absolute;
   z-index: 3;
   min-width: 0;
@@ -110,36 +110,34 @@
   pointer-events: none;
 }
 
-.tiptap-editor .tableWrapper .note-table-drag-placeholder td {
-  background: hsl(var(--background));
+.tiptap-editor table .note-table-drag-source.note-table-active-cell {
   box-shadow: none;
 }
 
-.tiptap-editor .tableWrapper .note-table-drag-placeholder th {
-  background: hsl(var(--card));
-  box-shadow: none;
-}
-
-.note-table-drag-placeholder :is(td, th) > * {
+.note-table-drag-source > * {
   visibility: hidden;
 }
 
-.note-table-drag-placeholder .selectedCell::after {
+.tiptap-editor table .note-table-drag-source.selectedCell::after {
   display: none;
 }
 
-.tiptap-editor .tableWrapper .note-table-drag-preview {
+.note-table-drag-preview {
+  position: absolute;
   z-index: 6;
+  overflow: hidden;
+  border-radius: 5px;
+  background: hsl(var(--card));
   filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.2));
-  opacity: 0.94;
 }
 
-.note-table-drag-outline {
+.note-table-drag-preview::after {
+  content: "";
   position: absolute;
-  z-index: 7;
+  inset: 0;
+  z-index: 4;
   box-shadow: inset 0 0 0 1px hsl(var(--primary));
-  border-radius: 5px;
-  pointer-events: none;
+  border-radius: inherit;
 }
 
 .note-table-drag-handle {
@@ -180,4 +178,15 @@
 .note-table-drop-indicator-column {
   width: 2px;
   transform: translateX(-50%);
+}
+
+/* The ghost is viewport-relative and cannot change any editor scroll extent. */
+.note-table-drag-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  overflow: clip;
+  contain: strict;
+  pointer-events: none;
+  user-select: none;
 }

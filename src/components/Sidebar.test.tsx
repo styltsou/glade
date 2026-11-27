@@ -78,6 +78,7 @@ it("docks again when reopened, and the next close is a wipe again", () => {
   render(true);
   setCollapsed(false);
   expect(looksFloating()).toBe(false);
+  expect([panel().style.left, panel().style.top, panel().style.bottom]).toEqual(["0px", "0px", "0px"]);
   render(false);
   setCollapsed(true);
   expect(looksFloating()).toBe(false);

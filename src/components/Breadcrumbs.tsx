@@ -30,14 +30,9 @@ interface BreadcrumbsProps {
   className?: string;
 }
 
-/**
- * Every crumb that does something: the same rounded hover as tabs, sidebar rows
- * and toolbar buttons. Keyboard focus shows the same fill, not a ring: a menu
- * hands focus back to its crumb as it closes, and a ring there looked stuck on.
- * No press scale on text either: on a wide pill it nudges the words sideways.
- */
 const CRUMB =
-  "flex h-7 cursor-pointer items-center rounded-lg px-2 outline-none transition-colors hover:bg-foreground/[0.07] focus-visible:bg-foreground/[0.07]";
+  "flex h-7 cursor-pointer items-center rounded-lg px-2 outline-none transition-colors";
+const FOLDER_CRUMB = "text-muted-foreground hover:text-foreground focus-visible:text-foreground";
 
 /** What the pointer or focus is on is measured before the tooltip may open, so it shows only for text that is cut off. */
 function measureTruncation(element: HTMLElement): boolean {
@@ -86,7 +81,7 @@ function NoteMenu({ file, label, loose }: { file: string; label: string; loose?:
             type="button"
             aria-current={loose ? undefined : "page"}
             // Open from aria-expanded: the tooltip shares this element and writes its own data-state over the menu's.
-            className={cn(CRUMB, "group/crumb max-w-[480px] gap-1 font-semibold text-foreground aria-expanded:bg-foreground/[0.11]")}
+            className={cn(CRUMB, "group/crumb max-w-[480px] gap-1 font-semibold text-foreground hover:bg-foreground/[0.07] focus-visible:bg-foreground/[0.07] aria-expanded:bg-foreground/[0.11]")}
           >
             <span data-truncate className="min-w-0 truncate">{label}</span>
             <ChevronDown className="size-3.5 shrink-0 text-muted-foreground transition-[color,rotate] duration-100 ease-[var(--ease-ui)] group-hover/crumb:text-foreground group-aria-expanded/crumb:rotate-180 group-aria-expanded/crumb:text-foreground" />
@@ -286,7 +281,7 @@ function CollapsingCrumbs({
         ) : (
           <BreadcrumbLink
             onClick={() => onNavigate(item.folderPath ?? null)}
-            className={cn(CRUMB, "max-w-[160px] text-muted-foreground hover:text-foreground", isRoot && "press w-7 justify-center px-0")}
+            className={cn(CRUMB, FOLDER_CRUMB, "max-w-[160px]", isRoot && "press w-7 justify-center px-0")}
           >
             {text}
           </BreadcrumbLink>
@@ -310,7 +305,7 @@ function CollapsingCrumbs({
                     <button
                       type="button"
                       aria-label={`Show ${collapsed.length} hidden folders`}
-                      className={cn(CRUMB, "press w-7 justify-center px-0 text-muted-foreground hover:text-foreground data-[state=open]:bg-foreground/[0.11]")}
+                      className={cn(CRUMB, FOLDER_CRUMB, "press w-7 justify-center px-0 data-[state=open]:text-foreground")}
                     >
                       <Ellipsis className="size-4" />
                     </button>

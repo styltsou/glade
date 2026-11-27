@@ -106,7 +106,9 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           aria-hidden={hidden}
           style={{
             width: floating ? PEEK_WIDTH : `var(--sidebar-live-width, ${sidebarWidth}px)`,
-            ...(floating ? { left: PEEK_INSET, top: PEEK_TOP, bottom: PEEK_INSET } : {}),
+            left: floating ? PEEK_INSET : 0,
+            top: floating ? PEEK_TOP : 0,
+            bottom: floating ? PEEK_INSET : 0,
             visibility: hidden ? "hidden" : "visible",
             opacity: hidden ? 0 : 1,
             transform: hidden ? "translateX(-8px)" : "translateX(0)",
@@ -115,8 +117,8 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
             transitionDelay: !hidden ? "0ms" : floating ? "0ms, 0ms, 150ms" : "var(--dur-sidebar)",
             pointerEvents: hidden ? "none" : undefined,
           }}
-          // Width only animates into the docked panel: the peek opens at its own width.
-          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "transition-[opacity,transform,visibility]" : "transition-[width,opacity,transform,visibility]"} ${floating ? "rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
+          // While docking, both vertical edges move with the sidebar's width.
+          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px ring-1 ring-inset select-none motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "transition-[opacity,transform,visibility] duration-150 ease-out" : "transition-[left,top,bottom,width,border-radius,box-shadow,opacity,transform,visibility] duration-(--dur-sidebar) ease-(--ease-ui)"} ${floating ? "rounded-lg ring-border/70 shadow-xl" : "rounded-none ring-transparent"}`}
         >
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
