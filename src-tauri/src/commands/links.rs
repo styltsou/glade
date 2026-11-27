@@ -124,6 +124,23 @@ pub async fn get_backlinks(window: tauri::Window, path: String) -> Result<Vec<Ba
         .collect())
 }
 
+/// Notes in the open folder that the note at `path` links to.
+#[tauri::command]
+pub async fn get_outgoing_links(window: tauri::Window, path: String) -> Result<Vec<Backlink>, AppError> {
+    let root = root_for(&window)?;
+    let source = resolve_markdown(&root, &path)?;
+    Ok(links::outgoing(&root, &source)?
+        .into_iter()
+        .map(|rel| {
+            let rel_str = rel.to_string_lossy().to_string();
+            let title = vault::note_card(&root, &rel_str, false)
+                .map(|c| c.title)
+                .unwrap_or_else(|| rel_str.clone());
+            Backlink { path: rel_str, title }
+        })
+        .collect())
+}
+
 #[derive(Serialize)]
 pub struct LinkUpdates {
     pub links: usize,

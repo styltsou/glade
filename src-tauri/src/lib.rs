@@ -127,6 +127,7 @@ pub fn run() {
             commands::create_linked_note,
             commands::list_dir_markdown,
             commands::get_backlinks,
+            commands::get_outgoing_links,
             commands::preview_link_updates,
             commands::apply_link_updates,
             set_frontmatter_text,

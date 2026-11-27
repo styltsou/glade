@@ -350,6 +350,26 @@ pub fn backlinks(root: &Path, target: &Path) -> Result<Vec<PathBuf>, crate::erro
     Ok(out)
 }
 
+/// Markdown notes in `root` that the file at `source` links to, in the order
+/// first linked, each once. Links to missing files, other folders and the note
+/// itself are left out.
+pub fn outgoing(root: &Path, source: &Path) -> Result<Vec<PathBuf>, crate::error::AppError> {
+    let content = std::fs::read_to_string(source)?;
+    let dir = source.parent().unwrap_or(root);
+    let mut out: Vec<PathBuf> = Vec::new();
+    for link in find_links(&content) {
+        let Some(target) = resolve_href(dir, &link.href) else { continue };
+        if target == source || !vault::is_markdown(&target) || !target.is_file() {
+            continue;
+        }
+        let Ok(rel) = target.strip_prefix(root) else { continue };
+        if !out.iter().any(|p| p == rel) {
+            out.push(rel.to_path_buf());
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -520,5 +540,18 @@ mod tests {
         assert_eq!(fs::read_to_string(root.join("keep.md")).unwrap(), "nothing\n");
         // Files outside the root are never touched.
         assert_eq!(fs::read_to_string(outer.path().join("outside.md")).unwrap(), "[C](root/c.md)\n");
+    }
+
+    #[test]
+    fn outgoing_lists_each_linked_note_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        fs::create_dir(root.join("sub")).unwrap();
+        fs::write(root.join("a.md"), "[b](b.md) [b again](b.md#top) [c](sub/c.md) [me](a.md) [gone](nope.md) [web](https://x.dev) [img](p.png)").unwrap();
+        fs::write(root.join("b.md"), "").unwrap();
+        fs::write(root.join("sub/c.md"), "").unwrap();
+        fs::write(root.join("p.png"), [1u8]).unwrap();
+        let found = outgoing(root, &root.join("a.md")).unwrap();
+        assert_eq!(found, vec![PathBuf::from("b.md"), PathBuf::from("sub/c.md")]);
     }
 }
