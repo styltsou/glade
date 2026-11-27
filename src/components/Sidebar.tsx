@@ -13,11 +13,12 @@ import { FRAME_GAP } from "@/lib/surfaces";
 import { startSidebarResize } from "@/lib/sidebarResize";
 import type { SidebarPreview } from "@/hooks/useSidebarPreview";
 
-// The peek floats inside the pages, as far from their top and bottom edges as it
-// is from the window's left edge. Each page edge is a 1px line, and the top one is
-// pulled up into the tabs' last row.
+// The peek floats inside the pages, the frame's gap in from their top, left and
+// bottom edges. Each edge is a 1px line, and the top one is pulled up into the
+// tabs' last row.
+const PEEK_WIDTH = 280;
 const PEEK_TOP = 1 + FRAME_GAP;
-const PEEK_BOTTOM = FRAME_GAP + 1 + FRAME_GAP;
+const PEEK_INSET = FRAME_GAP + 1 + FRAME_GAP;
 
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
@@ -92,8 +93,10 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
             aria-hidden="true"
             onPointerEnter={sidebarPreview.enter}
             onPointerLeave={sidebarPreview.leave}
-            style={{ left: FRAME_GAP, height: PEEK_TOP }}
-            className="absolute top-0 z-30 w-[280px]"
+            // From under the toggle to the peek's right edge, so the pointer can come
+            // straight down from the toggle.
+            style={{ left: FRAME_GAP, width: PEEK_INSET - FRAME_GAP + PEEK_WIDTH, height: PEEK_TOP }}
+            className="absolute top-0 z-30"
           />
         )}
         <div
@@ -102,8 +105,8 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           onPointerLeave={leavePeek}
           aria-hidden={hidden}
           style={{
-            width: floating ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
-            ...(floating ? { left: FRAME_GAP, top: PEEK_TOP, bottom: PEEK_BOTTOM } : {}),
+            width: floating ? PEEK_WIDTH : `var(--sidebar-live-width, ${sidebarWidth}px)`,
+            ...(floating ? { left: PEEK_INSET, top: PEEK_TOP, bottom: PEEK_INSET } : {}),
             visibility: hidden ? "hidden" : "visible",
             opacity: hidden ? 0 : 1,
             transform: hidden ? "translateX(-8px)" : "translateX(0)",
