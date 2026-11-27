@@ -46,6 +46,22 @@
   background-clip: padding-box, border-box;
 }
 
+.panel-card {
+  --edge: hsl(var(--sidebar-border) / 0.7);
+  border-color: var(--edge);
+}
+
+/* A right-hand panel's edge being hovered or dragged lights the card's left
+   edge, blended into the rest around the corners as for the page above. */
+.panel-resize-handle:is(:hover, [data-dragging="true"]) + .panel-card {
+  border-color: transparent;
+  background-image:
+    linear-gradient(hsl(var(--sidebar)), hsl(var(--sidebar))),
+    linear-gradient(to right, hsl(var(--primary)), var(--edge) var(--radius-xl));
+  background-origin: padding-box, border-box;
+  background-clip: padding-box, border-box;
+}
+
 .surface-page[data-flush] {
   --flush: 1;
 }

@@ -59,6 +59,11 @@ export interface NoteSlice {
   markTocInitialized: (path: string) => void;
   tocWidth: number;
   setTocWidth: (width: number) => void;
+  /** The panel of the notes that link here and that this one links to. */
+  referencesOpen: boolean;
+  referencesWidth: number;
+  setReferencesWidth: (width: number) => void;
+  toggleReferences: () => void;
   noteEditMode: Record<string, boolean>;
   setNoteEditMode: (path: string, isEditMode: boolean) => void;
   isRawMode: Record<string, boolean>;
@@ -577,6 +582,16 @@ const noteActions = (
         [path]: true,
       },
     }));
+  },
+
+  referencesOpen: false,
+  referencesWidth: 248,
+  setReferencesWidth: (width: number) => {
+    set({ referencesWidth: width });
+  },
+
+  toggleReferences: () => {
+    set((state: StoreState) => ({ referencesOpen: !state.referencesOpen }));
   },
 
   tocWidth: 280,

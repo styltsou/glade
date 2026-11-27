@@ -3,6 +3,8 @@ import { Editor } from "@tiptap/react";
 import { ChevronRight, X } from "lucide-react";
 import { useStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { usePanelResize } from "@/hooks/usePanelResize";
+import { PanelResizeHandle, PANEL_CARD } from "./PanelResizeHandle";
 
 /** Space around the floating card (1 left for the resize handle, 2 top/bottom/right); the drawer is this much wider than its card. */
 export const TOC_GUTTER = 12;
@@ -94,10 +96,7 @@ interface TableOfContentsProps {
 export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfContentsProps) {
   const tocWidth = useStore((state) => state.tocWidth);
   const setTocWidth = useStore((state) => state.setTocWidth);
-  const [isResizing, setIsResizing] = useState(false);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
-  const startXRef = useRef(0);
-  const startWidthRef = useRef(0);
 
   useEffect(() => {
     if (!editor) {
@@ -162,48 +161,19 @@ export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfCo
     [editor]
   );
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    startXRef.current = e.clientX;
-    startWidthRef.current = tocWidth;
-    setIsResizing(true);
-  }, [tocWidth]);
-
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const delta = startXRef.current - e.clientX;
-      const newWidth = Math.max(200, Math.min(500, startWidthRef.current + delta));
-      setTocWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "default";
-      document.body.style.userSelect = "";
-    };
-  }, [isResizing, setTocWidth]);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { isResizing, onPointerDown } = usePanelResize(tocWidth, setTocWidth, panelRef, TOC_GUTTER);
 
   if (!isOpen) return null;
 
   return (
     <div
+      ref={panelRef}
       className="relative h-full shrink-0 py-2 pr-2 pl-1 select-none"
       style={{ width: tocWidth + TOC_GUTTER }}
     >
-      <div className="flex h-full flex-col overflow-hidden rounded-xl border border-sidebar-border/70 bg-sidebar shadow-sm">
+      <PanelResizeHandle dragging={isResizing} onPointerDown={onPointerDown} />
+      <div className={cn("flex h-full flex-col overflow-hidden rounded-xl border bg-sidebar shadow-sm", PANEL_CARD)}>
         <div className="flex items-center justify-between h-9 pl-4 pr-2 shrink-0">
           <span className="text-[13px] font-medium tracking-[-0.005em] text-muted-foreground truncate">On this page</span>
           <button
@@ -223,13 +193,6 @@ export function TableOfContents({ editor, isOpen, onClose, headings }: TableOfCo
           />
         </div>
       </div>
-      <div
-        className={cn(
-          "absolute left-0 top-2 bottom-2 w-1 cursor-col-resize hover:bg-primary/30 transition-colors",
-          isResizing && "bg-primary/50"
-        )}
-        onMouseDown={handleMouseDown}
-      />
     </div>
   );
 }

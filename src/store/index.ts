@@ -42,6 +42,8 @@ export const useStore = create<StoreState>()(
         noteLabel: state.noteLabel,
         onboarded: state.onboarded,
         tocOpen: state.tocOpen,
+        referencesOpen: state.referencesOpen,
+        referencesWidth: state.referencesWidth,
         isRawMode: state.isRawMode,
         tocWidth: state.tocWidth,
         sidebarCollapsed: state.sidebarCollapsed,

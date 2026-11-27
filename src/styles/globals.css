@@ -412,7 +412,9 @@ kbd {
   cursor: ew-resize !important;
 }
 [data-resizing="pane"],
-[data-resizing="pane"] * {
+[data-resizing="pane"] *,
+[data-resizing="panel"],
+[data-resizing="panel"] * {
   cursor: col-resize !important;
 }
 

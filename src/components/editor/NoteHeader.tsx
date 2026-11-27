@@ -3,7 +3,7 @@ import { CopyIcon } from "@/components/ui/icon-swap";
 import { invoke } from "@tauri-apps/api/core";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
-import { Clock, BookOpen, PencilOff } from "lucide-react";
+import { Clock, BookOpen, Link2, PencilOff } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,10 @@ interface NoteHeaderProps {
   hasHeadings?: boolean;
   isTocOpen?: boolean;
   onToggleToc?: () => void;
+  /** Whether any note links to this one or is linked from it. */
+  hasLinks?: boolean;
+  isReferencesOpen?: boolean;
+  onToggleReferences?: () => void;
   /** The find bar, shown while there is one. */
   find?: FindBarProps | null;
 }
@@ -34,6 +38,9 @@ export function NoteHeader({
   hasHeadings = false,
   isTocOpen = false,
   onToggleToc,
+  hasLinks = false,
+  isReferencesOpen = false,
+  onToggleReferences,
   find = null,
 }: NoteHeaderProps) {
   const setNoteEditMode = useStore((s) => s.setNoteEditMode);
@@ -163,6 +170,28 @@ export function NoteHeader({
           </TooltipTrigger>
           <TooltipContent side="bottom">
             <p>Table of Contents ({formatShortcut(bindingFor("toggle-toc")!)})</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Links"
+              aria-pressed={isReferencesOpen}
+              className={cn(
+                !hasLinks && "text-muted-foreground/50 cursor-not-allowed",
+                isReferencesOpen && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary",
+              )}
+              onClick={onToggleReferences}
+              disabled={!hasLinks}
+            >
+              <Link2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            <p>{hasLinks ? "Links" : "No links"}</p>
           </TooltipContent>
         </Tooltip>
 

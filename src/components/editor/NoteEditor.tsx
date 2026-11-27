@@ -46,7 +46,6 @@ import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor, type RawEditorHandle } from "./RawEditor";
 import { PropertiesPanel } from "./PropertiesPanel";
-import { Backlinks } from "./Backlinks";
 import { LinkInteractionPopover } from "./LinkPopover";
 import { CaretLinkPopover, LinkUrlForm } from "./LinkUrlForm";
 import { TableControls } from "./tables/TableControls";
@@ -649,7 +648,6 @@ export function NoteEditor({
 				<div className="mb-8">
 					<TagInput />
 					<PropertiesPanel />
-					<Backlinks />
 				</div>
 
 				{isRawMode ? (

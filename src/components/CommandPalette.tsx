@@ -11,6 +11,7 @@ import {
   Check as CheckIcon,
   Monitor as MonitorIcon,
   BookOpen as BookOpenIcon,
+  Link2 as Link2Icon,
   Code as CodeIcon,
   Columns2 as Columns2Icon,
   Copy as CopyIcon,
@@ -76,6 +77,7 @@ type CommandId =
   | "close-folder"
   | "folder-overview"
   | "toggle-appearance"
+  | "toggle-references"
   | "change-theme"
   | "change-mode"
   | "show-welcome";
@@ -121,6 +123,7 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
       { id: "toggle-sidebar", label: "Toggle sidebar", icon: PanelLeftIcon },
       { id: "split-right", label: "Split right", icon: Columns2Icon },
       { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
+      { id: "toggle-references", label: "Toggle links panel", icon: Link2Icon },
       { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
       { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
       { id: "open-settings", label: "Settings", icon: SettingsIcon },
@@ -162,6 +165,7 @@ function isAvailable(id: CommandId): boolean {
     case "add-property":
     case "export-note":
     case "toggle-toc":
+    case "toggle-references":
     case "toggle-edit-mode":
     case "toggle-raw-mode":
       return !!note;
@@ -206,6 +210,8 @@ function liveLabel(def: CommandDef): string {
       return s.sidebarCollapsed ? "Show sidebar" : "Hide sidebar";
     case "toggle-toc":
       return note && s.tocOpen[note.path] ? "Hide table of contents" : "Show table of contents";
+    case "toggle-references":
+      return s.referencesOpen ? "Hide links panel" : "Show links panel";
     case "toggle-edit-mode":
       return note && (s.noteEditMode[note.path] ?? false) ? "Switch to reading mode" : "Switch to editing mode";
     case "toggle-raw-mode":
@@ -261,6 +267,9 @@ function runCommand(id: CommandId): boolean {
       break;
     case "toggle-toc":
       if (note) s.toggleToc(note.path);
+      break;
+    case "toggle-references":
+      s.toggleReferences();
       break;
     case "toggle-edit-mode":
       if (note) s.setNoteEditMode(note.path, !(s.noteEditMode[note.path] ?? false));
@@ -409,7 +418,7 @@ export function CommandPalette() {
   /** The command that closed the palette put the keyboard somewhere itself. */
   const keepFocus = useRef(false);
   // Re-render on store changes so labels and availability stay current.
-  useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.isRawMode, s.propertiesOpen, s.noteEditMode]));
+  useStore(useShallow((s) => [s.target, s.homeOpen, s.theme, s.mode, s.activeNote, s.currentFolder, s.sidebarCollapsed, s.resolvedMode, s.tabsState, s.tocOpen, s.referencesOpen, s.isRawMode, s.propertiesOpen, s.noteEditMode]));
 
   const entries = useStore((s) => s.entries);
   const recentFiles = useStore((s) => s.home?.recent_files);

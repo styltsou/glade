@@ -11,7 +11,8 @@ import {
 } from "react";
 import { NoteEditor } from "@/components/editor/NoteEditor";
 import { NoteHeader } from "@/components/editor/NoteHeader";
-import { TableOfContents, TOC_GUTTER } from "@/components/editor/TableOfContents";
+import { TableOfContents } from "@/components/editor/TableOfContents";
+import { ReferencesPanel, useNoteLinks } from "@/components/editor/ReferencesPanel";
 import { SearchHighlight } from "@/components/editor/SearchHighlight";
 import type { RawEditorHandle } from "@/components/editor/RawEditor";
 import { useNoteFind } from "@/hooks/useNoteFind";
@@ -64,8 +65,9 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
   );
   const tocOpen = useStore((state) => state.tocOpen);
   const toggleToc = useStore((state) => state.toggleToc);
+  const referencesOpen = useStore((state) => state.referencesOpen);
+  const toggleReferences = useStore((state) => state.toggleReferences);
   const reduceMotion = useReducedMotion();
-  const tocWidth = useStore((state) => state.tocWidth);
   const noteEditMode = useStore((state) => state.noteEditMode);
   const setNoteEditMode = useStore((state) => state.setNoteEditMode);
   const isRawModeMap = useStore((state) => state.isRawMode);
@@ -624,6 +626,9 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
     };
   }, [editor]);
 
+  const noteLinks = useNoteLinks(activeNote?.path, activeNote?.updated);
+  const hasLinks = noteLinks.referencedIn.length + noteLinks.linksTo.length > 0;
+
   const isTocOpen = activeNote ? (tocOpen[activeNote.path] ?? false) : false;
 
   const handleToggleToc = useCallback(() => {
@@ -732,6 +737,9 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
         hasHeadings={tocHeadings.length > 0}
         isTocOpen={isTocOpen}
         onToggleToc={handleToggleToc}
+        hasLinks={hasLinks}
+        isReferencesOpen={referencesOpen && hasLinks}
+        onToggleReferences={toggleReferences}
         find={find.visible ? find.barProps : null}
       />
       </div>
@@ -778,7 +786,7 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
           {isTocOpen && (
             <motion.div
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: tocWidth + TOC_GUTTER, opacity: 1, transition: { duration: reduceMotion ? 0.12 : 0.24, ease: [0.32, 0.72, 0, 1] } }}
+              animate={{ width: "auto", opacity: 1, transition: { duration: reduceMotion ? 0.12 : 0.24, ease: [0.32, 0.72, 0, 1] } }}
               exit={{ width: 0, opacity: 0, transition: { duration: reduceMotion ? 0.1 : 0.16, ease: [0.32, 0.72, 0, 1] } }}
               className="flex shrink-0 justify-end overflow-hidden"
             >
@@ -788,6 +796,19 @@ export function Editor({ path, focused, onFocus, split }: EditorProps) {
                 onClose={handleToggleToc}
                 headings={tocHeadings}
               />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* The links panel opens the same way, beside the contents. */}
+        <AnimatePresence initial={false}>
+          {referencesOpen && hasLinks && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "auto", opacity: 1, transition: { duration: reduceMotion ? 0.12 : 0.24, ease: [0.32, 0.72, 0, 1] } }}
+              exit={{ width: 0, opacity: 0, transition: { duration: reduceMotion ? 0.1 : 0.16, ease: [0.32, 0.72, 0, 1] } }}
+              className="flex shrink-0 justify-end overflow-hidden"
+            >
+              <ReferencesPanel links={noteLinks} onClose={toggleReferences} />
             </motion.div>
           )}
         </AnimatePresence>
