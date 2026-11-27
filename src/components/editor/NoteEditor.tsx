@@ -42,6 +42,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tip, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EditableTitle } from "./EditableTitle";
 import { TagInput } from "@/components/TagInput";
 import { RawEditor, type RawEditorHandle } from "./RawEditor";
@@ -157,30 +158,36 @@ function getCurrentBlockType(editor: Editor): string {
 
 function BubbleButton({
 	children,
+	label,
 	onClick,
 	isActive = false,
 	className = "",
 }: {
 	children: React.ReactNode;
+	label: string;
 	onClick?: () => void;
 	isActive?: boolean;
 	className?: string;
 }) {
 	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={cn(
-				"inline-flex items-center justify-center h-8 w-8 rounded-sm text-sm font-medium transition-colors",
-				// A wash of the text colour, as in the menus: a solid fill would sit on the glass.
-				"hover:bg-foreground/[0.06] active:bg-foreground/[0.09]",
-				"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-				isActive && "bg-primary/10 text-primary hover:bg-primary/15",
-				className,
-			)}
-		>
-			{children}
-		</button>
+		<Tip label={label} side="top">
+			<button
+				type="button"
+				aria-label={label}
+				aria-pressed={isActive}
+				onClick={onClick}
+				className={cn(
+					"inline-flex items-center justify-center h-8 w-8 rounded-sm text-sm font-medium transition-colors",
+					// A wash of the text colour, as in the menus: a solid fill would sit on the glass.
+					"hover:bg-foreground/[0.06] active:bg-foreground/[0.09]",
+					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+					isActive && "bg-primary/10 text-primary hover:bg-primary/15",
+					className,
+				)}
+			>
+				{children}
+			</button>
+		</Tip>
 	);
 }
 
@@ -511,31 +518,36 @@ export function NoteEditor({
 									setBlockPopoverOpen(open);
 								}}
 							>
-								<PopoverTrigger asChild>
-									<button
-										ref={blockTriggerRef}
-										type="button"
-										className={cn(
-											"inline-flex items-center justify-center gap-2 h-8 px-2 rounded-sm text-sm font-medium outline-hidden select-none",
-											"hover:bg-foreground/[0.06] data-[state=open]:bg-foreground/[0.09]",
-											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-										)}
-									>
-										{(() => {
-											const currentBT =
-												blockTypes.find((bt) => bt.id === currentBlockType) ||
-												blockTypes[0];
-											const Icon = currentBT.icon;
-											return (
-												<>
-													<Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-													<span className="text-sm">{currentBT.label}</span>
-												</>
-											);
-										})()}
-										<ChevronDown className="h-3 w-3 text-muted-foreground" />
-									</button>
-								</PopoverTrigger>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<PopoverTrigger asChild>
+											<button
+												ref={blockTriggerRef}
+												type="button"
+												className={cn(
+													"inline-flex items-center justify-center gap-2 h-8 px-2 rounded-sm text-sm font-medium outline-hidden select-none",
+													"hover:bg-foreground/[0.06] aria-expanded:bg-foreground/[0.09]",
+													"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+												)}
+											>
+												{(() => {
+													const currentBT =
+														blockTypes.find((bt) => bt.id === currentBlockType) ||
+														blockTypes[0];
+													const Icon = currentBT.icon;
+													return (
+														<>
+															<Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+															<span className="text-sm">{currentBT.label}</span>
+														</>
+													);
+												})()}
+												<ChevronDown className="h-3 w-3 text-muted-foreground" />
+											</button>
+										</PopoverTrigger>
+									</TooltipTrigger>
+									<TooltipContent side="top">Change block type</TooltipContent>
+								</Tooltip>
 								<PopoverContent
 									className="glass-bubble w-48 p-0 rounded-md text-popover-foreground data-[state=open]:animate-none data-[state=open]:zoom-in-100 data-[state=open]:fade-in-100"
 									side={blockPopoverSide}
@@ -581,6 +593,7 @@ export function NoteEditor({
 							</Popover>
 
 							<BubbleButton
+								label="Link"
 								onClick={() => {
 									setLinkFormOpen(true);
 								}}
@@ -592,30 +605,35 @@ export function NoteEditor({
 							<div className="w-px h-5 bg-foreground/10 mx-0.5" />
 
 							<BubbleButton
+								label="Bold"
 								onClick={() => editor.chain().focus().toggleBold().run()}
 								isActive={editor.isActive("bold")}
 							>
 								<Bold className="h-4 w-4" />
 							</BubbleButton>
 							<BubbleButton
+								label="Italic"
 								onClick={() => editor.chain().focus().toggleItalic().run()}
 								isActive={editor.isActive("italic")}
 							>
 								<Italic className="h-4 w-4" />
 							</BubbleButton>
 							<BubbleButton
+								label="Strikethrough"
 								onClick={() => editor.chain().focus().toggleStrike().run()}
 								isActive={editor.isActive("strike")}
 							>
 								<Strikethrough className="h-4 w-4" />
 							</BubbleButton>
 							<BubbleButton
+								label="Underline"
 								onClick={() => editor.chain().focus().toggleUnderline().run()}
 								isActive={editor.isActive("underline")}
 							>
 								<Underline className="h-4 w-4" />
 							</BubbleButton>
 							<BubbleButton
+								label="Inline code"
 								onClick={() => editor.chain().focus().toggleCode().run()}
 								isActive={editor.isActive("code")}
 							>
