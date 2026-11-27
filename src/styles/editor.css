@@ -86,6 +86,42 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* Each nesting level changes marker, as in the mnemee editor: bullets go disc, circle,
+   square; numbers go 1, a, i; then both start over, however deep. The ListMarkers
+   extension sets the level, since CSS can't count depth in a cycle. */
+.tiptap-editor ul[data-marker-level="1"] {
+  list-style-type: circle;
+}
+
+.tiptap-editor ul[data-marker-level="2"] {
+  list-style-type: square;
+}
+
+.tiptap-editor ol[data-marker-level="1"] {
+  list-style-type: lower-alpha;
+}
+
+.tiptap-editor ol[data-marker-level="2"] {
+  list-style-type: lower-roman;
+}
+
+/* A nested list sits close under its parent item, not a paragraph's gap away. */
+.tiptap-editor li :is(ul, ol) {
+  margin-top: 0.3em;
+  margin-bottom: 0;
+}
+
+/* An item with only its bullet, number or checkbox says what goes there. The
+   paragraph holds nothing but ProseMirror's trailing break until it has text. */
+.tiptap-editor.ProseMirror[contenteditable="true"] li p:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: "List item";
+  float: left;
+  height: 0;
+  color: hsl(var(--muted-foreground) / 0.5);
+  pointer-events: none;
+  font-weight: 400;
+}
+
 .tiptap-editor ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;

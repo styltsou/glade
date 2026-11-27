@@ -28,6 +28,7 @@ import { useStore } from "@/store";
 import { AutoLink } from "./extensions/AutoLink";
 import { linkMarkdown } from "./extensions/linkMarkdown";
 import { SoftBreaks } from "./extensions/SoftBreaks";
+import { ListMarkers } from "./extensions/ListMarkers";
 import { tableMarkdown } from "./tables/tableMarkdown";
 
 const lowlight = createLowlight(all);
@@ -85,6 +86,7 @@ export const extensions = [
   // Inline, as in markdown: in sentences, links, headings, list items and cells.
   LocalImage.configure({ inline: true }),
   SoftBreaks,
+  ListMarkers,
   LinkBehavior,
   AutoLink.configure({
     isLocalNote: (path, from) => pointsToNote(path, from, Object.values(useStore.getState().idToPath)),
