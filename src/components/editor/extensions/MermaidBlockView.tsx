@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react'
 import { CopyIcon, IconSwap } from '@/components/ui/icon-swap'
 import { createPortal } from 'react-dom'
 import { NodeViewWrapper } from '@tiptap/react'
@@ -11,7 +11,7 @@ import {
   Download,
 } from 'lucide-react'
 import { useStore } from '@/store'
-import { AnimatePresence } from 'motion/react'
+import { AnimatePresence, useReducedMotion } from 'motion/react'
 import { MermaidFullView } from './MermaidFullView'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -32,6 +32,49 @@ export function MermaidBlockView({
   const source: string = node.attrs.source || ''
 
   const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview')
+  const reduceMotion = useReducedMotion()
+  const blockRef = useRef<HTMLDivElement>(null)
+  /** The block's height as the view switched, to grow or shrink from. */
+  const switchedFrom = useRef<number | null>(null)
+  const heightAnimation = useRef<Animation | null>(null)
+
+  // Flipping between diagram and code changes the block's height a lot. Read
+  // it now (mid-animation, where it is), and the view change below animates
+  // from there. Not from the keyboard (Esc): a key press gets its result at once.
+  const switchView = (next: 'preview' | 'code', { animate = true } = {}) => {
+    if (next === viewMode) return
+    switchedFrom.current = animate ? blockRef.current?.offsetHeight ?? null : null
+    heightAnimation.current?.cancel()
+    setViewMode(next)
+  }
+
+  // Grow or shrink to the new view's height, pushing the note below along with
+  // it, while the new view fades in through a slight blur: quick, and only
+  // when the view switches (typing in the code view resizes it at once).
+  useLayoutEffect(() => {
+    const block = blockRef.current
+    const from = switchedFrom.current
+    switchedFrom.current = null
+    if (!block || from === null || reduceMotion) return
+    const motion = { duration: 110, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+    block.lastElementChild?.animate(
+      [{ opacity: 0, filter: 'blur(2px)' }, { opacity: 1, filter: 'blur(0)' }],
+      motion,
+    )
+    // Hold the old height until the new view has laid out (the code editor
+    // mounts in an effect), then measure and animate.
+    block.style.height = `${from}px`
+    const frame = requestAnimationFrame(() => {
+      block.style.height = ''
+      const to = block.offsetHeight
+      if (Math.abs(to - from) < 1) return
+      heightAnimation.current = block.animate([{ height: `${from}px` }, { height: `${to}px` }], motion)
+    })
+    return () => {
+      cancelAnimationFrame(frame)
+      block.style.height = ''
+    }
+  }, [viewMode, reduceMotion])
   const setMermaidFullscreenOpen = useStore((state) => state.setMermaidFullscreenOpen)
   const [isFullViewOpen, setIsFullViewOpen] = useState(false)
   const [draft, setDraft] = useState(source)
@@ -164,7 +207,7 @@ export function MermaidBlockView({
   // ─── Inline View ───
   return (
     <NodeViewWrapper data-type="mermaid-block">
-      <div className="mermaid-block group/mermaid">
+      <div ref={blockRef} className="mermaid-block group/mermaid">
         {/* Inline Toolbar */}
         {/* The same buttons in both views, so none moves when the view flips. */}
         <div className="mermaid-block-toolbar">
@@ -195,7 +238,7 @@ export function MermaidBlockView({
               <button
                 type="button"
                 aria-label={viewMode === 'preview' ? 'Show code' : 'Show diagram'}
-                onClick={() => setViewMode(viewMode === 'preview' ? 'code' : 'preview')}
+                onClick={() => switchView(viewMode === 'preview' ? 'code' : 'preview')}
               >
                 <IconSwap show={viewMode} icons={{ preview: <Code className="size-3.5" />, code: <Eye className="size-3.5" /> }} />
               </button>
@@ -235,7 +278,7 @@ export function MermaidBlockView({
             className="mermaid-block-source"
             onKeyDown={(e) => {
               // Esc goes back to the diagram; keys typed here stay out of the app's shortcuts.
-              if (e.key === 'Escape') setViewMode('preview')
+              if (e.key === 'Escape') switchView('preview', { animate: false })
               e.stopPropagation()
             }}
           >
