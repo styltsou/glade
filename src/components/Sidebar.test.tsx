@@ -61,6 +61,8 @@ it("still floats when peeked, and fades out as the card", () => {
   render(true);
   expect(looksFloating()).toBe(true);
   expect(panel().style.width).toBe("280px");
+  // As far from the pages' top and bottom edges as from the window's left edge.
+  expect([panel().style.left, panel().style.top, panel().style.bottom]).toEqual(["6px", "7px", "13px"]);
   expect(panel().style.opacity).toBe("1");
   expect(aside().classList.contains("overflow-hidden")).toBe(false);
 

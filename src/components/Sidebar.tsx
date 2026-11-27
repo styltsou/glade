@@ -13,6 +13,12 @@ import { FRAME_GAP } from "@/lib/surfaces";
 import { startSidebarResize } from "@/lib/sidebarResize";
 import type { SidebarPreview } from "@/hooks/useSidebarPreview";
 
+// The peek floats inside the pages, as far from their top and bottom edges as it
+// is from the window's left edge. Each page edge is a 1px line, and the top one is
+// pulled up into the tabs' last row.
+const PEEK_TOP = 1 + FRAME_GAP;
+const PEEK_BOTTOM = FRAME_GAP + 1 + FRAME_GAP;
+
 // ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) {
@@ -86,7 +92,8 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
             aria-hidden="true"
             onPointerEnter={sidebarPreview.enter}
             onPointerLeave={sidebarPreview.leave}
-            className="absolute left-1.5 top-0 z-30 h-1.5 w-[280px]"
+            style={{ left: FRAME_GAP, height: PEEK_TOP }}
+            className="absolute top-0 z-30 w-[280px]"
           />
         )}
         <div
@@ -96,6 +103,7 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
           aria-hidden={hidden}
           style={{
             width: floating ? 280 : `var(--sidebar-live-width, ${sidebarWidth}px)`,
+            ...(floating ? { left: FRAME_GAP, top: PEEK_TOP, bottom: PEEK_BOTTOM } : {}),
             visibility: hidden ? "hidden" : "visible",
             opacity: hidden ? 0 : 1,
             transform: hidden ? "translateX(-8px)" : "translateX(0)",
@@ -105,7 +113,7 @@ export function Sidebar({ sidebarPreview }: { sidebarPreview: SidebarPreview }) 
             pointerEvents: hidden ? "none" : undefined,
           }}
           // Width only animates into the docked panel: the peek opens at its own width.
-          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "transition-[opacity,transform,visibility]" : "transition-[width,opacity,transform,visibility]"} ${floating ? "left-1.5 top-1.5 bottom-1.5 rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
+          className={`absolute z-30 flex flex-col overflow-hidden bg-sidebar pt-px select-none duration-150 ease-out motion-reduce:transition-none [[data-resizing]_&]:transition-none ${sidebarCollapsed ? "transition-[opacity,transform,visibility]" : "transition-[width,opacity,transform,visibility]"} ${floating ? "rounded-lg border border-border/70 shadow-xl" : "left-0 top-0 h-full"}`}
         >
           <PinnedSection />
           <div className="flex-1 overflow-hidden flex flex-col">
