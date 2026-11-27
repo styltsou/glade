@@ -81,9 +81,11 @@
   margin-bottom: 0.3em;
 }
 
+/* The text's own color, lighter: markers stay secondary but follow each theme's text,
+   and a thin nested circle or a step number stays easy to read. */
 .tiptap-editor ul ::marker,
 .tiptap-editor ol ::marker {
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--editor-text) / 0.75);
 }
 
 /* Each nesting level changes marker, as in the mnemee editor: bullets go disc, circle,
