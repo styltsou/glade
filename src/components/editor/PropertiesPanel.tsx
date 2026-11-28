@@ -168,21 +168,24 @@ function NewPropertyRow({ notePath, onDone }: { notePath?: string; onDone: () =>
 /** A quiet "Properties" subtitle after the tags. Collapsed by default; edits only the lines it touches. Tags have their own UI, so they are left out. */
 export function PropertiesPanel() {
   const paneNote = usePaneNote();
+  const notePath = paneNote?.path;
   const properties = paneNote?.properties;
   const open = useStore((s) => s.propertiesOpen);
   const toggle = useStore((s) => s.toggleProperties);
   const removeProperty = useStore((s) => s.removeProperty);
-  const addRequested = useStore((s) => s.addPropertyOpen);
-  const setAddRequested = useStore((s) => s.setAddPropertyOpen);
+  const addRequested = useStore((s) => s.addPropertyPath);
+  const setAddRequested = useStore((s) => s.setAddPropertyPath);
   const [adding, setAdding] = useState(false);
+
+  useEffect(() => setAdding(false), [notePath]);
 
   // "Add property" from the command palette opens the section with a fresh row.
   useEffect(() => {
-    if (!addRequested) return;
-    setAddRequested(false);
+    if (!notePath || addRequested !== notePath) return;
+    setAddRequested(null);
     if (!useStore.getState().propertiesOpen) toggle();
     setAdding(true);
-  }, [addRequested, setAddRequested, toggle]);
+  }, [addRequested, notePath, setAddRequested, toggle]);
 
   if (!properties) return null;
   const entries = properties.status === "ok" ? properties.entries.filter((e) => e.key.toLowerCase() !== "tags") : [];

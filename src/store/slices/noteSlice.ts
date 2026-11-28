@@ -73,9 +73,9 @@ export interface NoteSlice {
   /** Properties panel collapsed (one setting for every note). */
   propertiesOpen: boolean;
   toggleProperties: () => void;
-  /** Asks the properties section to open and start an inline new-property row. */
-  addPropertyOpen: boolean;
-  setAddPropertyOpen: (open: boolean) => void;
+  /** The note whose properties section should start a new-property row. */
+  addPropertyPath: string | null;
+  setAddPropertyPath: (path: string | null) => void;
   /** The export dialog for the active note (opened from the command palette). */
   exportOpen: boolean;
   setExportOpen: (open: boolean) => void;
@@ -637,8 +637,8 @@ const noteActions = (
 
   propertiesOpen: false,
   toggleProperties: () => set((s: StoreState) => ({ propertiesOpen: !s.propertiesOpen })),
-  addPropertyOpen: false,
-  setAddPropertyOpen: (open: boolean) => set({ addPropertyOpen: open }),
+  addPropertyPath: null,
+  setAddPropertyPath: (path: string | null) => set({ addPropertyPath: path }),
   exportOpen: false,
   setExportOpen: (open: boolean) => set({ exportOpen: open }),
 

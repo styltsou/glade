@@ -1,8 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act } from "react";
+import { act, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { useStore } from "@/store";
 import { CommandPalette } from "./CommandPalette";
+import { PropertiesPanel } from "./editor/PropertiesPanel";
+import { PaneProvider } from "./editor/PaneContext";
+import { TooltipProvider } from "./ui/tooltip";
+import { initialTabs, openToTheSide } from "@/lib/tabs";
+import type { NoteData } from "@/types";
 
 const initial = useStore.getState();
 let host: HTMLDivElement;
@@ -44,9 +49,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function openActions() {
+async function openActions(content: ReactNode = <CommandPalette />) {
   await act(async () => {
-    root.render(<CommandPalette />);
+    root.render(content);
   });
   await act(async () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyK", key: "k", ctrlKey: true, bubbles: true, cancelable: true }));
@@ -105,6 +110,110 @@ describe("CommandPalette actions search", () => {
     expect(selected()[0]).toContain("Keyboard shortcuts");
     await act(async () => typeRaw(""));
     expect(selected()).toEqual([first]);
+  });
+});
+
+function setupSplitNotes() {
+  const note = (path: string, title: string): NoteData => ({
+    id: path, path, title, tags: [], created: null, updated: null, body: "", preview: "",
+    properties: { status: "none", yaml: "", entries: [] },
+  });
+  const left = note("left.md", "Left note");
+  const right = note("right.md", "Right note");
+  useStore.setState({
+    target: { kind: "folder", path: "/notes" },
+    homeOpen: false,
+    activeNote: right,
+    noteCache: { [left.path]: left, [right.path]: right },
+    tabsState: openToTheSide(initialTabs(left.path), right.path),
+    propertiesOpen: false,
+    addPropertyPath: null,
+  });
+  return { left, right };
+}
+
+describe("CommandPalette current note actions", () => {
+  it("shows three default note actions together under the focused note's title", async () => {
+    setupSplitNotes();
+    await openActions();
+    const group = [...document.querySelectorAll("[cmdk-group]")].find((el) =>
+      el.querySelector("[cmdk-group-heading]")?.textContent === "Current note · Right note",
+    )!;
+    expect([...group.querySelectorAll("[cmdk-item]")].map((el) => el.getAttribute("data-value")))
+      .toEqual(["Rename file", "Duplicate note", "Export note"]);
+    expect(items().filter((el) => el.getAttribute("data-value") === "Rename file")).toHaveLength(1);
+    for (const hidden of ["Add property", "Toggle table of contents", "Toggle links panel", "Toggle reading mode", "Toggle raw markdown", "Delete"]) {
+      expect(items().some((el) => el.getAttribute("data-value") === hidden)).toBe(false);
+    }
+    expect(selected()[0]).toContain("Rename file");
+  });
+
+  it.each([
+    ["property", "Add property"], ["contents", "Show table of contents"],
+    ["links", "Show links panel"], ["editing", "Switch to editing mode"],
+    ["raw", "Show raw markdown"], ["delete", "Delete note"],
+  ])("finds the hidden note action when searching for %s", async (query, label) => {
+    setupSplitNotes();
+    await openActions();
+    await act(async () => typeRaw(query));
+    expect(items().some((el) => el.textContent?.includes(label))).toBe(true);
+    expect(document.body.textContent).toContain("Current note · Right note");
+    await act(async () => typeRaw(""));
+    expect(items().some((el) => el.textContent?.includes(label))).toBe(false);
+  });
+
+  it("keeps hidden actions available through shortcuts for the focused note", async () => {
+    const { right } = setupSplitNotes();
+    await openActions();
+    await key({ key: "Escape" });
+    await key({ key: "e", code: "KeyE", ctrlKey: true }, window);
+    expect(useStore.getState().noteEditMode[right.path]).toBe(true);
+    expect(useStore.getState().noteEditMode["left.md"]).toBeUndefined();
+  });
+
+  it("sends Add property only to the focused pane and resets it when changing notes", async () => {
+    const { left, right } = setupSplitNotes();
+    const setProperty = vi.fn(async () => {});
+    useStore.setState({ setProperty });
+    const panes = (rightPath = right.path) => <>
+      <section data-pane="left"><PaneProvider value={{ path: left.path }}><PropertiesPanel /></PaneProvider></section>
+      <section data-pane="right"><PaneProvider value={{ path: rightPath }}><PropertiesPanel /></PaneProvider></section>
+    </>;
+    await openActions(<TooltipProvider>{panes()}<CommandPalette /></TooltipProvider>);
+    await act(async () => typeRaw("add property"));
+    await key({ key: "Enter" });
+    const leftPanel = host.querySelector('[data-pane="left"]')!;
+    const rightPanel = host.querySelector('[data-pane="right"]')!;
+    expect(leftPanel.querySelector('input[placeholder="Name"]')).toBeNull();
+    expect(rightPanel.querySelector('input[placeholder="Name"]')).not.toBeNull();
+    expect(document.activeElement).toBe(rightPanel.querySelector('input[placeholder="Name"]'));
+    expect(useStore.getState().addPropertyPath).toBeNull();
+
+    const typeIn = async (placeholder: string, value: string) => {
+      const field = rightPanel.querySelector<HTMLInputElement>(`input[placeholder="${placeholder}"]`)!;
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(field, value);
+        field.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      return field;
+    };
+    await typeIn("Name", "status");
+    const value = await typeIn("Value", "draft");
+    await key({ key: "Enter" }, value);
+    expect(setProperty).toHaveBeenCalledExactlyOnceWith("status", { kind: "scalar", value: "draft" }, right.path);
+
+    await act(async () => useStore.getState().setAddPropertyPath(right.path));
+    expect(rightPanel.querySelector('input[placeholder="Name"]')).not.toBeNull();
+    await act(async () => root.render(<TooltipProvider>{panes(left.path)}<CommandPalette /></TooltipProvider>));
+    expect(rightPanel.querySelector('input[placeholder="Name"]')).toBeNull();
+  });
+
+  it("keeps folder commands available without a note group on a folder overview", async () => {
+    useStore.setState({ target: { kind: "folder", path: "/notes" }, homeOpen: false, currentFolder: "Projects", activeNote: null });
+    await openActions();
+    expect(document.body.textContent).not.toContain("Current note");
+    expect(items().some((el) => el.textContent?.includes("Rename folder"))).toBe(true);
+    expect(items().some((el) => el.textContent?.includes("Delete folder"))).toBe(true);
   });
 });
 

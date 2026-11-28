@@ -89,18 +89,30 @@ interface CommandDef {
   /** Stable label used for filtering and selection. */
   label: string;
   icon: Icon;
+  searchOnly?: boolean;
 }
 
 const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
+  {
+    heading: "Current note",
+    items: [
+      { id: "rename-file", label: "Rename file", icon: PencilLineIcon },
+      { id: "duplicate-note", label: "Duplicate note", icon: CopyIcon },
+      { id: "export-note", label: "Export note", icon: DownloadIcon },
+      { id: "add-property", label: "Add property", icon: ListPlusIcon, searchOnly: true },
+      { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon, searchOnly: true },
+      { id: "toggle-references", label: "Toggle links panel", icon: Link2Icon, searchOnly: true },
+      { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon, searchOnly: true },
+      { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon, searchOnly: true },
+      { id: "delete", label: "Delete", icon: TrashIcon, searchOnly: true },
+    ],
+  },
   {
     heading: "Create",
     items: [
       { id: "new-note", label: "New note", icon: FilePlusIcon },
       { id: "new-folder", label: "New folder", icon: FolderPlusIcon },
-      { id: "duplicate-note", label: "Duplicate note", icon: CopyIcon },
       { id: "rename-file", label: "Rename file", icon: PencilLineIcon },
-      { id: "add-property", label: "Add property", icon: ListPlusIcon },
-      { id: "export-note", label: "Export note", icon: DownloadIcon },
     ],
   },
   {
@@ -122,10 +134,6 @@ const COMMAND_GROUPS: { heading: string; items: CommandDef[] }[] = [
     items: [
       { id: "toggle-sidebar", label: "Toggle sidebar", icon: PanelLeftIcon },
       { id: "split-right", label: "Split right", icon: Columns2Icon },
-      { id: "toggle-toc", label: "Toggle table of contents", icon: BookOpenIcon },
-      { id: "toggle-references", label: "Toggle links panel", icon: Link2Icon },
-      { id: "toggle-edit-mode", label: "Toggle reading mode", icon: EyeIcon },
-      { id: "toggle-raw-mode", label: "Toggle raw markdown", icon: CodeIcon },
       { id: "open-settings", label: "Settings", icon: SettingsIcon },
       { id: "change-theme", label: "Change theme", icon: PaletteIcon },
       { id: "change-mode", label: "Light, dark or system", icon: MoonIcon },
@@ -252,7 +260,7 @@ function runCommand(id: CommandId): boolean {
       break;
     case "add-property":
       if (!s.propertiesOpen) s.toggleProperties();
-      s.setAddPropertyOpen(true);
+      if (note) s.setAddPropertyPath(note.path);
       break;
     case "export-note":
       s.setExportOpen(true);
@@ -577,7 +585,17 @@ export function CommandPalette() {
     return [...local, ...searchResults.filter((n) => !seen.has(n.path) && matchesTagQuery(n.tags, tagQuery))].slice(0, 50);
   }, [tagQuery, allNotes, recentFiles, rootPath, searchResults]);
 
-  const availableGroups = COMMAND_GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => isAvailable(i.id)) })).filter(
+  const { note: commandNote } = commandContext();
+  const availableGroups = COMMAND_GROUPS.map((g) => ({
+    ...g,
+    heading: g.heading === "Current note" ? `Current note · ${commandNote?.title}` : g.heading,
+    items: g.items.filter((i) => {
+      if (!isAvailable(i.id)) return false;
+      if (g.heading === "Current note") return !!commandNote;
+      // Rename and Delete stay available for folder overviews too.
+      return !commandNote || (i.id !== "rename-file" && i.id !== "delete");
+    }),
+  })).filter(
     (g) => g.items.length > 0,
   );
 
@@ -588,7 +606,9 @@ export function CommandPalette() {
    */
   function rankedGroups(search: string) {
     const q = search.trim();
-    if (!q) return availableGroups;
+    if (!q) return availableGroups
+      .map((group) => ({ ...group, items: group.items.filter((item) => !item.searchOnly) }))
+      .filter((group) => group.items.length > 0);
     return availableGroups
       .map((group) => {
         const scored = group.items
@@ -947,7 +967,7 @@ function ModeList({ entries, currentMode, onSelect }: { entries: PickerEntry[]; 
 }
 
 const groupClass =
-  "text-foreground [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
+  "text-foreground [&_[cmdk-group-heading]]:truncate [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground";
 
 const itemClass =
   // transition-none: rows are role="option", which globally fades its background; a fading
