@@ -44,7 +44,7 @@
 
 - [ ] also what about some note specific actions in the cmdk? i assume the take effect on the currently focused note
 
-- [ ] we see padding causing clipping in the note title. 
+- [x] we see padding causing clipping in the note title.
 
 - [x] make the badges that show in the note cards a bit better
 
@@ -64,9 +64,11 @@
 
 - [x] when opening a new folder etc from the already open app, like a root folder i mean, the app opens an entirely new window
 
-- [ ] i dont like how we show the references and the referenced in.
+- [x] i dont like how we show the references and the referenced in.
 
-- [ ] had an issue when i had opened a single file with glade. then i moved that file for my OS file explorer. i saw the notification in the glade app as supposed to but when i clicked cancel the tab did not close and instead i kept seing loading skeleotn in the content. mind it was the only tab in the app as i had just opened a file directly
+- [x] had an issue when i had opened a single file with glade. then i moved that file for my OS file explorer. i saw the notification in the glade app as supposed to but when i clicked cancel the tab did not close and instead i kept seing loading skeleotn in the content. mind it was the only tab in the app as i had just opened a file directly
+
+- [ ] fix table drag and reorder
 
 ![glade-autumn](glade-autumn.webp)
 
